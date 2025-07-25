@@ -578,6 +578,57 @@ const AuctionDetailsPage = () => {
     }
   };
 
+  const handleShareAuction = async () => {
+    const shareData = {
+      title: `${product.title} - Auction`,
+      text: `Check out this auction: ${product.title}\nCurrent bid: LKR ${product.currentBid?.toLocaleString()}\n${getTimerLabel(auctionStatus)}: ${timerText}`,
+      url: window.location.href,
+    };
+
+    // Check if the Web Share API is supported
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare(shareData)
+    ) {
+      try {
+        await navigator.share(shareData);
+        toast({
+          title: 'Shared Successfully',
+          description: 'Auction shared successfully!',
+          variant: 'default',
+        });
+      } catch (error) {
+        // User cancelled sharing or error occurred
+        console.log('Share cancelled or failed:', error);
+      }
+    } else {
+      // Fallback: Copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: 'Link Copied',
+          description: 'Auction link copied to clipboard!',
+          variant: 'default',
+        });
+      } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        toast({
+          title: 'Link Copied',
+          description: 'Auction link copied to clipboard!',
+          variant: 'default',
+        });
+      }
+    }
+  };
+
   const renderBidButton = () => {
     if (!product) return null;
 
@@ -865,6 +916,7 @@ const AuctionDetailsPage = () => {
             <Button
               variant="ghost"
               className="flex flex-col items-center text-xs"
+              onClick={handleShareAuction}
             >
               <Share className="h-5 w-5 mb-1" />
               Share

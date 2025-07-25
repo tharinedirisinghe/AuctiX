@@ -369,12 +369,13 @@ public class AuctionService {
 
         int unlistedAuctions = (int) allAuctions.stream()
                 .filter(a -> (!a.isPublic() && !a.isDeleted()) ||
-                        (a.isDeleted() && "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus())))
+                        "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus()))
                 .count();
 
         int deletedAuctions = (int) allAuctions.stream()
-                .filter(Auction::isDeleted)
+                .filter(a -> a.isDeleted() && "DELETED".equals(a.getDeletionStatus()))
                 .count();
+
 
         return SellerAuctionStatsDTO.builder()
                 .totalAuctions(totalAuctions)
@@ -438,8 +439,8 @@ public class AuctionService {
 
         if (hasBids) {
             // If auction has bids, mark as pending deletion and unlist
-            auction.setDeleted(true);
-            auction.setDeletedAt(Instant.now());
+            auction.setDeleted(false);
+            auction.setDeletedAt(null);
             auction.setDeletionStatus("PENDING_ADMIN_APPROVAL");
             auction.setIsPublic(false); // Unlist the auction
             auction.setUpdatedAt(Instant.now());
@@ -459,6 +460,24 @@ public class AuctionService {
 
             return "Auction deleted successfully";
         }
+    }
+
+    public String approveAuctionDeletion(UUID auctionId) {
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+
+        if (!"PENDING_ADMIN_APPROVAL".equals(auction.getDeletionStatus())) {
+            throw new IllegalStateException("Auction is not pending deletion approval");
+        }
+
+        // Now actually delete the auction
+        auction.setDeleted(true);
+        auction.setDeletedAt(Instant.now());
+        auction.setDeletionStatus("DELETED");
+        auction.setUpdatedAt(Instant.now());
+        auctionRepository.save(auction);
+
+        return "Auction deletion approved and completed";
     }
 
     // Updated getAuctionForUpdate method in AuctionService.java
@@ -560,17 +579,21 @@ public class AuctionService {
                         .collect(Collectors.toList());
 
             case "unlisted":
-                // Unlisted auctions: not public OR pending admin approval for deletion
+                // Unlisted auctions: either not public and not deleted OR pending admin approval
                 return auctions.stream()
-                        .filter(a -> (!a.isPublic() && !a.isDeleted()) ||
-                                (a.isDeleted() && "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus())))
+                        .filter(a ->
+                                (!a.isPublic() && !a.isDeleted()) ||
+                                        ("PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus()))
+                        )
                         .collect(Collectors.toList());
 
+
             case "deleted":
-                // Deleted auctions: marked as deleted
+                // Deleted auctions: actually deleted and approved
                 return auctions.stream()
-                        .filter(Auction::isDeleted)
+                        .filter(a -> a.isDeleted() && "DELETED".equals(a.getDeletionStatus()))
                         .collect(Collectors.toList());
+
 
             case "total":
             default:

@@ -574,7 +574,9 @@ public class AuctionController {
      * @return Response message
      */
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteAuction(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteAuction(
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User seller = userDetailsService.getAuthenticatedUser(authentication);
@@ -596,17 +598,23 @@ public class AuctionController {
             // Check if auction has bids
             boolean hasBids = bidService.hasAuctionReceivedBids(id);
 
-            String result = auctionService.deleteAuction(id, hasBids);
-            return ResponseEntity.ok(result);
+            if (hasBids && (requestBody == null || requestBody.get("reason") == null || requestBody.get("reason").trim().isEmpty())) {
+                return ResponseEntity.badRequest().body("Deletion reason is required for auctions with bids");
+            }
+
+            String deletionReason = hasBids ? requestBody.get("reason") : null;
+            String result = auctionService.deleteAuction(id, hasBids, deletionReason, seller.getSeller().getId());
+            return ResponseEntity.ok(Map.of("message", result));
 
         } catch (IllegalArgumentException e) {
             log.warning("Invalid request parameters: " + e.getMessage());
-            return ResponseEntity.badRequest().body("Invalid request parameters.");
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authentication required"));
         } catch (Exception e) {
             log.warning("Error deleting auction: " + e.getMessage());
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
 

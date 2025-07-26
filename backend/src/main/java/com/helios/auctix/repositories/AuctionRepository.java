@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -204,6 +205,17 @@ public interface AuctionRepository extends JpaRepository<Auction, UUID> {
 
     // Finds auctions that are ending within a time window
     List<Auction> findByEndTimeBetween(Instant start, Instant end);
+
+    // Add these methods to your AuctionRepository
+    @Query("SELECT a FROM Auction a WHERE a.isDeleted = false AND a.isPublic = true")
+    List<Auction> findAllActiveAuctions();
+
+    @Query("SELECT a FROM Auction a WHERE a.seller.id = :sellerId")
+    List<Auction> findBySellerIdIncludingDeleted(@Param("sellerId") UUID sellerId);
+
+    // Update existing public auction queries to exclude deleted auctions
+    @Query("SELECT a FROM Auction a WHERE a.isDeleted = false AND a.isPublic = true AND a.id = :id")
+    Optional<Auction> findActiveAuctionById(@Param("id") UUID id);
 
     @Query(value = """
   SELECT EXISTS (

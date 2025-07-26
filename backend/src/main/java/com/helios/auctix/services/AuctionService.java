@@ -1,11 +1,13 @@
 package com.helios.auctix.services;
 
 import com.helios.auctix.domain.auction.Auction;
+import com.helios.auctix.domain.auction.AuctionDeletionRequest;
 import com.helios.auctix.domain.auction.AuctionImagePath;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.dtos.*;
 import com.helios.auctix.mappers.impl.SellerMapperImpl;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
+import com.helios.auctix.repositories.AuctionDeletionRequestRepository;
 import com.helios.auctix.repositories.AuctionImagePathsRepository;
 
 import java.util.Arrays;
@@ -46,9 +48,12 @@ public class AuctionService {
     private final ChatRoomRepository chatRoomRepository;
     @Autowired
     private FileUploadService uploader;
+    private AuctionDeletionRequestRepository deletionRequestRepository;
     private static final Logger log = Logger.getLogger(AuctionService.class.getName());
+
+
     public AuctionDetailsDTO getAuctionDetails(UUID id) {
-        Auction auction = auctionRepository.findById(id).orElse(null);
+        try {Auction auction = auctionRepository.findById(id).orElse(null);
         if (auction == null) return null;
 
         List<String> imageIds = auctionImagePathsRepository.findById_AuctionId(id)
@@ -81,7 +86,14 @@ public class AuctionService {
                 .bidHistory(bidHistory)
                 .currentHighestBid(highestBid)
                 .startingPrice(auction.getStartingPrice())
+                .isDeleted(auction.isDeleted()) // Fixed: removed 'set' prefix
+                .deletionStatus(auction.getDeletionStatus()) // ADD this line
+//                .status(auction.getStatus() != null ? auction.getStatus().toString() : null) // ADD this line
                 .build();
+    }  catch (Exception e) {
+//        log.error("Database error when finding auction: " + id, e);
+        throw e;
+    }
     }
 
     public Auction createAuction(Auction auction) {
@@ -369,12 +381,13 @@ public class AuctionService {
 
         int unlistedAuctions = (int) allAuctions.stream()
                 .filter(a -> (!a.isPublic() && !a.isDeleted()) ||
-                        (a.isDeleted() && "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus())))
+                        "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus()))
                 .count();
 
         int deletedAuctions = (int) allAuctions.stream()
-                .filter(Auction::isDeleted)
+                .filter(a -> a.isDeleted() && "DELETED".equals(a.getDeletionStatus()))
                 .count();
+
 
         return SellerAuctionStatsDTO.builder()
                 .totalAuctions(totalAuctions)
@@ -432,25 +445,34 @@ public class AuctionService {
     /**
      * Delete an auction with bid restrictions
      */
-    public String deleteAuction(UUID auctionId, boolean hasBids) {
+    public String deleteAuction(UUID auctionId, boolean hasBids, String deletionReason, UUID sellerId) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
 
         if (hasBids) {
-            // If auction has bids, mark as pending deletion and unlist
+            // Store deletion reason
+            AuctionDeletionRequest deletionRequest = new AuctionDeletionRequest();
+            deletionRequest.setAuctionId(auctionId);
+            deletionRequest.setSellerId(sellerId);
+            deletionRequest.setDeletionReason(deletionReason);
+            deletionRequest.setStatus("PROCESSED"); // Mark as processed since we're deleting immediately
+            deletionRequest.setProcessedAt(Instant.now());
+            deletionRequestRepository.save(deletionRequest);
+
+            // Unfreeze all bid amounts for this auction
+//            bidService.unfreezeAllBidsForAuction(auctionId);
+
+            // Delete the auction immediately
             auction.setDeleted(true);
             auction.setDeletedAt(Instant.now());
-            auction.setDeletionStatus("PENDING_ADMIN_APPROVAL");
-            auction.setIsPublic(false); // Unlist the auction
+            auction.setDeletionStatus("DELETED");
+            auction.setIsPublic(false);
             auction.setUpdatedAt(Instant.now());
             auctionRepository.save(auction);
 
-            // Here you would typically send a notification to admin
-            // notificationService.notifyAdminForDeletionApproval(auction);
-
-            return "Auction deletion request submitted for admin approval. Auction has been unlisted.";
+            return "Auction deleted successfully. All bid amounts have been unfrozen.";
         } else {
-            // If no bids, soft delete immediately
+            // If no bids, soft delete immediately (no reason required)
             auction.setDeleted(true);
             auction.setDeletedAt(Instant.now());
             auction.setDeletionStatus("DELETED");
@@ -459,6 +481,24 @@ public class AuctionService {
 
             return "Auction deleted successfully";
         }
+    }
+
+    public String approveAuctionDeletion(UUID auctionId) {
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+
+        if (!"PENDING_ADMIN_APPROVAL".equals(auction.getDeletionStatus())) {
+            throw new IllegalStateException("Auction is not pending deletion approval");
+        }
+
+        // Now actually delete the auction
+        auction.setDeleted(true);
+        auction.setDeletedAt(Instant.now());
+        auction.setDeletionStatus("DELETED");
+        auction.setUpdatedAt(Instant.now());
+        auctionRepository.save(auction);
+
+        return "Auction deletion approved and completed";
     }
 
     // Updated getAuctionForUpdate method in AuctionService.java
@@ -560,17 +600,20 @@ public class AuctionService {
                         .collect(Collectors.toList());
 
             case "unlisted":
-                // Unlisted auctions: not public OR pending admin approval for deletion
+                // Unlisted auctions: not public and not deleted
+                // Note: With new flow, no more "PENDING_ADMIN_APPROVAL" since we delete immediately
                 return auctions.stream()
-                        .filter(a -> (!a.isPublic() && !a.isDeleted()) ||
-                                (a.isDeleted() && "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus())))
+                        .filter(a -> !a.isPublic() && !a.isDeleted())
                         .collect(Collectors.toList());
 
+
             case "deleted":
-                // Deleted auctions: marked as deleted
+                // Deleted auctions: all auctions that are marked as deleted
+                // With new flow, we delete immediately so check isDeleted flag
                 return auctions.stream()
-                        .filter(Auction::isDeleted)
+                        .filter(a -> a.isDeleted())
                         .collect(Collectors.toList());
+
 
             case "total":
             default:
@@ -586,7 +629,13 @@ public class AuctionService {
      */
     private SellerAuctionDTO convertToSellerAuctionDTO(Auction auction) {
         Instant now = Instant.now();
-        String status = determineAuctionStatus(auction, now);
+
+        String status;
+        if (auction.isDeleted()) {
+            status = "deleted";
+        } else {
+            status = determineAuctionStatus(auction, now);
+        }
 
         // Get current bid count and highest bid
         int bidCount = bidService.getBidCountForAuction(auction.getId());

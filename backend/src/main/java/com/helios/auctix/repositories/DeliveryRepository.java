@@ -12,16 +12,16 @@ import java.util.UUID;
 @Repository
 public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
 
-    List<Delivery> findBySellerId(UUID sellerId);
+    List<Delivery> findBySellerIdOrderByCreatedAtDesc(UUID sellerId);
 
-    List<Delivery> findByBuyerId(UUID buyerId);
+    List<Delivery> findByBuyerIdOrderByCreatedAtDesc(UUID buyerId);
 
-    List<Delivery> findBySellerIdAndStatus(UUID sellerId, String status);
+    List<Delivery> findBySellerIdAndStatusOrderByCreatedAtDesc(UUID sellerId, String status);
 
-    List<Delivery> findByBuyerIdAndStatus(UUID buyerId, String status);
+    List<Delivery> findByBuyerIdAndStatusOrderByCreatedAtDesc(UUID buyerId, String status);
 
     Optional<Delivery> findByAuctionId(UUID auctionId);
 
-    @Query("SELECT d FROM Delivery d WHERE d.seller.id = :userId OR d.buyer.id = :userId")
+    @Query("SELECT d FROM Delivery d WHERE d.seller.id = :userId OR d.buyer.id = :userId ORDER BY d.createdAt DESC")
     List<Delivery> findAllByUser(UUID userId);
 }

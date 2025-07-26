@@ -191,7 +191,7 @@ public class DeliveryService {
             throw new IllegalArgumentException("User is not a seller");
         }
 
-        List<Delivery> deliveries = deliveryRepository.findBySellerId(seller.getId());
+        List<Delivery> deliveries = deliveryRepository.findBySellerIdOrderByCreatedAtDesc(seller.getId());
 
         return deliveries.stream()
                 .map(this::mapToDTO)
@@ -201,7 +201,7 @@ public class DeliveryService {
     public List<DeliveryDTO> getAllDeliveriesForBuyer(User buyer) {
         logger.info("Fetching all deliveries for buyer: " + buyer.getId());
 
-        List<Delivery> deliveries = deliveryRepository.findByBuyerId(buyer.getId());
+        List<Delivery> deliveries = deliveryRepository.findByBuyerIdOrderByCreatedAtDesc(buyer.getId());
 
         return deliveries.stream()
                 .map(this::mapToDTO)

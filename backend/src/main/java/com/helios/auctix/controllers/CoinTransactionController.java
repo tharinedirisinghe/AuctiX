@@ -26,16 +26,28 @@ public class CoinTransactionController {
         this.transactionService = transactionService;
     }
 
+    // This endpoint is now deprecated since wallets are created automatically during registration
+    // Keeping it for backward compatibility but it will return existing wallet info if wallet already exists
     @PostMapping("/create")
     public ResponseEntity<?> createWallet() {
         try {
-            TransactionResponseDTO walletResponse = transactionService.createWallet();
-            return ResponseEntity.ok(walletResponse);
+            // First check if wallet already exists
+            TransactionResponseDTO existingWallet = transactionService.getWalletInfo();
+            return ResponseEntity.ok(existingWallet);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            // If no wallet exists, create one
+            try {
+                TransactionResponseDTO walletResponse = transactionService.createWallet();
+                return ResponseEntity.ok(walletResponse);
+            } catch (RuntimeException createError) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(createError.getMessage());
+            } catch (Exception createError) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error creating wallet: " + createError.getMessage());
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error creating wallet: " + e.getMessage());
+                    .body("Error fetching wallet information: " + e.getMessage());
         }
     }
 
@@ -157,4 +169,5 @@ public class CoinTransactionController {
                     .body("Error fetching wallet information: " + e.getMessage());
         }
     }
+
 }

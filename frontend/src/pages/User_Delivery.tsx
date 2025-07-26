@@ -11,6 +11,7 @@ import {
   clearDeliveryError,
 } from '@/store/slices/deliverySlice';
 import { Delivery } from '@/services/deliveryService';
+import { reviewService } from '@/services/reviewService';
 
 // Import components
 import { DeliveryHeroBanner } from '@/components/delivery/buyer/DeliveryHeroBanner';
@@ -24,6 +25,7 @@ import { ErrorDisplay } from '@/components/delivery/buyer/ErrorDisplay';
 import { LoadingIndicator } from '@/components/delivery/shared/LoadingIndicator';
 import { DeliverySkeletons } from '@/components/delivery/shared/DeliverySkeletons';
 import { Pagination } from '@/components/delivery/seller/Pagination';
+import { ReviewFormDialog } from '@/components/review/ReviewFormDialog';
 
 const UserDeliveryPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -46,10 +48,57 @@ const UserDeliveryPage = () => {
     useState<boolean>(false);
   const [contactMessage, setContactMessage] = useState<string>('');
 
+  // Review state
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState<boolean>(false);
+  const [reviewDelivery, setReviewDelivery] = useState<Delivery | null>(null);
+  const [reviewEligibility, setReviewEligibility] = useState<{[key: string]: boolean}>({});
+  const [existingReviews, setExistingReviews] = useState<{[key: string]: boolean}>({});
+
   // Fetch deliveries on mount
   useEffect(() => {
     dispatch(fetchBuyerDeliveries());
   }, [dispatch]);
+
+  // Check review eligibility and existing reviews for all deliveries
+  useEffect(() => {
+    const checkReviewStatus = async () => {
+      if (deliveries.length === 0) return;
+
+      const eligibilityPromises = deliveries.map(async (delivery) => {
+        try {
+          const canReview = await reviewService.canReviewDelivery(delivery.id);
+          const existingReview = await reviewService.getReviewByDeliveryId(delivery.id);
+          return {
+            deliveryId: delivery.id,
+            canReview,
+            hasReview: existingReview !== null,
+          };
+        } catch (error) {
+          console.error(`Error checking review status for delivery ${delivery.id}:`, error);
+          return {
+            deliveryId: delivery.id,
+            canReview: false,
+            hasReview: false,
+          };
+        }
+      });
+
+      const results = await Promise.all(eligibilityPromises);
+      
+      const eligibilityMap: {[key: string]: boolean} = {};
+      const reviewsMap: {[key: string]: boolean} = {};
+      
+      results.forEach(({ deliveryId, canReview, hasReview }) => {
+        eligibilityMap[deliveryId] = canReview;
+        reviewsMap[deliveryId] = hasReview;
+      });
+
+      setReviewEligibility(eligibilityMap);
+      setExistingReviews(reviewsMap);
+    };
+
+    checkReviewStatus();
+  }, [deliveries]);
 
   // Reset current page when filters change
   useEffect(() => {
@@ -176,6 +225,29 @@ const UserDeliveryPage = () => {
     setLocalSelectedDelivery(null);
   };
 
+  // Handle review click
+  const handleReviewClick = (delivery: Delivery) => {
+    setReviewDelivery(delivery);
+    setIsReviewDialogOpen(true);
+  };
+
+  // Handle review submitted
+  const handleReviewSubmitted = () => {
+    // Refresh review status after successful submission
+    if (reviewDelivery) {
+      setExistingReviews(prev => ({
+        ...prev,
+        [reviewDelivery.id]: true
+      }));
+      setReviewEligibility(prev => ({
+        ...prev,
+        [reviewDelivery.id]: false
+      }));
+    }
+    setIsReviewDialogOpen(false);
+    setReviewDelivery(null);
+  };
+
   // Reset filters
   const resetFilters = () => {
     setTypeFilter('all');
@@ -247,6 +319,9 @@ const UserDeliveryPage = () => {
                 delivery={delivery}
                 handleContactSeller={handleContactSeller}
                 viewDeliveryDetails={viewDeliveryDetails}
+                onReviewClick={handleReviewClick}
+                canReview={reviewEligibility[delivery.id] || false}
+                hasReview={existingReviews[delivery.id] || false}
               />
             ))}
           </div>
@@ -283,6 +358,14 @@ const UserDeliveryPage = () => {
         contactMessage={contactMessage}
         setContactMessage={setContactMessage}
         sendContactMessage={sendContactMessage}
+      />
+
+      {/* Review Form Dialog */}
+      <ReviewFormDialog
+        isOpen={isReviewDialogOpen}
+        onClose={() => setIsReviewDialogOpen(false)}
+        delivery={reviewDelivery}
+        onReviewSubmitted={handleReviewSubmitted}
       />
     </div>
   );

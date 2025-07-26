@@ -33,12 +33,14 @@ export interface WithdrawRequest {
   accountHolderName: string;
 }
 
+// DEPRECATED: Wallets are now created automatically during user registration
+// This function is kept for backward compatibility and will return existing wallet info
 export const createWallet = async (
   axiosInstance: AxiosInstance,
 ): Promise<WalletInfo> => {
   try {
     // Log the request to help with debugging
-    console.log('Sending create wallet request');
+    console.log('Sending create wallet request (deprecated - wallets are auto-created)');
     const response = await axiosInstance.post('/coins/create', {});
     console.log('Create wallet response:', response.data);
     return response.data;
@@ -46,11 +48,11 @@ export const createWallet = async (
     console.error('Create wallet error:', error);
 
     if (isAxiosError(error)) {
-      throw new Error(error.response?.data || 'Failed to create wallet');
+      throw new Error(error.response?.data || 'Failed to access wallet');
     }
 
     throw new Error(
-      error instanceof Error ? error.message : 'Failed to create wallet',
+      error instanceof Error ? error.message : 'Failed to access wallet',
     );
   }
 };

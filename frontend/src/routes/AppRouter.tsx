@@ -16,6 +16,7 @@ import ProfileSettings from '@/pages/ProfileSettings';
 import { useNotificationRegistration } from '@/hooks/use-notification-registration';
 import UserDeliveryPage from '@/pages/User_Delivery';
 import SellerDeliveryPage from '@/pages/Seller_Delivery';
+import SellerReviews from '@/pages/SellerReviews';
 import AuctionsPage from '@/pages/ExploreAuctions';
 import ManageAuctions from '@/pages/ManageAuctions';
 import AdminManagementPage from '@/pages/AdminManagementPage';
@@ -182,6 +183,7 @@ export default function AppRouter() {
         <Route path="/register" element={<Register />} />
         <Route path="/user-delivery" element={<UserDeliveryPage />} />
         <Route path="/seller-delivery" element={<SellerDeliveryPage />} />
+        <Route path="/seller-reviews" element={<SellerReviews />} />
 
         <Route path="/403" element={<h2>403 Unauthorized</h2>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />

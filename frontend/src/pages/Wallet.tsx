@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Eye,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -166,18 +167,9 @@ const WalletPage: React.FC = () => {
           const filterValue = statusFilter.toLowerCase().trim();
 
           if (filterValue === 'success') {
-            // All statuses now show as "Success"
-            return [
-              'credited',
-              'debited',
-              'unfreezed',
-              'freezed',
-              'completed',
-            ].includes(transaction.status.toLowerCase());
-          } else if (filterValue === 'pending') {
-            // No statuses currently map to pending in our new logic,
-            // but we keep this for potential future status types
-            return false;
+            return !['failed', 'rejected'].includes(transaction.status.toLowerCase());
+          } else if (filterValue === 'failed') {
+            return ['failed', 'rejected'].includes(transaction.status.toLowerCase());
           }
 
           // Direct comparison as fallback
@@ -261,15 +253,23 @@ const WalletPage: React.FC = () => {
   };
 
   // Get appropriate status display and style for transactions
-  // UPDATED: All transaction types now show "Success" status
   const getStatusDisplay = (
     status: string,
   ): { text: string; className: string } => {
-    // All transaction types show "Success" status
-    return {
-      text: 'Success',
-      className: 'bg-green-100 text-green-800',
-    };
+    switch (status) {
+      case 'FAILED':
+      case 'REJECTED':
+        return {
+          text: 'Failed',
+          className: 'bg-red-100 text-red-800',
+        };
+      default:
+        // All other statuses (CREDITED, DEBITED, COMPLETED, UNFREEZED, FREEZED) show as Success
+        return {
+          text: 'Success',
+          className: 'bg-green-100 text-green-800',
+        };
+    }
   };
 
 
@@ -506,7 +506,7 @@ const WalletPage: React.FC = () => {
                   >
                     <option value="all">All Statuses</option>
                     <option value="success">Success</option>
-                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
                   </select>
                 </div>
                 <div>
@@ -561,7 +561,7 @@ const WalletPage: React.FC = () => {
                     <th className="w-20 sm:w-24 p-3 font-medium text-right">
                       Amount
                     </th>
-                    <th className="w-10 p-3"></th>
+                    <th className="w-16 p-3 font-medium text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs divide-y divide-gray-200">
@@ -590,15 +590,7 @@ const WalletPage: React.FC = () => {
                     return (
                       <tr
                         key={index}
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          const type = getTransactionType(transaction.status);
-                          setSelectedTransaction({
-                            ...transaction,
-                            type,
-                          });
-                          setShowTransactionDetails(true);
-                        }}
+                        className="hover:bg-gray-50 transition-colors"
                       >
                         <td
                           className="p-3 pl-4 font-mono text-xs truncate"
@@ -638,9 +630,22 @@ const WalletPage: React.FC = () => {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="p-3">
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal className="w-4 h-4" />
+                        <td className="p-3 text-center">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const type = getTransactionType(transaction.status);
+                              setSelectedTransaction({
+                                ...transaction,
+                                type,
+                              });
+                              setShowTransactionDetails(true);
+                            }}
+                            className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                            title="View transaction details"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
                           </button>
                         </td>
                       </tr>

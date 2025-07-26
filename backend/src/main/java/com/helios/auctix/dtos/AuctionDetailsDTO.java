@@ -21,7 +21,6 @@ public class AuctionDetailsDTO {
     private String description;
     private List<String> images;
     private UserDTO seller;
-
     private double startingPrice;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
@@ -29,4 +28,19 @@ public class AuctionDetailsDTO {
     private String startTime;
     private List<BidDTO> bidHistory;
     private BidDTO currentHighestBid;
+
+    // ADD these new fields for deletion status
+    private boolean isDeleted;
+    private String deletionStatus;
+    private String status; // Add general status field
+
+    // Getters and setters for new fields
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
+    }
+
 }

@@ -6,9 +6,12 @@ import com.helios.auctix.domain.watchlist.AuctionWatchList;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -74,5 +77,17 @@ public interface AuctionWatchListRepository extends JpaRepository<AuctionWatchLi
 
 
     Page<AuctionWatchList> findByUserId(UUID userId, Pageable pageable);
+
+
+    @Modifying
+    @Transactional
+    @Query("""
+        DELETE FROM AuctionWatchList aw
+        WHERE aw.auction.id IN (
+            SELECT a.id FROM Auction a
+            WHERE a.endTime < :threshold
+        )
+    """)
+    int deleteWatchListEntriesForExpiredAuctions(@Param("threshold") Instant threshold);
 
 }

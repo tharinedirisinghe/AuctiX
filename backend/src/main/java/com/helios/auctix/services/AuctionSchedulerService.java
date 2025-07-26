@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -40,8 +41,10 @@ public class AuctionSchedulerService {
     private final WalletRepository walletRepository;
     private final WatchListNotifyService watchListNotifyService;
     private final AuctionNotificationLogRepository auctionNotificationLogRepository;
+    private final AuctionWatchListRepository watchListRepository;
 
     private static final long SCHEDULE_FIXED_RATE_MS = 60_000;
+    private static final long ONE_HOUR_MS = 60 * 60 * 1000;
     private static final long AUCTION_SOON_WINDOW_MINUTES = 10;
     private static final long AUCTION_START_DETECTION_WINDOW_MINUTES = 1;
 
@@ -88,7 +91,10 @@ public class AuctionSchedulerService {
             NotificationEventPublisher notificationEventPublisher,
             UserRepository userRepository,
             WalletRepository walletRepository,
-            WatchListNotifyService watchListNotifyService, AuctionNotificationLogRepository auctionNotificationLogRepository) {
+            WatchListNotifyService watchListNotifyService,
+            AuctionNotificationLogRepository auctionNotificationLogRepository,
+            AuctionWatchListRepository watchListRepository
+            ) {
         this.auctionRepository = auctionRepository;
         this.bidRepository = bidRepository;
         this.bidService = bidService;
@@ -99,6 +105,7 @@ public class AuctionSchedulerService {
         this.walletRepository = walletRepository;
         this.watchListNotifyService = watchListNotifyService;
         this.auctionNotificationLogRepository = auctionNotificationLogRepository;
+        this.watchListRepository = watchListRepository;
     }
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -264,9 +271,10 @@ public class AuctionSchedulerService {
                             String auctionTitle = auction.getTitle();
                             String auctionUrl = String.format(AUCTION_DETAILS_PATH_TEMPLATE, auction.getId());
                             String messageSeller = String.format(AUCTION_ENDED_NO_BIDS_SELLER_MESSAGE_TEMPLATE, auctionTitle);
+                            String notificationTitle = String.format(AUCTION_ENDED_NO_BIDS_TITLE, auction.getTitle());
 
                             notificationEventPublisher.publishNotificationEvent(
-                                    AUCTION_ENDED_NO_BIDS_TITLE,
+                                    notificationTitle,
                                     messageSeller,
                                     NotificationCategory.AUCTION_COMPLETED,
                                     auction.getSeller().getUser(),
@@ -278,7 +286,7 @@ public class AuctionSchedulerService {
                             watchListNotifyService.notifySubscribers(
                                     auction,
                                     null,
-                                    AUCTION_ENDED_NO_BIDS_TITLE,
+                                    notificationTitle,
                                     messageWatcher,
                                     NotificationCategory.AUCTION_COMPLETED,
                                     auctionUrl
@@ -442,4 +450,15 @@ public class AuctionSchedulerService {
             throw e;
         }
     }
+
+    @Scheduled(fixedRate = ONE_HOUR_MS)
+    public void cleanOldEndedAuctionsFromWatchlists() {
+        Instant tenDaysAgo = Instant.now().minus(Duration.ofDays(10));
+        int removed = watchListRepository.deleteWatchListEntriesForExpiredAuctions(tenDaysAgo);
+
+        if (removed > 0) {
+            log.info("Removed {} old watchlist entries for auctions ended before {}", removed, tenDaysAgo);
+        }
+    }
+
 }

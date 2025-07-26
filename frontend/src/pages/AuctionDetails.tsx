@@ -930,7 +930,10 @@ const AuctionDetailsPage = () => {
               <Heart className="h-5 w-5 mb-1" />
               Add to Watchlist
             </Button> */}
-            <AddToWatchlistButton auctionId={product.id} />
+            <AddToWatchlistButton
+              auctionId={product.id}
+              endTime={product.endTime}
+            />
             <Button
               variant="ghost"
               className="flex flex-col items-center text-xs"

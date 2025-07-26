@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Search,
   InfoIcon,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -38,7 +37,8 @@ const WalletPage: React.FC = () => {
   const [createWalletError, setCreateWalletError] = useState<string | null>(
     null,
   );
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [showTransactionDetails, setShowTransactionDetails] =
     useState<boolean>(false);
 
@@ -122,6 +122,7 @@ const WalletPage: React.FC = () => {
     status: string;
     transactionDate: string;
     amount: number | string;
+    type?: string; // Add type property to match usage in setSelectedTransaction
   };
 
   // Apply all filters to transactions
@@ -167,9 +168,13 @@ const WalletPage: React.FC = () => {
           const filterValue = statusFilter.toLowerCase().trim();
 
           if (filterValue === 'success') {
-            return !['failed', 'rejected'].includes(transaction.status.toLowerCase());
+            return !['failed', 'rejected'].includes(
+              transaction.status.toLowerCase(),
+            );
           } else if (filterValue === 'failed') {
-            return ['failed', 'rejected'].includes(transaction.status.toLowerCase());
+            return ['failed', 'rejected'].includes(
+              transaction.status.toLowerCase(),
+            );
           }
 
           // Direct comparison as fallback
@@ -272,7 +277,6 @@ const WalletPage: React.FC = () => {
     }
   };
 
-
   // Reset filters
   const resetFilters = () => {
     setTypeFilter('all');
@@ -317,8 +321,9 @@ const WalletPage: React.FC = () => {
             Access Your Wallet
           </h2>
           <p className="text-yellow-700 mb-4">
-            Your wallet should have been created automatically during registration. 
-            Click below to access it or create one if it doesn't exist.
+            Your wallet should have been created automatically during
+            registration. Click below to access it or create one if it doesn't
+            exist.
           </p>
           {createWalletError && (
             <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-red-700">
@@ -330,7 +335,7 @@ const WalletPage: React.FC = () => {
             className="px-6 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
             disabled={isCreatingWallet}
           >
-{isCreatingWallet ? 'Accessing...' : 'Access Wallet'}
+            {isCreatingWallet ? 'Accessing...' : 'Access Wallet'}
           </button>
         </div>
       </div>
@@ -460,7 +465,6 @@ const WalletPage: React.FC = () => {
                 <Filter className="w-3.5 h-3.5" />
                 Filters
               </button>
-
 
               <div className="flex-grow"></div>
 
@@ -631,10 +635,12 @@ const WalletPage: React.FC = () => {
                           })}
                         </td>
                         <td className="p-3 text-center">
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const type = getTransactionType(transaction.status);
+                              const type = getTransactionType(
+                                transaction.status,
+                              );
                               setSelectedTransaction({
                                 ...transaction,
                                 type,
@@ -659,8 +665,8 @@ const WalletPage: React.FC = () => {
           {/* Pagination controls - Simplified */}
           <div className="p-3 border-t border-gray-200 flex flex-wrap justify-between items-center gap-2 text-xs text-gray-600">
             <div className="text-gray-500">
-              Showing {currentTransactions.length} of {filteredTransactions.length}{' '}
-              transaction(s)
+              Showing {currentTransactions.length} of{' '}
+              {filteredTransactions.length} transaction(s)
             </div>
 
             <div className="flex items-center space-x-1">

@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +68,11 @@ public class WatchListService {
     public void subscribe(UUID userId, UUID auctionId) {
         User user = userRepo.findById(userId).orElseThrow();
         Auction auction = auctionRepo.findById(auctionId).orElseThrow();
+
+        // Don't allow subscription if auction has already ended
+        if (auction.getEndTime().isBefore(Instant.now())) {
+            throw new IllegalStateException("Cannot subscribe to an auction that has already ended.");
+        }
 
         if (!watchRepo.existsByUserAndAuction(user, auction)) {
             AuctionWatchList watch = AuctionWatchList.builder()

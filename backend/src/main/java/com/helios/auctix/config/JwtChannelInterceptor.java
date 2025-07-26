@@ -24,10 +24,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,6 +43,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
 
     private static final Pattern AUCTION_ID_PATTERN = Pattern.compile("/topic/auction/([^/]+)/chat");
     private static final String ANONYMOUS_KEY = "GUEST_USER";
+    private static final int AUCTION_CHAT_CUTOFF_AFTER_HOURS = 3;
 
     // Store session ID to authentication mapping
     private final Map<String, Authentication> sessionAuthMap = new HashMap<>();
@@ -161,6 +162,24 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                     log.warning("User not found for email: " + userEmail);
                     return null;
                 }
+
+                Optional<Auction> auction = auctionRepository.findById(UUID.fromString(auctionId));
+                if (!auction.isPresent()) {
+                    return null;
+                }
+
+
+                Instant cutoffTime = Instant.now().minus(Duration.ofHours(AUCTION_CHAT_CUTOFF_AFTER_HOURS));
+                if (auction.get().getEndTime().isBefore(cutoffTime)) {
+                    return null;
+                }
+
+
+                log.info("check cutoff time");
+
+
+
+
                 if (!user.getRoleEnum().equals(UserRoleEnum.BIDDER)) {
                     if (user.getRoleEnum().equals(UserRoleEnum.SELLER)) {
                         if (auctionId == null || auctionId.isBlank()) {

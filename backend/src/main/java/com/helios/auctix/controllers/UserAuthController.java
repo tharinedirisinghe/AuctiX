@@ -75,9 +75,9 @@ public class UserAuthController {
 
         notificationEventPublisher.publishNotificationEvent(
                 "Welcome to AuctiX",
-                "Your account on the AuctiX platform has been created created successfully!",
+                "Your account on the AuctiX platform has been created successfully!",
                 NotificationCategory.WELCOME_MESSAGE,
-                currentUser,
+                registrationResponse.getUser(), // Use the newly created user, not currentUser
                 null
         );
 

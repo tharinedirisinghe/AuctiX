@@ -39,6 +39,7 @@ public class BidService {
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationEventPublisher notificationEventPublisher;
     private final WatchListNotifyService watchListNotifyService;
+    private final WatchListService watchListService;
 
     // Get bid history for an auction
     public List<Bid> getBidHistoryForAuction(UUID auctionId) {
@@ -259,6 +260,9 @@ public class BidService {
         });
 
         Bid savedBid = bidRepository.save(bid);
+
+        // subscribe to watchlist if already not there
+        watchListService.subscribe(bidderId, auctionId);
 
         BidDTO bidDTO = convertToDTO(savedBid);
         List<BidDTO> history = getBidHistoryForAuction(auctionId).stream()

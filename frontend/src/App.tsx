@@ -12,6 +12,7 @@ import { Toaster } from './components/ui/toaster';
 import { fetchPendingRequiredActions } from './store/slices/requiredActionsSlice';
 import { FCMHandlerEventListener } from './lib/FCMMessageListener';
 import { listenForForegroundMessages } from './firebase/firebase';
+import AdminTools from './components/organisms/AdminTools';
 
 const App: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -41,6 +42,7 @@ const App: React.FC = () => {
       <FCMHandlerEventListener />
       <AppRouter />
       <Toaster />
+      <AdminTools />
     </>
   );
 };

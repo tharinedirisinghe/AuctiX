@@ -1,5 +1,3 @@
-'use client';
-
 import { motion } from 'framer-motion';
 import { StatusIcon } from '@/components/atoms/StatusIcon';
 import { ActionButton } from '@/components/atoms/ActionButton';

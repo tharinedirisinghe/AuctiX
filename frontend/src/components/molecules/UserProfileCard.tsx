@@ -1,5 +1,3 @@
-'use client';
-
 import { motion } from 'framer-motion';
 import { Avatar } from '@/components/atoms/Avatar';
 import { IUser } from '@/types/IUser';

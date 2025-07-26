@@ -30,12 +30,48 @@ public interface AuctionWatchListRepository extends JpaRepository<AuctionWatchLi
             OR LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(a.description) LIKE LOWER(CONCAT('%', :search, '%'))
           )
+        ORDER BY wl.watchedAt DESC
     """)
     Page<AuctionWatchList> findWatchedAuctionsWithSearch(
             @Param("userId") UUID userId,
             @Param("search") String search,
             Pageable pageable
     );
+
+    @Query(value = """
+    SELECT wl.*
+    FROM auction_watch_list wl
+    JOIN auctions a ON wl.auction_id = a.id
+    WHERE wl.user_id = :userId
+      AND (
+        :tsQuery IS NULL
+        OR a.search_vector @@ to_tsquery('english', :tsQuery)
+      )
+    ORDER BY
+      CASE WHEN :tsQuery IS NOT NULL THEN ts_rank(a.search_vector, to_tsquery('english', :tsQuery)) ELSE 0 END DESC,
+      wl.watched_at DESC
+    LIMIT :limit OFFSET :offset
+    """, nativeQuery = true)
+    List<AuctionWatchList> findWatchedAuctionsWithFullTextSearch(
+            @Param("userId") UUID userId,
+            @Param("tsQuery") String tsQuery,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
+
+    @Query(value = """
+    SELECT COUNT(*)
+    FROM auction_watch_list wl
+    JOIN auctions a ON wl.auction_id = a.id
+    WHERE wl.user_id = :userId
+      AND (
+        :tsQuery IS NULL
+        OR a.search_vector @@ to_tsquery('english', :tsQuery)
+      )
+    """, nativeQuery = true)
+    long countWatchedAuctionsWithFullTextSearch(
+            @Param("userId") UUID userId,
+            @Param("tsQuery") String tsQuery);
+
 
     Page<AuctionWatchList> findByUserId(UUID userId, Pageable pageable);
 

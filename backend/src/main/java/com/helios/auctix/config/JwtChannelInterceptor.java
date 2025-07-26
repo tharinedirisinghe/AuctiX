@@ -7,7 +7,6 @@ import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.UserRepository;
 import com.helios.auctix.services.ChatService;
 import com.helios.auctix.services.JwtService;
-import com.sun.tools.jconsole.JConsoleContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.springframework.messaging.Message;

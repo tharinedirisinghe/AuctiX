@@ -23,6 +23,7 @@ import {
   fetchUnreadCount,
   markNotificationReadThunk,
 } from '@/store/slices/notificationSlice';
+import AuctionSearchBar from '../molecules/AuctionSearchBar';
 
 export function Navbar() {
   const userData = useAppSelector((state) => state.user as IUser);
@@ -141,11 +142,12 @@ export function Navbar() {
         <div className="hidden lg:block w-full max-w-md mx-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
+            {/* <Input
               type="search"
               placeholder="Search auctions"
               className="w-full pl-10"
-            />
+            /> */}
+            <AuctionSearchBar />
           </div>
         </div>
 
@@ -265,14 +267,15 @@ export function Navbar() {
                     Aucti<span className="text-orange-500">X</span>
                   </span>
                 </div>
-                <div className="relative mb-4">
+                {/* <div className="relative mb-4">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
                     placeholder="Type a command or search..."
                     className="pl-10"
                   />
-                </div>
+                </div> */}
+                <AuctionSearchBar />
                 <nav className="flex flex-col gap-4">
                   <Link to="/">
                     <Button variant="ghost" className="justify-start w-full">

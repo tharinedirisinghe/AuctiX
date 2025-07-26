@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useEffect } from 'react';
 import { Command } from 'lucide-react';
 import { CollapsibleNavItem } from '../molecules/collapsible-navitem';

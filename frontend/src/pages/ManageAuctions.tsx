@@ -19,7 +19,13 @@ const ManageAuctions = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    auctionId: '',
+    auctionTitle: '',
+    hasBids: false,
+  });
+  const [deletionReason, setDeletionReason] = useState('');
   // Map frontend filter keys to backend filter values
   const filterMap: Record<FilterKey, string> = {
     total: 'total',
@@ -39,9 +45,21 @@ const ManageAuctions = () => {
     completed: 'Ended',
     unlisted: 'Unlisted',
     deleted: 'Deleted',
-    PENDING_ADMIN_APPROVAL: 'Pending Deletion',
+    PENDING_ADMIN_APPROVAL: 'Pending Deletion', // More clear label
     DELETED: 'Deleted',
   };
+
+  // 2. ADD helper function to check if auction is pending deletion
+  const isPendingDeletion = (auction: any) => {
+    return (
+      auction.status === 'PENDING_ADMIN_APPROVAL' ||
+      (auction.status === 'unlisted' && auction.pendingDeletion === true) ||
+      auction.deletionStatus === 'PENDING_ADMIN_APPROVAL'
+    );
+  };
+
+  const isDeletedOrPending = (auction: any) =>
+    isPendingDeletion(auction) || auction.status?.toLowerCase() === 'deleted';
 
   const itemsPerPage = 10;
   const axiosInstance = AxiosRequest().axiosInstance;
@@ -50,6 +68,21 @@ const ManageAuctions = () => {
   const userData = useAppSelector((state) => state.auth);
   const token = userData?.token;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!userData?.isUserLoggedIn || userData.role !== 'SELLER') {
+      toast.error('Access denied. Seller account required.');
+      navigate('/login', { replace: true });
+    }
+  }, [userData, navigate]);
+
+  if (!userData?.isUserLoggedIn || userData.role !== 'SELLER') {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-500">
+        Access denied. Only sellers can view this page.
+      </div>
+    );
+  }
 
   // Fetch auctions based on filter and search
   const fetchAuctions = async (
@@ -187,45 +220,91 @@ const ManageAuctions = () => {
   ];
 
   const handleAuctionAction = async (
-    action: 'update' | 'delete',
+    action: 'update' | 'delete' | 'view',
     auctionId: string,
   ) => {
-    if (action === 'update') {
-      // Fixed: Navigate to the correct update route
-      navigate(`/auctions/update/${auctionId}`);
+    if (action === 'view') {
+      // Navigate to auction details page
+      navigate(`/auctions/${auctionId}`);
+      setShowDropdown(null);
+      return;
     }
+
+    if (action === 'update') {
+      navigate(`/auctions/update/${auctionId}`);
+      setShowDropdown(null);
+      return;
+    }
+
     if (action === 'delete') {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this auction?',
-      );
-      if (!confirmed) return;
+      const auction = allAuctions.find((a) => a.id === auctionId);
+      const hasBids =
+        auction?.currentBid > 0 || auction?.bidHistory?.length > 0;
 
-      try {
-        await axiosInstance.delete(`/auctions/delete/${auctionId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        toast.success('Auction deleted successfully');
-
-        // Refresh the auctions list
-        fetchAuctions(selectedFilter, searchTerm);
-        fetchStats();
-      } catch (error: any) {
-        if (error.response?.status === 400) {
-          toast.error(error.response.data || 'Cannot delete auction');
-        } else {
-          toast.error('Failed to delete auction');
-        }
-        console.error(error);
-      }
+      setDeleteModal({
+        isOpen: true,
+        auctionId: auctionId,
+        auctionTitle: auction?.title || auction?.name || 'Unknown Auction',
+        hasBids: hasBids,
+      });
+      setDeletionReason('');
     }
 
     setShowDropdown(null);
   };
 
-  const getStatusBadgeColor = (status: string) => {
+  const handleDeleteConfirm = async () => {
+    if (deleteModal.hasBids && !deletionReason.trim()) {
+      toast.error(
+        'Please provide a reason for deleting this auction with bids',
+      );
+      return;
+    }
+
+    try {
+      const requestBody = deleteModal.hasBids ? { reason: deletionReason } : {};
+
+      await axiosInstance.delete(`/auctions/delete/${deleteModal.auctionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        data: requestBody,
+      });
+
+      toast.success('Auction deleted successfully');
+
+      // Close modal and refresh data
+      setDeleteModal({
+        isOpen: false,
+        auctionId: '',
+        auctionTitle: '',
+        hasBids: false,
+      });
+      setDeletionReason('');
+
+      // Refresh the auctions list
+      fetchAuctions(selectedFilter, searchTerm);
+      fetchStats();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data ||
+        'Failed to delete auction';
+      toast.error(errorMessage);
+    }
+  };
+
+  // 3. UPDATE the getStatusBadgeColor function
+  const getStatusBadgeColor = (status: string, auction?: any) => {
     const normalizedStatus = status?.toLowerCase();
+
+    // Special handling for pending deletion
+    if (isPendingDeletion(auction)) {
+      return 'bg-orange-100 text-orange-800 border border-orange-300';
+    }
+
     switch (normalizedStatus) {
       case 'ongoing':
       case 'active':
@@ -351,6 +430,40 @@ const ManageAuctions = () => {
           </div>
         </div>
 
+        {selectedFilter === 'unlisted' &&
+          paginatedAuctions.some((auction) => isPendingDeletion(auction)) && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-orange-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-orange-800">
+                    Pending Deletion Requests
+                  </h3>
+                  <div className="mt-2 text-sm text-orange-700">
+                    <p>
+                      Auctions marked as "Pending Admin Approval" have deletion
+                      requests that require admin review. These auctions cannot
+                      be updated or deleted until the admin processes the
+                      request.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <div className="text-gray-500">Loading auctions...</div>
@@ -420,13 +533,24 @@ const ManageAuctions = () => {
                             : '-'}
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(auction.status)}`}
-                          >
-                            {statusDisplayMap[auction.status?.toLowerCase()] ||
-                              auction.status}
-                          </span>
+                          <div className="flex flex-col">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(auction.status, auction)}`}
+                            >
+                              {isPendingDeletion(auction)
+                                ? 'Pending Admin Approval'
+                                : statusDisplayMap[
+                                    auction.status?.toLowerCase()
+                                  ] || auction.status}
+                            </span>
+                            {isPendingDeletion(auction) && (
+                              <span className="text-xs text-orange-600 mt-1">
+                                Deletion Request Submitted
+                              </span>
+                            )}
+                          </div>
                         </td>
+
                         <td className="py-3 px-4 relative">
                           <div className="dropdown-container">
                             <button
@@ -442,24 +566,58 @@ const ManageAuctions = () => {
                               <MoreHorizontal className="h-4 w-4" />
                             </button>
                             {showDropdown === auction.id && (
-                              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
                                 <div className="py-1">
-                                  <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                    onClick={() =>
-                                      handleAuctionAction('update', auction.id)
-                                    }
-                                  >
-                                    Update Auction
-                                  </div>
-                                  <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
-                                    onClick={() =>
-                                      handleAuctionAction('delete', auction.id)
-                                    }
-                                  >
-                                    Delete Auction
-                                  </div>
+                                  {isDeletedOrPending(auction) ? (
+                                    <>
+                                      <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() =>
+                                          navigate(
+                                            `/auction-details/${auction.id}`,
+                                          )
+                                        }
+                                      >
+                                        View Auction Details
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() =>
+                                          handleAuctionAction(
+                                            'view',
+                                            auction.id,
+                                          )
+                                        }
+                                      >
+                                        View Auction Details
+                                      </div>
+                                      <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() =>
+                                          handleAuctionAction(
+                                            'update',
+                                            auction.id,
+                                          )
+                                        }
+                                      >
+                                        Update Auction
+                                      </div>
+                                      <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                        onClick={() =>
+                                          handleAuctionAction(
+                                            'delete',
+                                            auction.id,
+                                          )
+                                        }
+                                      >
+                                        Delete Auction
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -507,6 +665,67 @@ const ManageAuctions = () => {
           </>
         )}
       </div>
+      {/* ADD this modal JSX right before the last closing </div> tag */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Auction</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete "{deleteModal.auctionTitle}"?
+            </p>
+
+            {deleteModal.hasBids && (
+              <div className="mb-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+                  <p className="text-orange-800 text-sm">
+                    ⚠️ This auction has bids. Deleting will immediately unfreeze
+                    all bid amounts and remove the auction permanently.
+                  </p>
+                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for deletion *
+                </label>
+                <textarea
+                  value={deletionReason}
+                  onChange={(e) => setDeletionReason(e.target.value)}
+                  placeholder="Please explain why you need to delete this auction..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  required
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setDeleteModal({
+                    isOpen: false,
+                    auctionId: '',
+                    auctionTitle: '',
+                    hasBids: false,
+                  });
+                  setDeletionReason('');
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteModal.hasBids && !deletionReason.trim()}
+                className={`px-4 py-2 text-white rounded ${
+                  deleteModal.hasBids && !deletionReason.trim()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                Delete Auction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

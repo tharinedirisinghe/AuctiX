@@ -97,6 +97,10 @@ public class Auction {
     @Column(name = "penalty_fee")
     private Double penaltyFee;
 
+//    @Enumerated(EnumType.STRING)
+//    @Column(nullable = false)
+//    private AuctionStatus status;
+
     // ... existing fields and methods ...
 
     // Add getters and setters for new fields

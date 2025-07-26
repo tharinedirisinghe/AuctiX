@@ -15,10 +15,8 @@ import com.helios.auctix.repositories.AuctionWatchListRepository;
 import com.helios.auctix.repositories.BidRepository;
 import com.helios.auctix.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,12 +26,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class WatchListService {
 
     private final AuctionWatchListRepository watchRepo;
@@ -41,6 +40,20 @@ public class WatchListService {
     private final UserRepository userRepo;
     private final AuctionService auctionService;
     private final BidRepository bidRepository;
+
+    public WatchListService(
+            AuctionWatchListRepository watchRepo,
+            AuctionRepository auctionRepo,
+            UserRepository userRepo,
+            @Lazy AuctionService auctionService, // prevent the cycle
+            BidRepository bidRepository
+    ) {
+        this.watchRepo = watchRepo;
+        this.auctionRepo = auctionRepo;
+        this.userRepo = userRepo;
+        this.auctionService = auctionService;
+        this.bidRepository = bidRepository;
+    }
 
     public boolean isWatchedByUser(User user, UUID auctionId) {
         Optional<Auction> auctionOpt = auctionRepo.findById(auctionId);
@@ -74,9 +87,15 @@ public class WatchListService {
 
     @Transactional(readOnly = true)
     public Page<WatchListAuctionDTO> getWatchList(UUID userId, String search, Pageable pageable) {
-        Page<AuctionWatchList> watched = watchRepo.findWatchedAuctionsWithSearch(userId, search, pageable);
+        String tsQuery = buildTsQuery(search);
 
-        return watched.map(wl -> {
+        int limit = pageable.getPageSize();
+        int offset = (int) pageable.getOffset();
+
+        List<AuctionWatchList> watched = watchRepo.findWatchedAuctionsWithFullTextSearch(userId, tsQuery, limit, offset);
+        long total = watchRepo.countWatchedAuctionsWithFullTextSearch(userId, tsQuery);
+
+        List<WatchListAuctionDTO> dtoList = watched.stream().map(wl -> {
             Auction auction = wl.getAuction();
 
             AuctionDetailsDTO auctionDetailsDTO = auctionService.convertToDTO(auction);
@@ -104,7 +123,20 @@ public class WatchListService {
                     .isHighestBidder(isHighestBidder)
                     .userBidAmount(userBidAmount)
                     .build();
-        });
+        }).toList();
 
+        return new PageImpl<>(dtoList, pageable, total);
     }
+
+    private String buildTsQuery(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) {
+            return null;
+        }
+
+        String sanitized = searchTerm.replaceAll("[^\\w\\s]", "");
+        return Arrays.stream(sanitized.trim().split("\\s+"))
+                .map(word -> word + ":*")
+                .collect(Collectors.joining(" & "));
+    }
+
 }

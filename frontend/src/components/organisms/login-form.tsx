@@ -87,6 +87,7 @@ export function LoginForm({
         message={msg}
         continueBtn="Ok"
         cancelBtn={null}
+        timeoutSeconds={4}
       />
       <form
         onSubmit={(e) => handleSubmit(e)}
@@ -114,7 +115,7 @@ export function LoginForm({
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
               <a
-                href="/forgot-password"
+                href="/password-reset"
                 className="ml-auto text-sm underline-offset-4 hover:underline"
               >
                 Forgot your password?

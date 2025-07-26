@@ -82,7 +82,7 @@ const WalletPage: React.FC = () => {
           dispatch(fetchWalletInfo());
         } else {
           setCreateWalletError(
-            'Failed to create wallet. Please try again later.',
+            'Failed to access wallet. Please try again later.',
           );
         }
       });
@@ -345,11 +345,11 @@ const WalletPage: React.FC = () => {
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
           <h2 className="text-lg font-medium text-yellow-800 mb-2">
-            Create Your Wallet
+            Access Your Wallet
           </h2>
           <p className="text-yellow-700 mb-4">
-            You don't have a wallet yet. Create one to start managing your funds
-            for auctions.
+            Your wallet should have been created automatically during registration. 
+            Click below to access it or create one if it doesn't exist.
           </p>
           {createWalletError && (
             <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-red-700">
@@ -361,7 +361,7 @@ const WalletPage: React.FC = () => {
             className="px-6 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
             disabled={isCreatingWallet}
           >
-            {isCreatingWallet ? 'Creating...' : 'Create Wallet'}
+{isCreatingWallet ? 'Accessing...' : 'Access Wallet'}
           </button>
         </div>
       </div>

@@ -7,6 +7,10 @@ import com.helios.auctix.domain.user.UserRequiredAction;
 import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.ProfileUpdateDataDTO;
 import com.helios.auctix.dtos.UserDTO;
+import com.helios.auctix.dtos.UserStatsDTO;
+import com.helios.auctix.exception.PermissionDeniedException;
+import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
+import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
 import com.helios.auctix.services.fileUpload.*;
 import com.helios.auctix.services.user.*;
@@ -41,6 +45,7 @@ public class UserController {
     private final FileUploadService fileUploadService;
     private final UserDetailsService userDetailsService;
     private final UserMapperImpl userMapper;
+    private final UserMapperImpl userMapperImpl;
 
     @Profile("dev")
     @GetMapping("/hello")
@@ -170,7 +175,7 @@ public class UserController {
         String userRole = user.getRole().getName().toString();
         log.info("user data requested by " + user.getEmail() + "," + userRole);
         if (!(UserRoleEnum.valueOf(userRole) == UserRoleEnum.ADMIN || UserRoleEnum.valueOf(userRole) == UserRoleEnum.SUPER_ADMIN)) {
-            throw new PermissionDeniedDataAccessException("You don't have permission to access this resource", new Throwable("Permission Denied"));
+            throw new PermissionDeniedException("You don't have permission to access this resource");
         }
 
         // decode from url encoded parameters
@@ -236,7 +241,7 @@ public class UserController {
         if (user == null) {
             return ResponseEntity.status(404).body("User not found");
         }
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(userMapperImpl.mapTo(user));
     }
 
     @PostMapping("/uploadUserProfilePhoto")
@@ -482,5 +487,13 @@ public class UserController {
         }
     }
 
+    @GetMapping("/userStats")
+    public ResponseEntity<UserStatsDTO> getRegisteredUserCount() throws AuthenticationException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+
+        UserStatsDTO count = userDetailsService.getRegisteredUserCount(currentUser);
+        return ResponseEntity.ok(count);
+    }
 
 }

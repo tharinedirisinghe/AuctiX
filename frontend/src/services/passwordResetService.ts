@@ -14,6 +14,7 @@ export const requestPasswordResetCode = async (
       {
         headers: {
           'Content-Type': 'multipart/form-data',
+          timeout: 30000,
         },
       },
     );

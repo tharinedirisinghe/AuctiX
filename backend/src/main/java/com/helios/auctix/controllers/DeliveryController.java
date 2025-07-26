@@ -1,7 +1,6 @@
 package com.helios.auctix.controllers;
 
 import com.helios.auctix.domain.delivery.Delivery;
-import com.helios.auctix.domain.delivery.DeliveryStatus;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.dtos.DeliveryCreateDTO;
 import com.helios.auctix.dtos.DeliveryDTO;
@@ -131,14 +130,7 @@ public class DeliveryController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = userDetailsService.getAuthenticatedUser(authentication);
 
-            DeliveryStatus deliveryStatus;
-            try {
-                deliveryStatus = DeliveryStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                return ResponseEntity.badRequest().body("Invalid delivery status: " + status);
-            }
-
-            DeliveryDTO updatedDelivery = deliveryService.updateDeliveryStatus(id, deliveryStatus, currentUser);
+            DeliveryDTO updatedDelivery = deliveryService.updateDeliveryStatus(id, status, currentUser);
             return ResponseEntity.ok(updatedDelivery);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());

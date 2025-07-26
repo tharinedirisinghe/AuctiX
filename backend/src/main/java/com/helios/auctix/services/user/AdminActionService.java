@@ -1,19 +1,24 @@
 package com.helios.auctix.services.user;
 
 import com.helios.auctix.domain.user.*;
+import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.AdminActionDTO;
-import com.helios.auctix.dtos.UserDTO;
+import com.helios.auctix.exception.InvalidUserException;
+import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.AdminActionMapperImpl;
 import com.helios.auctix.repositories.AdminActionRepository;
-import com.helios.auctix.repositories.AdminRepository;
+import com.helios.auctix.repositories.SuspendedUserRepository;
 import com.helios.auctix.repositories.UserRepository;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -27,13 +32,19 @@ public class AdminActionService {
     private final AdminActionRepository adminActionRepository;
     private final UserRepository userRepository;
     private final AdminActionMapperImpl adminActionMapperImpl;
+    private final SuspendedUserRepository suspendedUserRepository;
+    private final UserDetailsService userDetailsService;
+    private final UserRegisterService userRegisterService;
 
     public AdminActionService(
             AdminActionRepository adminActionRepository,
-            UserRepository userRepository, AdminActionMapperImpl adminActionMapperImpl) {
+            UserRepository userRepository, AdminActionMapperImpl adminActionMapperImpl, SuspendedUserRepository suspendedUserRepository, UserDetailsService userDetailsService, UserRegisterService userRegisterService) {
         this.adminActionRepository = adminActionRepository;
         this.userRepository = userRepository;
         this.adminActionMapperImpl = adminActionMapperImpl;
+        this.suspendedUserRepository = suspendedUserRepository;
+        this.userDetailsService = userDetailsService;
+        this.userRegisterService = userRegisterService;
     }
 
     public void logAdminAction(User admin, User user, AdminActionsEnum action, String description) {
@@ -92,7 +103,10 @@ public class AdminActionService {
         Set<UUID> matchedUserIds = Set.of();
         String descriptionSearch = null;
 
-        AdminActionsEnum actionTypeFilterEnumVal = AdminActionsEnum.valueOf(actionTypeFilter);
+        AdminActionsEnum actionTypeFilterEnumVal = null;
+        if (actionTypeFilter != null && !actionTypeFilter.isEmpty() && !actionTypeFilter.equals("ALL")) {
+            actionTypeFilterEnumVal = AdminActionsEnum.valueOf(actionTypeFilter);
+        }
 
         if (search != null && search.toLowerCase().contains("username:")) {
             String lowerSearch = search.toLowerCase();
@@ -118,7 +132,7 @@ public class AdminActionService {
         if (matchedUserIds != null && !matchedUserIds.isEmpty()) {
             adminActions = adminActionRepository.searchAdminActions( new ArrayList<>(matchedUserIds), descriptionSearch, actionTypeFilterEnumVal, pageable);
         } else {
-            adminActions = adminActionRepository.findByDescriptionContainingIgnoreCaseAndActivityType(pageable, descriptionSearch, actionTypeFilterEnumVal);
+            adminActions = adminActionRepository.searchAdminActionsNoUserSearch(pageable, descriptionSearch, actionTypeFilterEnumVal);
         }
 
         log.info("Retrieved {} admin actions with limit {}, offset {}, order {}, sortBy createdAt, search {}, filterBy activity_type, filterValue {}",
@@ -136,6 +150,63 @@ public class AdminActionService {
                 .stream()
                 .map(user -> ((User) user).getId())
                 .collect(Collectors.toSet());
+    }
+
+    @Transactional
+    public void banUser(@NotNull String targetUserUserName, @NotNull User currentUser,@NotNull String reason, SuspentionDurationEnum duration) {
+        log.info("Ban request by user {}", currentUser.getEmail());
+
+        User targetUser = userRepository.findByUsername(targetUserUserName);
+
+        if (targetUser == null) {
+            throw new InvalidUserException("User not found");
+        }
+
+        if(targetUser.isSuspended()){
+            throw new InvalidUserException("User is already suspended");
+        }
+
+        if (targetUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN)) {
+            throw new PermissionDeniedException("Cannot ban a Super Admin");
+        }
+
+        if (targetUser.getRoleEnum().equals(UserRoleEnum.ADMIN) && !currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN)) {
+            throw new PermissionDeniedException("Only Super Admin can ban an Admin");
+        }
+
+        Instant suspendedUntil = null;
+        if(duration != SuspentionDurationEnum.PERMANENT){
+            suspendedUntil = switch (duration) {
+                case ONE_DAY -> Instant.now().plusSeconds(86400);
+                case THREE_DAYS -> Instant.now().plusSeconds(259200);
+                case ONE_WEEK -> Instant.now().plusSeconds(604800);
+                case TWO_WEEKS -> Instant.now().plusSeconds(1209600);
+                case ONE_MONTH -> Instant.now().plusSeconds(2592000);
+                default -> throw new IllegalArgumentException("Invalid suspension duration");
+            };
+        }
+
+        targetUser.setSuspended(true);
+        userRepository.save(targetUser);
+        SuspendedUser suspendedUser = SuspendedUser.builder()
+                .suspendedBy(currentUser)
+                .reason(reason)
+                .user(targetUser)
+                .suspendedUntil(suspendedUntil)
+                .build();
+        suspendedUserRepository.save(suspendedUser);
+        logAdminAction(currentUser, targetUser, AdminActionsEnum.USER_BAN, "User " + targetUser.getUsername() + " has been banned by " + currentUser.getUsername() + " for reason: " + reason + "for duration: " + duration.getDuration());
+
+        UserRequiredActionContext userRequiredActionContext = UserRequiredActionContext.builder()
+                .title("Your account has been banned")
+                .content("Hello "+suspendedUser.getUser().getUsername()+" We are sorry to let you know, Your account is banned for the following reason/s: " + suspendedUser.getReason() + " for "+suspendedUser.getSuspendedUntil()+". Please contact support for more information.")
+                .canResolve(false)
+                .severityLevel(UserRequiredActionSeverityLevelEnum.HIGH)
+                .triggerUrl(null)
+                .continueUrl(null)
+                .build();
+
+        userDetailsService.registerUserRequiredAction(targetUser, UserRequiredActionEnum.ANNOUNCEMENT_READ, userRequiredActionContext);
     }
 
 }

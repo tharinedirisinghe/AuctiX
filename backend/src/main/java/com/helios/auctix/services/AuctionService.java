@@ -1,12 +1,16 @@
 package com.helios.auctix.services;
 
 import com.helios.auctix.domain.auction.Auction;
+import com.helios.auctix.domain.auction.AuctionDeletionRequest;
 import com.helios.auctix.domain.auction.AuctionImagePath;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.dtos.*;
 import com.helios.auctix.mappers.impl.SellerMapperImpl;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
+import com.helios.auctix.repositories.AuctionDeletionRequestRepository;
 import com.helios.auctix.repositories.AuctionImagePathsRepository;
+
+import java.util.Arrays;
 import java.util.logging.Logger;
 import com.helios.auctix.repositories.AuctionRepository;
 
@@ -16,6 +20,10 @@ import com.helios.auctix.services.fileUpload.FileUploadService;
 import com.helios.auctix.services.fileUpload.FileUploadUseCaseEnum;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,9 +48,12 @@ public class AuctionService {
     private final ChatRoomRepository chatRoomRepository;
     @Autowired
     private FileUploadService uploader;
+    private AuctionDeletionRequestRepository deletionRequestRepository;
     private static final Logger log = Logger.getLogger(AuctionService.class.getName());
+
+
     public AuctionDetailsDTO getAuctionDetails(UUID id) {
-        Auction auction = auctionRepository.findById(id).orElse(null);
+        try {Auction auction = auctionRepository.findById(id).orElse(null);
         if (auction == null) return null;
 
         List<String> imageIds = auctionImagePathsRepository.findById_AuctionId(id)
@@ -75,7 +86,14 @@ public class AuctionService {
                 .bidHistory(bidHistory)
                 .currentHighestBid(highestBid)
                 .startingPrice(auction.getStartingPrice())
+                .isDeleted(auction.isDeleted()) // Fixed: removed 'set' prefix
+                .deletionStatus(auction.getDeletionStatus()) // ADD this line
+//                .status(auction.getStatus() != null ? auction.getStatus().toString() : null) // ADD this line
                 .build();
+    }  catch (Exception e) {
+//        log.error("Database error when finding auction: " + id, e);
+        throw e;
+    }
     }
 
     public Auction createAuction(Auction auction) {
@@ -156,63 +174,111 @@ public class AuctionService {
     }
     }
 
-    public List<Auction> getAllAuctions() {
-        return auctionRepository.findAllPublicAuctions(); // Use the new method
-    }
 
-    // Get currently running auctions (started and not ended)
-    public List<Auction> getActiveAuctions() {
+    public Page<Auction> getActiveAuctionsPaged(String category, String tsQuery, int page, int limit) {
         Instant now = Instant.now();
-        return auctionRepository.findActiveAuctions(now);
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        return auctionRepository.findActiveAuctionsPaged(now, category, tsQuery, pageable);
     }
 
-    // Get available auctions (not yet ended - includes future auctions)
-    public List<Auction> getAvailableAuctions() {
+
+
+    public Page<Auction> getUpcomingAuctionsPaged(String category, String tsQuery, int page, int limit) {
         Instant now = Instant.now();
-        return auctionRepository.findAvailableAuctions(now);
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        return auctionRepository.findUpcomingAuctionsPaged(now, category, tsQuery, pageable);
     }
 
-    // Get upcoming auctions (future auctions)
-    public List<Auction> getUpcomingAuctions() {
-        Instant now = Instant.now();
-        return auctionRepository.findUpcomingAuctions(now);
-    }
 
-    // Get expired auctions from the last 3 days
-    public List<Auction> getExpiredAuctions() {
+    public Page<Auction> getExpiredAuctionsPaged(String category, String tsQuery, int page, int limit) {
         Instant now = Instant.now();
         Instant threeDaysAgo = now.minus(3, ChronoUnit.DAYS);
-        return auctionRepository.findExpiredAuctions(now, threeDaysAgo);
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        return auctionRepository.findExpiredAuctionsPaged(now, threeDaysAgo, category, tsQuery, pageable);
     }
 
 
-    public List<AuctionDetailsDTO> getActiveAuctionsDTO(String category) {
-        return getActiveAuctions().stream()
-                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public Page<Auction> getAllAuctionsPaged(String category, String tsQuery, int page, int limit) {
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        return auctionRepository.findAllPaged(category, tsQuery, pageable); // ✅ Match new repo method
     }
 
-    public List<AuctionDetailsDTO> getUpcomingAuctionsDTO(String category) {
-        return getUpcomingAuctions().stream()
-                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+
+    public String buildTsQuery(String searchQuery) {
+        if (searchQuery == null || searchQuery.trim().isEmpty()) return null;
+        return Arrays.stream(searchQuery.trim().split("\\s+"))
+                .map(word -> word + ":*")
+                .collect(Collectors.joining(" & "));
     }
 
-    public List<AuctionDetailsDTO> getExpiredAuctionsDTO(String category) {
-        return getExpiredAuctions().stream()
-                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
 
-    public List<AuctionDetailsDTO> getAllAuctionsDTO(String category) {
-        return getAllAuctions().stream()
-                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
+
+
+
+
+
+
+
+//    public List<Auction> getAllAuctions() {
+//        return auctionRepository.findAllPublicAuctions(); // Use the new method
+//
+//    }
+
+
+
+    // Get currently running auctions (started and not ended)
+//    public List<Auction> getActiveAuctions() {
+//        Instant now = Instant.now();
+//        return auctionRepository.findActiveAuctions(now);
+//    }
+//
+//    // Get available auctions (not yet ended - includes future auctions)
+//    public List<Auction> getAvailableAuctions() {
+//        Instant now = Instant.now();
+//        return auctionRepository.findAvailableAuctions(now);
+//    }
+//
+//    // Get upcoming auctions (future auctions)
+//    public List<Auction> getUpcomingAuctions() {
+//        Instant now = Instant.now();
+//        return auctionRepository.findUpcomingAuctions(now);
+//    }
+//
+//    // Get expired auctions from the last 3 days
+//    public List<Auction> getExpiredAuctions() {
+//        Instant now = Instant.now();
+//        Instant threeDaysAgo = now.minus(3, ChronoUnit.DAYS);
+//        return auctionRepository.findExpiredAuctions(now, threeDaysAgo);
+//    }
+
+
+//    public List<AuctionDetailsDTO> getActiveAuctionsDTO(String category) {
+//        return getActiveAuctions().stream()
+//                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
+//                .map(this::convertToDTO)
+//                .collect(Collectors.toList());
+//    }
+//
+//    public List<AuctionDetailsDTO> getUpcomingAuctionsDTO(String category) {
+//        return getUpcomingAuctions().stream()
+//                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
+//                .map(this::convertToDTO)
+//                .collect(Collectors.toList());
+//    }
+//
+//    public List<AuctionDetailsDTO> getExpiredAuctionsDTO(String category) {
+//        return getExpiredAuctions().stream()
+//                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
+//                .map(this::convertToDTO)
+//                .collect(Collectors.toList());
+//    }
+//
+//    public List<AuctionDetailsDTO> getAllAuctionsDTO(String category) {
+//        return getAllAuctions().stream()
+//                .filter(auction -> category == null || category.isEmpty() || auction.getCategory().equalsIgnoreCase(category))
+//                .map(this::convertToDTO)
+//                .collect(Collectors.toList());
+//    }
 
     // Helper method to convert Auction entity to AuctionDetailsDTO (package private so other services can use)
     public AuctionDetailsDTO convertToDTO(Auction auction) {
@@ -315,12 +381,13 @@ public class AuctionService {
 
         int unlistedAuctions = (int) allAuctions.stream()
                 .filter(a -> (!a.isPublic() && !a.isDeleted()) ||
-                        (a.isDeleted() && "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus())))
+                        "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus()))
                 .count();
 
         int deletedAuctions = (int) allAuctions.stream()
-                .filter(Auction::isDeleted)
+                .filter(a -> a.isDeleted() && "DELETED".equals(a.getDeletionStatus()))
                 .count();
+
 
         return SellerAuctionStatsDTO.builder()
                 .totalAuctions(totalAuctions)
@@ -378,25 +445,34 @@ public class AuctionService {
     /**
      * Delete an auction with bid restrictions
      */
-    public String deleteAuction(UUID auctionId, boolean hasBids) {
+    public String deleteAuction(UUID auctionId, boolean hasBids, String deletionReason, UUID sellerId) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
 
         if (hasBids) {
-            // If auction has bids, mark as pending deletion and unlist
+            // Store deletion reason
+            AuctionDeletionRequest deletionRequest = new AuctionDeletionRequest();
+            deletionRequest.setAuctionId(auctionId);
+            deletionRequest.setSellerId(sellerId);
+            deletionRequest.setDeletionReason(deletionReason);
+            deletionRequest.setStatus("PROCESSED"); // Mark as processed since we're deleting immediately
+            deletionRequest.setProcessedAt(Instant.now());
+            deletionRequestRepository.save(deletionRequest);
+
+            // Unfreeze all bid amounts for this auction
+//            bidService.unfreezeAllBidsForAuction(auctionId);
+
+            // Delete the auction immediately
             auction.setDeleted(true);
             auction.setDeletedAt(Instant.now());
-            auction.setDeletionStatus("PENDING_ADMIN_APPROVAL");
-            auction.setIsPublic(false); // Unlist the auction
+            auction.setDeletionStatus("DELETED");
+            auction.setIsPublic(false);
             auction.setUpdatedAt(Instant.now());
             auctionRepository.save(auction);
 
-            // Here you would typically send a notification to admin
-            // notificationService.notifyAdminForDeletionApproval(auction);
-
-            return "Auction deletion request submitted for admin approval. Auction has been unlisted.";
+            return "Auction deleted successfully. All bid amounts have been unfrozen.";
         } else {
-            // If no bids, soft delete immediately
+            // If no bids, soft delete immediately (no reason required)
             auction.setDeleted(true);
             auction.setDeletedAt(Instant.now());
             auction.setDeletionStatus("DELETED");
@@ -405,6 +481,24 @@ public class AuctionService {
 
             return "Auction deleted successfully";
         }
+    }
+
+    public String approveAuctionDeletion(UUID auctionId) {
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+
+        if (!"PENDING_ADMIN_APPROVAL".equals(auction.getDeletionStatus())) {
+            throw new IllegalStateException("Auction is not pending deletion approval");
+        }
+
+        // Now actually delete the auction
+        auction.setDeleted(true);
+        auction.setDeletedAt(Instant.now());
+        auction.setDeletionStatus("DELETED");
+        auction.setUpdatedAt(Instant.now());
+        auctionRepository.save(auction);
+
+        return "Auction deletion approved and completed";
     }
 
     // Updated getAuctionForUpdate method in AuctionService.java
@@ -506,17 +600,20 @@ public class AuctionService {
                         .collect(Collectors.toList());
 
             case "unlisted":
-                // Unlisted auctions: not public OR pending admin approval for deletion
+                // Unlisted auctions: not public and not deleted
+                // Note: With new flow, no more "PENDING_ADMIN_APPROVAL" since we delete immediately
                 return auctions.stream()
-                        .filter(a -> (!a.isPublic() && !a.isDeleted()) ||
-                                (a.isDeleted() && "PENDING_ADMIN_APPROVAL".equals(a.getDeletionStatus())))
+                        .filter(a -> !a.isPublic() && !a.isDeleted())
                         .collect(Collectors.toList());
 
+
             case "deleted":
-                // Deleted auctions: marked as deleted
+                // Deleted auctions: all auctions that are marked as deleted
+                // With new flow, we delete immediately so check isDeleted flag
                 return auctions.stream()
-                        .filter(Auction::isDeleted)
+                        .filter(a -> a.isDeleted())
                         .collect(Collectors.toList());
+
 
             case "total":
             default:
@@ -532,7 +629,13 @@ public class AuctionService {
      */
     private SellerAuctionDTO convertToSellerAuctionDTO(Auction auction) {
         Instant now = Instant.now();
-        String status = determineAuctionStatus(auction, now);
+
+        String status;
+        if (auction.isDeleted()) {
+            status = "deleted";
+        } else {
+            status = determineAuctionStatus(auction, now);
+        }
 
         // Get current bid count and highest bid
         int bidCount = bidService.getBidCountForAuction(auction.getId());
@@ -597,6 +700,43 @@ public class AuctionService {
             throw new RuntimeException("Failed to save image: " + e.getMessage());
         }
     }
+
+
+    public List<Auction> searchAuctions(String searchTerm) {
+        String tsQuery = buildTsQuery(searchTerm);
+        if (tsQuery == null) {
+            return auctionRepository.findAll();
+        }
+        return auctionRepository.searchByFullText(tsQuery);
+    }
+
+    /**
+     * Builds a PostgreSQL full-text search query (`tsquery`) from a raw search string.
+     * <p>
+     * This method:
+     * <ul>
+     *   <li>Removes all non-alphanumeric characters except whitespace</li>
+     *   <li>Splits the cleaned string into words</li>
+     *   <li>Appends <code>:*</code> to each word to enable prefix matching</li>
+     *   <li>Joins all words using <code>&</code> for logical AND</li>
+     * </ul>
+     * <p>
+     * Example: <code>"vintage toy"</code> becomes <code>"vintage:* & toy:*"</code>
+     *
+     * @param searchTerm the raw user input search string; can be null or blank
+     * @return a formatted tsquery string for use in PostgreSQL's <code>to_tsquery</code>, or null if input is null/blank
+     */
+//    private String buildTsQuery(String searchTerm) {
+//        if (searchTerm == null || searchTerm.isBlank()) {
+//            return null;
+//        }
+//
+//        String sanitized = searchTerm.replaceAll("[^\\w\\s]", "");
+//        // E.g. Convert: "vint toy car" => "vint:* & toy:* & car:*"
+//        return Arrays.stream(sanitized.trim().split("\\s+"))
+//                .map(word -> word + ":*") // append :* for prefix matching
+//                .collect(Collectors.joining(" & "));
+//    }
 
 
 

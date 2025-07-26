@@ -1,9 +1,9 @@
 package com.helios.auctix.services.user;
 
 import com.helios.auctix.domain.user.*;
-import com.helios.auctix.dtos.VerificationRequestDTO;
 import com.helios.auctix.dtos.VerificationStatusDTO;
-import com.helios.auctix.mappers.impl.VerificationRequestMapperImpl;
+import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
+import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
 import com.helios.auctix.mappers.impl.VerificationStatusMapperImpl;
 import com.helios.auctix.repositories.SellerRepository;
 import com.helios.auctix.repositories.SellerVerificationRequestRepository;

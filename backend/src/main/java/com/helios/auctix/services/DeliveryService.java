@@ -2,7 +2,6 @@ package com.helios.auctix.services;
 
 import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.delivery.Delivery;
-import com.helios.auctix.domain.delivery.DeliveryStatus;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.domain.user.UserAddress;
 import com.helios.auctix.domain.user.UserRoleEnum;
@@ -10,6 +9,7 @@ import com.helios.auctix.dtos.DeliveryCreateDTO;
 import com.helios.auctix.dtos.DeliveryDTO;
 import com.helios.auctix.dtos.DeliveryUpdateDTO;
 import com.helios.auctix.repositories.AuctionRepository;
+import com.helios.auctix.repositories.BidRepository;
 import com.helios.auctix.repositories.DeliveryRepository;
 import com.helios.auctix.repositories.UserRepository;
 import lombok.AllArgsConstructor;
@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ public class DeliveryService {
     private final DeliveryRepository deliveryRepository;
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
+    private final BidRepository bidRepository;
     private static final Logger logger = Logger.getLogger(DeliveryService.class.getName());
 
     @Transactional
@@ -73,15 +75,100 @@ public class DeliveryService {
                 .seller(currentUser)
                 .buyer(buyer)
                 .deliveryDate(deliveryDate)
-                .status(DeliveryStatus.PACKING)
+                .status("PACKING")
                 .deliveryAddress(createDTO.getDeliveryAddress())
                 .notes(createDTO.getNotes())
-                .amount(auction.getStartingPrice()) // Use the auction price
+                .amount(auction.getStartingPrice())
                 .build();
 
         delivery = deliveryRepository.save(delivery);
 
         return mapToDTO(delivery);
+    }
+
+    /**
+     * Automatically create delivery after successful auction completion
+     */
+    @Transactional
+    public DeliveryDTO createAutomaticDelivery(UUID auctionId, UUID buyerId, Double winningAmount) {
+        logger.info("Creating automatic delivery for auction: " + auctionId + " with buyer: " + buyerId);
+
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> new IllegalArgumentException("Buyer not found"));
+
+        User seller = auction.getSeller().getUser();
+
+        // Check if delivery already exists for this auction
+        Optional<Delivery> existingDelivery = deliveryRepository.findByAuctionId(auctionId);
+        if (existingDelivery.isPresent()) {
+            logger.info("Delivery already exists for auction: " + auctionId);
+            return mapToDTO(existingDelivery.get());
+        }
+
+        // Get buyer's delivery address
+        String deliveryAddress = getBuyerDeliveryAddress(buyer);
+
+        // Set delivery date to 7 days from now
+        LocalDate deliveryDate = LocalDate.now().plusDays(7);
+
+        // Create delivery entity
+        Delivery delivery = Delivery.builder()
+                .auction(auction)
+                .seller(seller)
+                .buyer(buyer)
+                .deliveryDate(deliveryDate)
+                .status("PACKING")
+                .deliveryAddress(deliveryAddress)
+                .notes("Automatic delivery created after auction completion")
+                .amount(winningAmount)
+                .build();
+
+        delivery = deliveryRepository.save(delivery);
+        logger.info("Successfully created automatic delivery with ID: " + delivery.getId());
+
+        return mapToDTO(delivery);
+    }
+
+    /**
+     * Helper method to get buyer's full delivery address
+     */
+    private String getBuyerDeliveryAddress(User buyer) {
+        UserAddress address = buyer.getUserAddress();
+        if (address == null) {
+            return "Address not provided - Please contact buyer for delivery details";
+        }
+
+        StringBuilder fullAddress = new StringBuilder();
+        
+        if (address.getAddressNumber() != null) {
+            fullAddress.append(address.getAddressNumber()).append(", ");
+        }
+        if (address.getAddressLine1() != null) {
+            fullAddress.append(address.getAddressLine1()).append(", ");
+        }
+        if (address.getAddressLine2() != null) {
+            fullAddress.append(address.getAddressLine2()).append(", ");
+        }
+        if (address.getCity() != null) {
+            fullAddress.append(address.getCity()).append(", ");
+        }
+        if (address.getState() != null) {
+            fullAddress.append(address.getState()).append(" ");
+        }
+        if (address.getPostalCode() != null) {
+            fullAddress.append(address.getPostalCode()).append(", ");
+        }
+        if (address.getCountry() != null) {
+            fullAddress.append(address.getCountry());
+        }
+
+        // Clean up trailing commas and spaces
+        String result = fullAddress.toString().replaceAll(",\\s*$", "").trim();
+        
+        return result.isEmpty() ? "Address not provided - Please contact buyer for delivery details" : result;
     }
 
     public List<DeliveryDTO> getAllDeliveriesForUser(User user) {
@@ -168,12 +255,13 @@ public class DeliveryService {
 
         // Update status if provided
         if (updateDTO.getStatus() != null && !updateDTO.getStatus().isEmpty()) {
-            try {
-                DeliveryStatus status = DeliveryStatus.valueOf(updateDTO.getStatus().toUpperCase());
-                delivery.setStatus(status);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Invalid delivery status");
+            // Validate status values
+            String statusUpper = updateDTO.getStatus().toUpperCase();
+            if (!statusUpper.equals("PACKING") && !statusUpper.equals("SHIPPING") && 
+                !statusUpper.equals("DELIVERED") && !statusUpper.equals("CANCELLED")) {
+                throw new IllegalArgumentException("Invalid delivery status. Must be: PACKING, SHIPPING, DELIVERED, or CANCELLED");
             }
+            delivery.setStatus(statusUpper);
         }
 
         // Update other fields if provided
@@ -195,7 +283,7 @@ public class DeliveryService {
     }
 
     @Transactional
-    public DeliveryDTO updateDeliveryStatus(UUID id, DeliveryStatus status, User currentUser) {
+    public DeliveryDTO updateDeliveryStatus(UUID id, String status, User currentUser) {
         logger.info("Updating delivery status to " + status + " for delivery: " + id);
 
         Delivery delivery = deliveryRepository.findById(id)
@@ -210,8 +298,14 @@ public class DeliveryService {
             throw new IllegalArgumentException("Only the seller or admin can update this delivery status");
         }
 
-        // Update status
-        delivery.setStatus(status);
+        // Validate and update status
+        String statusUpper = status.toUpperCase();
+        if (!statusUpper.equals("PACKING") && !statusUpper.equals("SHIPPING") && 
+            !statusUpper.equals("DELIVERED") && !statusUpper.equals("CANCELLED")) {
+            throw new IllegalArgumentException("Invalid delivery status. Must be: PACKING, SHIPPING, DELIVERED, or CANCELLED");
+        }
+        
+        delivery.setStatus(statusUpper);
         delivery = deliveryRepository.save(delivery);
 
         return mapToDTO(delivery);
@@ -276,7 +370,7 @@ public class DeliveryService {
                 .buyerId(delivery.getBuyer().getId())
                 .buyerName(delivery.getBuyer().getUsername())
                 .deliveryDate(delivery.getDeliveryDate())
-                .status(delivery.getStatus().name())
+                .status(delivery.getStatus())
                 .deliveryAddress(delivery.getDeliveryAddress())
                 .notes(delivery.getNotes())
                 .amount(delivery.getAmount())

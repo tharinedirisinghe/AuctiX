@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 import {
   Search,
   InfoIcon,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  Download,
   Filter,
+  Eye,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -38,17 +37,14 @@ const WalletPage: React.FC = () => {
   const [createWalletError, setCreateWalletError] = useState<string | null>(
     null,
   );
-  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
   const [showTransactionDetails, setShowTransactionDetails] =
     useState<boolean>(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [selectedTransactions, setSelectedTransactions] = useState<string[]>(
-    [],
-  );
-  const [selectAll, setSelectAll] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -126,6 +122,7 @@ const WalletPage: React.FC = () => {
     status: string;
     transactionDate: string;
     amount: number | string;
+    type?: string; // Add type property to match usage in setSelectedTransaction
   };
 
   // Apply all filters to transactions
@@ -171,18 +168,13 @@ const WalletPage: React.FC = () => {
           const filterValue = statusFilter.toLowerCase().trim();
 
           if (filterValue === 'success') {
-            // All statuses now show as "Success"
-            return [
-              'credited',
-              'debited',
-              'unfreezed',
-              'freezed',
-              'completed',
-            ].includes(transaction.status.toLowerCase());
-          } else if (filterValue === 'pending') {
-            // No statuses currently map to pending in our new logic,
-            // but we keep this for potential future status types
-            return false;
+            return !['failed', 'rejected'].includes(
+              transaction.status.toLowerCase(),
+            );
+          } else if (filterValue === 'failed') {
+            return ['failed', 'rejected'].includes(
+              transaction.status.toLowerCase(),
+            );
           }
 
           // Direct comparison as fallback
@@ -266,42 +258,23 @@ const WalletPage: React.FC = () => {
   };
 
   // Get appropriate status display and style for transactions
-  // UPDATED: All transaction types now show "Success" status
   const getStatusDisplay = (
     status: string,
   ): { text: string; className: string } => {
-    // All transaction types show "Success" status
-    return {
-      text: 'Success',
-      className: 'bg-green-100 text-green-800',
-    };
-  };
-
-  // Handle row selection
-  const toggleRowSelection = (transactionId: string) => {
-    setSelectedTransactions((prevSelected) => {
-      if (prevSelected.includes(transactionId)) {
-        return prevSelected.filter((id) => id !== transactionId);
-      } else {
-        return [...prevSelected, transactionId];
-      }
-    });
-  };
-
-  // Handle select all
-  const toggleSelectAll = () => {
-    if (selectAll) {
-      setSelectedTransactions([]);
-    } else {
-      setSelectedTransactions(currentTransactions.map((t) => t.id));
+    switch (status) {
+      case 'FAILED':
+      case 'REJECTED':
+        return {
+          text: 'Failed',
+          className: 'bg-red-100 text-red-800',
+        };
+      default:
+        // All other statuses (CREDITED, DEBITED, COMPLETED, UNFREEZED, FREEZED) show as Success
+        return {
+          text: 'Success',
+          className: 'bg-green-100 text-green-800',
+        };
     }
-    setSelectAll(!selectAll);
-  };
-
-  // Export selected transactions
-  const exportSelectedTransactions = () => {
-    // Implementation for exporting selected transactions
-    alert(`Exporting ${selectedTransactions.length} transactions`);
   };
 
   // Reset filters
@@ -348,8 +321,9 @@ const WalletPage: React.FC = () => {
             Access Your Wallet
           </h2>
           <p className="text-yellow-700 mb-4">
-            Your wallet should have been created automatically during registration. 
-            Click below to access it or create one if it doesn't exist.
+            Your wallet should have been created automatically during
+            registration. Click below to access it or create one if it doesn't
+            exist.
           </p>
           {createWalletError && (
             <div className="bg-red-50 border border-red-200 rounded p-3 mb-4 text-red-700">
@@ -361,7 +335,7 @@ const WalletPage: React.FC = () => {
             className="px-6 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
             disabled={isCreatingWallet}
           >
-{isCreatingWallet ? 'Accessing...' : 'Access Wallet'}
+            {isCreatingWallet ? 'Accessing...' : 'Access Wallet'}
           </button>
         </div>
       </div>
@@ -492,16 +466,6 @@ const WalletPage: React.FC = () => {
                 Filters
               </button>
 
-              {selectedTransactions.length > 0 && (
-                <button
-                  onClick={exportSelectedTransactions}
-                  className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-              )}
-
               <div className="flex-grow"></div>
 
               <select
@@ -546,7 +510,7 @@ const WalletPage: React.FC = () => {
                   >
                     <option value="all">All Statuses</option>
                     <option value="success">Success</option>
-                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
                   </select>
                 </div>
                 <div>
@@ -591,15 +555,7 @@ const WalletPage: React.FC = () => {
               <table className="min-w-full table-fixed">
                 <thead>
                   <tr className="text-xs text-gray-600 text-left bg-gray-50 border-b border-gray-200">
-                    <th className="w-10 p-3 pl-4">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300"
-                        checked={selectAll}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
-                    <th className="w-20 sm:w-32 p-3 font-medium">ID</th>
+                    <th className="w-20 sm:w-32 p-3 pl-4 font-medium">ID</th>
                     <th className="w-20 sm:w-24 p-3 font-medium">Date</th>
                     <th className="w-16 sm:w-20 p-3 font-medium">Type</th>
                     <th className="w-16 sm:w-24 p-3 font-medium">Status</th>
@@ -609,16 +565,13 @@ const WalletPage: React.FC = () => {
                     <th className="w-20 sm:w-24 p-3 font-medium text-right">
                       Amount
                     </th>
-                    <th className="w-10 p-3"></th>
+                    <th className="w-16 p-3 font-medium text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs divide-y divide-gray-200">
                   {currentTransactions.map((transaction, index) => {
                     const type = getTransactionType(transaction.status);
                     const status = getStatusDisplay(transaction.status);
-                    const isSelected = selectedTransactions.includes(
-                      transaction.id,
-                    );
 
                     // Determine the color for the transaction type
                     let typeClassName = '';
@@ -641,26 +594,10 @@ const WalletPage: React.FC = () => {
                     return (
                       <tr
                         key={index}
-                        className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-amber-50' : ''} cursor-pointer`}
-                        onClick={() => {
-                          const type = getTransactionType(transaction.status);
-                          setSelectedTransaction({
-                            ...transaction,
-                            type,
-                          });
-                          setShowTransactionDetails(true);
-                        }}
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <td className="p-3 pl-4">
-                          <input
-                            type="checkbox"
-                            className="rounded border-gray-300"
-                            checked={isSelected}
-                            onChange={() => toggleRowSelection(transaction.id)}
-                          />
-                        </td>
                         <td
-                          className="p-3 font-mono text-xs truncate"
+                          className="p-3 pl-4 font-mono text-xs truncate"
                           title={transaction.id}
                         >
                           {transaction.id.substring(0, 8)}...
@@ -697,9 +634,24 @@ const WalletPage: React.FC = () => {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="p-3">
-                          <button className="text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal className="w-4 h-4" />
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const type = getTransactionType(
+                                transaction.status,
+                              );
+                              setSelectedTransaction({
+                                ...transaction,
+                                type,
+                              });
+                              setShowTransactionDetails(true);
+                            }}
+                            className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                            title="View transaction details"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
                           </button>
                         </td>
                       </tr>
@@ -713,8 +665,8 @@ const WalletPage: React.FC = () => {
           {/* Pagination controls - Simplified */}
           <div className="p-3 border-t border-gray-200 flex flex-wrap justify-between items-center gap-2 text-xs text-gray-600">
             <div className="text-gray-500">
-              {selectedTransactions.length} of {filteredTransactions.length}{' '}
-              transaction(s) selected
+              Showing {currentTransactions.length} of{' '}
+              {filteredTransactions.length} transaction(s)
             </div>
 
             <div className="flex items-center space-x-1">

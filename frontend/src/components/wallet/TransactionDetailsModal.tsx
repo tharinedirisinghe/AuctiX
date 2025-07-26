@@ -36,9 +36,32 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
     }
   };
 
-  // All statuses now show green success background
+  // Get status class based on transaction status
   const getStatusClass = () => {
-    return 'bg-green-100 text-green-800';
+    if (!transaction) return 'bg-green-100 text-green-800';
+    
+    switch (transaction.status) {
+      case 'FAILED':
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800';
+      default:
+        // All other statuses show as Success
+        return 'bg-green-100 text-green-800';
+    }
+  };
+
+  // Get status text based on transaction status
+  const getStatusText = () => {
+    if (!transaction) return 'Success';
+    
+    switch (transaction.status) {
+      case 'FAILED':
+      case 'REJECTED':
+        return 'Failed';
+      default:
+        // All other statuses show as Success
+        return 'Success';
+    }
   };
 
   const getTypeClass = () => {
@@ -87,7 +110,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
               <span
                 className={`px-2 py-0.5 rounded-full ${getStatusClass()} text-xs`}
               >
-                Success
+                {getStatusText()}
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full bg-gray-100 ${getTypeClass()} text-xs font-medium`}
@@ -141,10 +164,13 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
               <span
                 className={`px-2 py-0.5 rounded-full ${getStatusClass()} text-xs`}
               >
-                Success
+                {getStatusText()}
               </span>
               <span className="text-sm text-gray-600">
-                Transaction completed successfully
+                {getStatusText() === 'Success' 
+                  ? 'Transaction completed successfully'
+                  : 'Transaction failed or was rejected'
+                }
               </span>
             </div>
           </div>

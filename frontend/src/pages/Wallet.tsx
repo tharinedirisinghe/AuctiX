@@ -6,6 +6,8 @@ import {
   ChevronRight,
   Filter,
   Eye,
+  BarChart3,
+  CreditCard,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -22,6 +24,7 @@ import {
 import RechargeModal from '@/components/wallet/RechargeModal';
 import WithdrawModal from '@/components/wallet/WithdrawModal';
 import TransactionDetailsModal from '@/components/wallet/TransactionDetailsModal';
+import WalletAnalytics from '@/components/wallet/WalletAnalytics';
 import { AppDispatch } from '@/store/store';
 
 const WalletPage: React.FC = () => {
@@ -49,6 +52,7 @@ const WalletPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('overview');
 
   useEffect(() => {
     dispatch(clearWalletError());
@@ -438,11 +442,53 @@ const WalletPage: React.FC = () => {
           </div>
         )}
 
-        {/* Transactions Section */}
+        {/* Tab Navigation */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-200 p-4">
-            <h2 className="text-lg font-medium text-gray-800">Transactions</h2>
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'overview'
+                    ? 'border-amber-500 text-amber-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Overview</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'analytics'
+                    ? 'border-amber-500 text-amber-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                disabled={transactions.length === 0}
+              >
+                <div className="flex items-center space-x-2">
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Analytics</span>
+                  {transactions.length === 0 && (
+                    <span className="text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">
+                      No Data
+                    </span>
+                  )}
+                </div>
+              </button>
+            </nav>
           </div>
+
+          {/* Tab Content */}
+          <div className="p-0">
+            {activeTab === 'overview' && (
+              <div>
+                {/* Transactions Section */}
+                <div className="border-b border-gray-200 p-4">
+                  <h2 className="text-lg font-medium text-gray-800">Transactions</h2>
+                </div>
 
           {/* Search and Filters */}
           <div className="p-4 border-b border-gray-200">
@@ -690,6 +736,19 @@ const WalletPage: React.FC = () => {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+          </div>
+              </div>
+            )}
+
+            {activeTab === 'analytics' && (
+              <div className="p-6">
+                <WalletAnalytics
+                  transactions={transactions}
+                  currentBalance={getAvailableBalance()}
+                  frozenBalance={getFrozenBalance()}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

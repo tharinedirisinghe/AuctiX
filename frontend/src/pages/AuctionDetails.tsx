@@ -1018,7 +1018,11 @@ const AuctionDetailsPage = () => {
         <h2 className="text-lg font-semibold mb-4">Live Chat</h2>
         <p className="text-sm text-gray-500">
           {auctionId ? (
-            <LiveChat auctionId={auctionId} />
+            <LiveChat
+              auctionId={auctionId}
+              type="AUCTION"
+              title="Auction Chat"
+            />
           ) : (
             <div>Sorry chat is unavailable</div>
           )}

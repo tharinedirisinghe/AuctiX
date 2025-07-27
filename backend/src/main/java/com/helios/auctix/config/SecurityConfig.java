@@ -61,10 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws-auction/**").permitAll()
                         .requestMatchers("/api/auctions/**").permitAll()
                         .requestMatchers("/api/feedback/**").permitAll()
-
-
-
-
+                        .requestMatchers("/api/chat/**").permitAll() // checks auth user when needed by the controller
                         .requestMatchers("/api/coins/**").authenticated()
                         .anyRequest().authenticated()
                 )

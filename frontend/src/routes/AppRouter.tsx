@@ -33,6 +33,7 @@ import SecuritySettingsPage from '@/pages/SecuritySettingsPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
 import FeedbackManagement from '@/pages/FeedbackManagement';
 import { NoticePage } from '@/pages/NoticePage';
+import SupportChat from '@/pages/SupportChat';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -185,6 +186,7 @@ export default function AppRouter() {
         <Route path="/user-delivery" element={<UserDeliveryPage />} />
         <Route path="/seller-delivery" element={<SellerDeliveryPage />} />
         <Route path="/seller-reviews" element={<SellerReviews />} />
+        <Route path="/support" element={<SupportChat />} />
 
         <Route path="/403" element={<h2>403 Unauthorized</h2>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />

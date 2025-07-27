@@ -1,6 +1,5 @@
 package com.helios.auctix.controllers;
 
-import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.domain.user.User;
@@ -8,12 +7,11 @@ import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.ChatMessageDTO;
 import com.helios.auctix.mappers.Mapper;
 import com.helios.auctix.repositories.AuctionRepository;
-import com.helios.auctix.services.AuctionService;
+import com.helios.auctix.repositories.chat.ChatRoomRepository;
 import com.helios.auctix.services.ChatService;
 import com.helios.auctix.services.user.UserRegisterService;
 import lombok.extern.java.Log;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -34,6 +32,7 @@ import static java.lang.Thread.sleep;
 public class ChatController {
 
     private final ChatService chatService;
+    private final ChatRoomRepository chatRoomRepository;
     private final UserRegisterService userRegisterService;
     private final AuctionRepository auctionRepository;
     private final Mapper<ChatMessage, ChatMessageDTO> chatMessageDTOMapper;
@@ -41,64 +40,90 @@ public class ChatController {
 
     public ChatController(
             SimpMessagingTemplate messagingTemplate,
-            ChatService chatService,
+            ChatService chatService, ChatRoomRepository chatRoomRepository,
             Mapper<ChatMessage, ChatMessageDTO> chatMessageDTOMapper,
             UserRegisterService userRegisterService,
             AuctionRepository auctionRepository
     ) {
         this.messagingTemplate = messagingTemplate;
         this.chatService = chatService;
+        this.chatRoomRepository = chatRoomRepository;
         this.chatMessageDTOMapper = chatMessageDTOMapper;
         this.userRegisterService = userRegisterService;
         this.auctionRepository = auctionRepository;
     }
 
-    @MessageMapping("/chat.sendMessage/{auctionId}")
-    @SendTo("/topic/auction/{auctionId}/chat")
-    public void sendMessage(@DestinationVariable String auctionId,
-                                      ChatMessageDTO chatMessageDto,
-                                      SimpMessageHeaderAccessor headerAccessor) throws InterruptedException {
+    @MessageMapping("/chat.sendMessage/{chatType}/{id}")
+    public void sendMessage(
+            @DestinationVariable String chatType,
+            @DestinationVariable String id,
+            ChatMessageDTO chatMessageDto,
+            SimpMessageHeaderAccessor headerAccessor
+    ) throws InterruptedException {
 
-//        sleep(500);
-//        return chatMessageDto;
-        // redundant since the interceptor checks it already
         if (headerAccessor.getUser() == null || headerAccessor.getUser() instanceof AnonymousAuthenticationToken) {
             log.severe("Guest users cannot send messages");
             throw new IllegalArgumentException("You must be logged in to send messages");
         }
 
-
-
         String userEmail = headerAccessor.getUser().getName();
-        log.info("Processing message from user: " + userEmail + " for auction: " + auctionId);
+        log.info("Processing message from user: " + userEmail + " for chatType: " + chatType + " and id: " + id);
 
         User sender = userRegisterService.getUserFromEmail(userEmail);
         if (sender == null) {
             throw new IllegalArgumentException("Authenticated user not found.");
         }
 
-        ChatRoom chatRoom = chatService.getChatRoom(auctionId);
-        if (chatRoom == null) {
-            log.warning("ChatRoom not found for the auction id " + auctionId);
-            return;
-        }
+        ChatRoom chatRoom;
 
-        if (sender.getRoleEnum() == UserRoleEnum.SELLER) {
-            UUID sellerId = sender.getSeller().getId();
-            boolean isAuctionByMessagingSeller = auctionRepository.isSellerOwnerOfAuction(UUID.fromString(auctionId), sellerId);
-            log.info("iSAuctionByMessaingSeller" + isAuctionByMessagingSeller);
-            if (!isAuctionByMessagingSeller) {
-                log.warning("The message cannot be send because the seller does not own this auction");
+        switch (chatType.toUpperCase()) {
+            case "AUCTION":
+                // id is auctionId here
+                chatRoom = chatService.getChatRoomByAuctionId(id);
+                if (chatRoom == null) {
+                    log.warning("ChatRoom not found for the auction id " + id);
+                    return;
+                }
+                // Check seller owns auction
+                if (sender.getRoleEnum() == UserRoleEnum.SELLER) {
+                    UUID sellerId = sender.getSeller().getId();
+                    boolean isAuctionByMessagingSeller = auctionRepository.isSellerOwnerOfAuction(UUID.fromString(id), sellerId);
+                    if (!isAuctionByMessagingSeller) {
+                        log.warning("Seller does not own this auction, message rejected");
+                        return;
+                    }
+                }
+                break;
+
+            case "SUPPORT":
+            case "DIRECT":
+            case "GROUP":
+                // id is chatRoomId here
+                chatRoom = chatRoomRepository.findById(UUID.fromString(id)).orElse(null);
+                if (chatRoom == null) {
+                    log.warning("ChatRoom not found for id " + id);
+                    return;
+                }
+                 if (!chatRoomRepository.isUserMemberOfChatRoom(chatRoom.getId(), sender.getId())) {
+                     log.warning("User not authorized in this chat room");
+                     return;
+                 }
+                break;
+
+            default:
+                log.warning("Unknown chat type: " + chatType);
                 return;
-            }
         }
 
         ChatMessage chatMessage = chatMessageDTOMapper.mapFrom(chatMessageDto);
         chatMessage.setSender(sender);
         chatMessage.setChatRoom(chatRoom);
         ChatMessage savedChatMessage = chatService.saveChatMessage(chatMessage);
-        log.info("Saved the chat messaage: " + chatMessage.toString());
+
         ChatMessageDTO responseDto = chatMessageDTOMapper.mapTo(savedChatMessage);
-        messagingTemplate.convertAndSend("/topic/auction/" + auctionId + "/chat", responseDto);
+        String topicDestination = String.format("/topic/chat/%s/%s", chatType.toLowerCase(), id);
+        messagingTemplate.convertAndSend(topicDestination, responseDto);
+
+        log.info("Sent message to topic: " + topicDestination);
     }
 }

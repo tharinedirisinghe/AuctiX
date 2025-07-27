@@ -85,10 +85,11 @@ public class ChatService {
         return true;
     }
 
-    public ChatRoom getChatRoom(String auctionId) {
+    public ChatRoom getChatRoomByAuctionId(String auctionId) {
         try {
+            log.warning("No chat room for auction ID " + auctionId);
             return chatRoomRepository.findChatRoomByAuctionId(UUID.fromString(auctionId))
-                    .orElseThrow(() -> new IllegalStateException("No chat room for auction ID " + auctionId));
+                    .orElse(null);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid auction ID format: " + auctionId);
         }

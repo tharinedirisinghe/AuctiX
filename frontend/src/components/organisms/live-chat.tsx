@@ -12,7 +12,7 @@ import { Label } from '@radix-ui/react-dropdown-menu';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
-const AuctionChat = ({ auctionId }: { auctionId: string }) => {
+const LiveChat = ({ auctionId }: { auctionId: string }) => {
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [messages, setMessages] = useState<ChatMessageProps[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -476,4 +476,4 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   );
 };
 
-export default AuctionChat;
+export default LiveChat;

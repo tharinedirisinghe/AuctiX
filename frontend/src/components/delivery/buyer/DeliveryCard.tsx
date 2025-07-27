@@ -74,7 +74,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
             <Badge
               className={`w-fit flex items-center ${statusInfo.color} border mt-2 sm:mt-0`}
             >
-              {statusInfo.icon}
+              <statusInfo.iconComponent className="w-3 h-3 mr-1" />
               {statusInfo.text}
             </Badge>
           </div>

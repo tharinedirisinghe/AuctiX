@@ -1,5 +1,6 @@
 package com.helios.auctix.dtos;
 
+import com.helios.auctix.domain.user.Seller;
 import com.helios.auctix.domain.user.SellerVerificationRequest;
 import com.helios.auctix.domain.user.SellerVerificationStatusEnum;
 import lombok.AllArgsConstructor;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -25,14 +27,14 @@ public class SellerVerificationRequestSummaryDTO {
     private Instant submittedAt;
 
 
-    public SellerVerificationRequestSummaryDTO(SellerVerificationRequest request, long totalDocumentsSubmitted, long pendingDocumentsCount){
+    public SellerVerificationRequestSummaryDTO(UUID id, String username, String firstName, String lastName , String email, Instant submittedAt ,long totalDocumentsSubmitted, long pendingDocumentsCount, boolean isApprovedAtLeastOne) {
         this.totalDocumentsSubmitted = (int) totalDocumentsSubmitted;
         this.pendingDocumentsCount = (int) pendingDocumentsCount;
-        this.verificationStatus = request.getVerificationStatus();
-        this.sellerFirstName = request.getSeller().getUser().getFirstName();
-        this.sellerLastName = request.getSeller().getUser().getLastName();
-        this.username = request.getSeller().getUser().getUsername();
-        this.email = request.getSeller().getUser().getEmail();
-        this.submittedAt = request.getCreatedAt();
+        this.verificationStatus = isApprovedAtLeastOne? SellerVerificationStatusEnum.APPROVED : SellerVerificationStatusEnum.PENDING;
+        this.sellerFirstName = firstName;
+        this.sellerLastName = lastName;
+        this.username = username;
+        this.email = email;
+        this.submittedAt = submittedAt;
     }
 }

@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -181,7 +183,7 @@ public class AdminController {
     public ResponseEntity<Page<SellerVerificationRequestSummaryDTO>> getSellerVerificationRequests(
             @RequestParam(value = "limit", required = false, defaultValue = "10") Integer limit,
             @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset,
-            @RequestParam(value = "sortBy", required = false, defaultValue = "id") String sortBy,
+            @RequestParam(value = "sortBy", required = false, defaultValue = "submittedAt") String sortBy,
             @RequestParam(value = "order", required = false, defaultValue = "asc") String order,
             @RequestParam(value = "filterBy", required = false, defaultValue = "") String filterBy,
             @RequestParam(value = "filterValue", required = false, defaultValue = "") String filterValue,
@@ -194,6 +196,23 @@ public class AdminController {
         logger.info("Retrieving sellers verification summary");
         if (!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
             throw new InvalidUserException("Invalid role");
+        }
+
+        // decode from url encoded parameters
+        if (search != null) {
+            search = URLDecoder.decode(search, StandardCharsets.UTF_8);
+        }
+        if (filterBy != null) {
+            filterBy = URLDecoder.decode(filterBy, StandardCharsets.UTF_8);
+        }
+        if (sortBy != null) {
+            sortBy = URLDecoder.decode(sortBy, StandardCharsets.UTF_8);
+        }
+        if (order != null) {
+            order = URLDecoder.decode(order, StandardCharsets.UTF_8);
+        }
+        if (filterValue != null) {
+            filterValue = URLDecoder.decode(filterValue, StandardCharsets.UTF_8);
         }
 
         Page<SellerVerificationRequestSummaryDTO> summary = sellerService.getSellerVerificationSummary(search,filterBy,filterValue,offset,limit,sortBy,order);

@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -131,14 +132,40 @@ public class SellerService {
             sortBy = "createdAt";
             sortDirection = "desc";
         }
-        List<String> sortableFields = List.of("createdAt", "verificationStatus", "sellerFirstName", "sellerLastName", "sellerEmail");
-        //TODO: validate sortBy add support for multiple sortBy fields
+        Map<String, String> SORT_FIELD_MAPPINGS = Map.of(
+                "submittedAt", "createdAt",
+                "verificationStatus", "isApproved",
+                "sellerFirstName", "u.firstName",
+                "sellerLastName", "u.lastName",
+                "email", "u.email",
+                "username", "u.username",
+                "documentsSubmitted", "pendingCount"
+        );
+
+        if(SORT_FIELD_MAPPINGS.containsKey(sortBy)){
+            sortBy = SORT_FIELD_MAPPINGS.get(sortBy);
+        } else {
+            throw new IllegalArgumentException("Invalid sortBy value: " + sortBy);
+        }
+
+        Map<String,String> FILTER_FIELD_MAPPINGS = Map.of(
+                "verificationStatus", "r.verificationStatus"
+        );
+
+        // validate filterBy and filterValue
+        // sample values filterBy=[%22verificationStatus%22]
+        // filterValue=[[%22PENDING%22,%22APPROVED%22]]
+
+
+        if(filterBy != null && !filterBy.isEmpty() && !FILTER_FIELD_MAPPINGS.containsKey(filterBy)){
+            throw new IllegalArgumentException("Invalid filterBy value: " + filterBy);
+        }
 
         Pageable pageable = PageRequest.of(page, size,
                 sortDirection.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
 
         SellerVerificationStatusEnum status = null;
-        if ( filterBy != null ) {
+        if ( filterBy != null && !filterBy.isEmpty() ) {
             switch (filterBy){
                 case "verificationStatus" -> {
                     if (filterValue != null && !filterValue.isEmpty()) {
@@ -150,6 +177,10 @@ public class SellerService {
                 }
 
             }
+        }
+        else{
+            filterBy = null;
+            filterValue = null;
         }
 
         if (search == null || search.isEmpty()) {

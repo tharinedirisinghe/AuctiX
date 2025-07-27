@@ -19,28 +19,36 @@ public interface SellerVerificationRequestRepository extends JpaRepository<Selle
 
     List<SellerVerificationRequest> findAllBySellerId(UUID id);
 
+
     @Query("""
     SELECT new com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO(
-        r,
-        (SELECT COUNT(r2) FROM SellerVerificationRequest r2 WHERE r2.seller.id = r.seller.id),
-        (SELECT COUNT(r3) FROM SellerVerificationRequest r3 
-         WHERE r3.seller.id = r.seller.id 
-         AND r3.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.PENDING
-         AND r3.createdAt <= r.createdAt)
+        u.id,
+        u.firstName,
+        u.lastName,
+        u.username,
+        u.email,
+        (SELECT MAX(r.createdAt) FROM SellerVerificationRequest r WHERE r.seller.user.id = u.id) As createdAt,
+        (SELECT COUNT(r) FROM SellerVerificationRequest r WHERE r.seller.user.id = u.id) As totalRequests,
+        (SELECT COUNT(r) FROM SellerVerificationRequest r 
+         WHERE r.seller.user.id = u.id 
+         AND r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.PENDING) As pendingCount,
+        (SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END
+         FROM SellerVerificationRequest r
+         WHERE r.seller.user.id = u.id
+         AND r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED) As isApproved
     )
-    FROM SellerVerificationRequest r
-    JOIN r.seller s
-    JOIN s.user u
-    WHERE
-        (:search IS NULL OR 
-         LOWER(u.firstName) LIKE LOWER(CONCAT('%', COALESCE(:search, ''), '%')) OR 
-         LOWER(u.lastName) LIKE LOWER(CONCAT('%', COALESCE(:search, ''), '%')) OR 
-         LOWER(u.email) LIKE LOWER(CONCAT('%', COALESCE(:search, ''), '%')))
-    AND (:statusFilter IS NULL OR r.verificationStatus = :statusFilter)
+    FROM User u
+    WHERE EXISTS (
+        SELECT 1 FROM SellerVerificationRequest r 
+        JOIN r.seller s 
+        WHERE s.user = u
+        AND (:search IS NULL OR :search = '' OR
+             LOWER(CONCAT(u.firstName, ' ', u.lastName, ' ', u.email)) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (:statusFilter IS NULL OR r.verificationStatus = :statusFilter)
+    )
 """)
     Page<SellerVerificationRequestSummaryDTO> searchAndFilter(
             @Param("search") String search,
             @Param("statusFilter") SellerVerificationStatusEnum statusFilter,
-            Pageable pageable
-    );
+            Pageable pageable);
 }

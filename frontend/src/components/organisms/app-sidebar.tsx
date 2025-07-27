@@ -65,6 +65,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               url: '/admin-management',
               roles: ['SUPER_ADMIN'],
             },
+            {
+              title: 'Seller Verification',
+              url: '/seller-verification-management',
+              roles: ['ADMIN', 'SUPER_ADMIN'],
+            },
           ],
         },
         {

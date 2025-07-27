@@ -9,9 +9,6 @@ import AxiosReqest from '@/services/axiosInspector';
 import { Skeleton } from '../ui/skeleton';
 import { assets } from '@/config/assets';
 import RoleFilterDropdown from '../molecules/RoleFilterDropdown';
-import { IUser } from '@/types/IUser';
-import { useToast } from '@/hooks/use-toast';
-
 import AdminActionsDropDown from '../molecules/AdminActionsDropDown';
 
 interface IProfilePhoto {
@@ -41,10 +38,6 @@ export default function UserDataTable() {
   const [filterValue, setFilterValue] = useState<string[][]>([
     ['BIDDER', 'SELLER', 'ADMIN', 'SUPER_ADMIN'],
   ]);
-  const [filterByQuery, setFilterByQuery] = useState<string | null>('role');
-  const [filterValueQuery, setFilterValueQuery] = useState<string | null>(
-    '(BIDDER,SELLER,ADMIN)',
-  );
   const [limit, setLimit] = useState<number>(10);
   const [offset, setOffset] = useState<number>(0);
   const [search, setSearch] = useState<string | null>(null);
@@ -134,8 +127,6 @@ export default function UserDataTable() {
         console.log('[filterByHandler] clearing filters');
         setFilterBy([]);
         setFilterValue([]);
-        setFilterByQuery(null);
-        setFilterValueQuery(null);
         return;
       }
 
@@ -365,7 +356,7 @@ export default function UserDataTable() {
       id: 'actions',
       enableHiding: false,
       cell: ({ row }) => {
-        return <AdminActionsDropDown row={row} />;
+        return <AdminActionsDropDown username={row.getValue('username')} />;
       },
     },
   ];

@@ -33,6 +33,8 @@ import SecuritySettingsPage from '@/pages/SecuritySettingsPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
 import FeedbackManagement from '@/pages/FeedbackManagement';
 import { NoticePage } from '@/pages/NoticePage';
+import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
+import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -122,6 +124,17 @@ export default function AppRouter() {
                 redirectPath="/403"
               >
                 <User />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seller-verification-management"
+            element={
+              <ProtectedRoute
+                allowedUsers={['ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <SellerVerificationMngPage />
               </ProtectedRoute>
             }
           />

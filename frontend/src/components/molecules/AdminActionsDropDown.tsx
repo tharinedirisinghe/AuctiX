@@ -12,7 +12,11 @@ import { useAppDispatch } from '@/store/hooks';
 import { AdminToolsEnum } from '../organisms/AdminTools';
 import { openTool } from '@/store/slices/adminToolsSlice';
 
-export default function AdminActionsDropDown({ row }: { row: any }) {
+export default function AdminActionsDropDown({
+  username,
+}: {
+  username: string;
+}) {
   const appDispatch = useAppDispatch();
 
   return (
@@ -26,9 +30,7 @@ export default function AdminActionsDropDown({ row }: { row: any }) {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem
-          onClick={() =>
-            navigator.clipboard.writeText(row.getValue('username'))
-          }
+          onClick={() => navigator.clipboard.writeText(username)}
         >
           Copy Username
         </DropdownMenuItem>
@@ -37,7 +39,7 @@ export default function AdminActionsDropDown({ row }: { row: any }) {
           onClick={() =>
             appDispatch(
               openTool({
-                user: row.original.username,
+                user: username,
                 tool: AdminToolsEnum.REMOVE_PROFILE_PICTURE,
               }),
             )
@@ -49,7 +51,7 @@ export default function AdminActionsDropDown({ row }: { row: any }) {
           onClick={() =>
             appDispatch(
               openTool({
-                user: row.original.username,
+                user: username,
                 tool: AdminToolsEnum.BAN_USER,
               }),
             )

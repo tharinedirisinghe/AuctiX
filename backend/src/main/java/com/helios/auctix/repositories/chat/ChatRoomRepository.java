@@ -17,4 +17,7 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
     void addUserToChatRoom(UUID chatRoomId, UUID userId);
 
     Optional<ChatRoom> findChatRoomByAuctionId(UUID auctionId);
+
+    @Query(value = "SELECT EXISTS(SELECT 1 FROM chat_room_participants WHERE chat_room_id = :chatRoomId AND user_id = :userId)", nativeQuery = true)
+    boolean isUserMemberOfChatRoom(UUID chatRoomId, UUID userId);
 }

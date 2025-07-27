@@ -3,6 +3,7 @@ package com.helios.auctix.services;
 import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
+import com.helios.auctix.domain.chat.ChatRoomType;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.chat.ChatMessageRepository;
@@ -37,13 +38,12 @@ public class ChatService {
     }
 
     @Transactional
-    public boolean joinChatRoom (User user, UUID auctionId) {
-
-        Optional<ChatRoom> chatRoomOpt = this.chatRoomRepository.findChatRoomByAuctionId(auctionId);
+    public boolean joinChatRoom(User user, UUID auctionId) {
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findChatRoomByAuctionId(auctionId);
         ChatRoom chatRoom;
 
         if (chatRoomOpt.isEmpty()) {
-            log.severe("There isn't a chat room for the given chatroom id, creating one");
+            log.warning("There isn't a chat room for the given auction, creating one");
             chatRoom = createChatRoomForAuction(auctionId);
         } else {
             chatRoom = chatRoomOpt.get();
@@ -52,7 +52,35 @@ public class ChatService {
         // "ON CONFLICT DO NOTHING" in the query means if the user is already in the chat room, the insert is ignored.
         chatRoomRepository.addUserToChatRoom(chatRoom.getId(), user.getId());
 
-        log.info("User" + user.getId() + " entered the chat room" + chatRoom.getId());
+        log.info("User " + user.getId() + " entered the chat room " + chatRoom.getId());
+
+        return true;
+    }
+
+    @Transactional
+    public boolean joinChatRoom(User user, UUID chatRoomId, ChatRoomType chatRoomType) {
+        if (chatRoomType == ChatRoomType.AUCTION) {
+            throw new IllegalArgumentException("Use joinChatRoom(User, UUID auctionId) for auction chat rooms.");
+        }
+
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findById(chatRoomId);
+        ChatRoom chatRoom;
+
+        if (chatRoomOpt.isEmpty()) {
+            log.warning("There isn't a chat room for the given ID, creating one");
+
+            chatRoom = ChatRoom.builder()
+                    .type(chatRoomType)
+                    .build();
+
+            chatRoom = chatRoomRepository.save(chatRoom);
+        } else {
+            chatRoom = chatRoomOpt.get();
+        }
+
+        chatRoomRepository.addUserToChatRoom(chatRoom.getId(), user.getId());
+
+        log.info("User " + user.getId() + " entered the chat room " + chatRoom.getId());
 
         return true;
     }
@@ -105,6 +133,7 @@ public class ChatService {
         }
 
         ChatRoom chatRoom = ChatRoom.builder()
+                .type(ChatRoomType.AUCTION)
                 .auction(auction)
                 .build();
 

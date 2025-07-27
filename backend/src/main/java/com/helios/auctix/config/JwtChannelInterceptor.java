@@ -1,18 +1,18 @@
 package com.helios.auctix.config;
 
 import com.helios.auctix.domain.auction.Auction;
+import com.helios.auctix.domain.chat.ChatRoomType;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.UserRepository;
+import com.helios.auctix.repositories.chat.ChatRoomRepository;
 import com.helios.auctix.services.ChatService;
 import com.helios.auctix.services.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -26,7 +26,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,14 +39,18 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     private final UserRepository userRepository;
     private final ChatService chatService;
     private final AuctionRepository auctionRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
-    private static final Pattern AUCTION_ID_PATTERN = Pattern.compile("/topic/auction/([^/]+)/chat");
+    private static final Pattern AUCTION_CHAT_PATTERN = Pattern.compile("/topic/auction/([^/]+)/chat");
+    private static final Pattern PRIVATE_CHAT_PATTERN = Pattern.compile("/topic/chat/private/([^/]+)");
+    private static final Pattern GROUP_CHAT_PATTERN = Pattern.compile("/topic/chat/group/([^/]+)");
+    private static final Pattern SUPPORT_CHAT_PATTERN = Pattern.compile("/topic/chat/support/([^/]+)");
+
     private static final String ANONYMOUS_KEY = "GUEST_USER";
     private static final int AUCTION_CHAT_CUTOFF_AFTER_HOURS = 3;
 
     // Store session ID to authentication mapping
     private final Map<String, Authentication> sessionAuthMap = new HashMap<>();
-
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -57,63 +60,41 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             return message;
         }
 
-        // === Allow SockJS handshake/info requests to pass through ===
         if (accessor.getCommand() == null) {
             return message;
         }
-        // === End block ===
 
         String sessionId = accessor.getSessionId();
         log.info("Processing message type: " + accessor.getCommand() + " for session: " + sessionId);
-/*
-@Component
-public class JwtChannelInterceptor implements ChannelInterceptor {
 
-    @Override
-    public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
-
-        // Allow SockJS handshake (paths like /ws-auction/info)
-        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            String endpoint = accessor.getNativeHeader("stompEndpoint").get(0);
-            if (endpoint.contains("/info")) {
-                return message; // Skip authentication for SockJS handshake
-            }
-        }
-
-        // Your existing JWT validation logic for other messages
-        // ...
-    }
-}
-
- */
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             try {
-
                 String authHeader = accessor.getFirstNativeHeader("Authorization");
-                String auctionId = accessor.getFirstNativeHeader("auctionId");
-                Matcher matcher = AUCTION_ID_PATTERN.matcher(auctionId != null ? auctionId : "");
+                String auctionIdHeader = accessor.getFirstNativeHeader("auctionId");
 
-                if (matcher.find()) {
-                    auctionId = matcher.group(1);
+                // Extract auctionId from header if it matches pattern, else fallback to header as UUID string directly
+                String auctionId = null;
+                if (auctionIdHeader != null && !auctionIdHeader.isBlank()) {
+                    Matcher matcher = AUCTION_CHAT_PATTERN.matcher(auctionIdHeader);
+                    if (matcher.find()) {
+                        auctionId = matcher.group(1);
+                    } else {
+                        auctionId = auctionIdHeader.trim();
+                    }
                 }
 
-                    Authentication auth = null;
+                Authentication auth = null;
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7).trim();
-
-                    if (token != null && !token.isEmpty()) {
-
+                    if (!token.isEmpty()) {
                         auth = authenticateUser(token, auctionId);
                     }
                 }
 
                 if (auth == null) {
-                    // anonymous authentication for guest/non-logged in readonly users
                     auth = createAnonymousAuthentication();
                 }
 
-                // Store the authentication with the session ID
                 sessionAuthMap.put(sessionId, auth);
                 accessor.setUser(auth);
 
@@ -124,7 +105,6 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                 accessor.setUser(auth);
             }
         }
-
         else if (sessionId != null) {
             Authentication auth = sessionAuthMap.get(sessionId);
             if (auth != null) {
@@ -133,16 +113,18 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             }
 
             if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                if (auth == null || auth instanceof AnonymousAuthenticationToken) {
+                    log.warning("Anonymous user trying to subscribe - reject");
+                    return null; // Reject anonymous subscriptions
+                }
                 handleSubscribe(accessor, auth);
             }
-
             else if (StompCommand.SEND.equals(accessor.getCommand())) {
                 if (auth == null || auth instanceof AnonymousAuthenticationToken) {
                     log.warning("Unauthenticated user attempting to send message - rejected");
                     return null; // Reject the message
                 }
             }
-
             else if (StompCommand.DISCONNECT.equals(accessor.getCommand())) {
                 sessionAuthMap.remove(sessionId);
                 log.info("Removed chat session with id: " + sessionId);
@@ -163,70 +145,55 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                     return null;
                 }
 
-                Optional<Auction> auction = auctionRepository.findById(UUID.fromString(auctionId));
-                if (!auction.isPresent()) {
-                    return null;
-                }
-
-
-                Instant cutoffTime = Instant.now().minus(Duration.ofHours(AUCTION_CHAT_CUTOFF_AFTER_HOURS));
-                if (auction.get().getEndTime().isBefore(cutoffTime)) {
-                    return null;
-                }
-
-
-                log.info("check cutoff time");
-
-
-
-
-                if (!user.getRoleEnum().equals(UserRoleEnum.BIDDER)) {
-                    if (user.getRoleEnum().equals(UserRoleEnum.SELLER)) {
-                        if (auctionId == null || auctionId.isBlank()) {
-                            log.warning("Auction ID is required for seller authentication.");
-                            return null;
-                        }
-
-                        UUID sellerID = user.getSeller().getId();
-                        boolean isSellerOwnedAuction = auctionRepository.isSellerOwnerOfAuction(
-                                UUID.fromString(auctionId),
-                                sellerID
-                        );
-
-                        log.info("Seller ownership check for auction " + auctionId + ": " + isSellerOwnedAuction);
-
-                        if (!isSellerOwnedAuction) {
-                            return null;
-                        }
-                    } else {
+                if (auctionId != null && !auctionId.isBlank()) {
+                    Optional<Auction> auction = auctionRepository.findById(UUID.fromString(auctionId));
+                    if (!auction.isPresent()) {
+                        log.warning("Auction not found: " + auctionId);
                         return null;
                     }
+
+                    Instant cutoffTime = Instant.now().minus(Duration.ofHours(AUCTION_CHAT_CUTOFF_AFTER_HOURS));
+                    if (auction.get().getEndTime().isBefore(cutoffTime)) {
+                        log.warning("Auction chat cutoff time exceeded for auction: " + auctionId);
+                        return null;
+                    }
+
+                    if (!user.getRoleEnum().equals(UserRoleEnum.BIDDER)) {
+                        if (user.getRoleEnum().equals(UserRoleEnum.SELLER)) {
+                            UUID sellerID = user.getSeller().getId();
+                            boolean isSellerOwnedAuction = auctionRepository.isSellerOwnerOfAuction(UUID.fromString(auctionId), sellerID);
+                            if (!isSellerOwnedAuction) {
+                                log.warning("Seller does not own auction: " + auctionId);
+                                return null;
+                            }
+                        } else {
+                            log.warning("User role not authorized for auction chat: " + user.getRoleEnum());
+                            return null;
+                        }
+                    }
+                } else {
+                    log.info("Non-auction chat authentication for user: " + userEmail);
                 }
 
                 List<GrantedAuthority> authorities = List.of(
                         new SimpleGrantedAuthority("ROLE_" + user.getRoleEnum().name())
                 );
 
-                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                return new UsernamePasswordAuthenticationToken(
                         userEmail,
                         null,
                         authorities
                 );
-
-                log.info("WebSocket authentication successful for user: " + userEmail);
-                return authentication;
             }
         } catch (Exception e) {
             log.warning("Authentication failed: " + e.getMessage());
         }
-
         return null;
     }
 
-
     private Authentication createAnonymousAuthentication() {
         String guestId = "guest-" + UUID.randomUUID().toString().substring(0, 8);
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_GUEST"));  // so it's actually not a role in the db, doesnt have to be?
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_GUEST"));
 
         Authentication authentication = new AnonymousAuthenticationToken(
                 ANONYMOUS_KEY, guestId, authorities);
@@ -235,34 +202,83 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     }
 
     private void handleSubscribe(StompHeaderAccessor accessor, Authentication auth) {
-        if (auth != null && !(auth instanceof AnonymousAuthenticationToken)) {
-            String destination = accessor.getDestination();
-            Matcher matcher = AUCTION_ID_PATTERN.matcher(destination != null ? destination : "");
+        String destination = accessor.getDestination();
+        String userEmail = auth.getName();
 
-            if (matcher.find()) {
-                String auctionId = matcher.group(1);
-                String userEmail = auth.getName();
+        User user = userRepository.findByEmail(userEmail);
+        if (user == null) {
+            log.warning("User not found during subscribe: " + userEmail);
+            return;
+        }
 
-                try {
-                    User user = userRepository.findByEmail(userEmail);
-                    if (user != null && auctionId != null) {
-                        if (user.getRoleEnum().equals(UserRoleEnum.SELLER)) {
-                            // check if this chat is
-                            boolean isSellerOwnedAuction = auctionRepository.isSellerOwnerOfAuction(UUID.fromString(auctionId), user.getSeller().getId());
-                            if (!isSellerOwnedAuction) {
-                                return;
-                            }
-                        }
+        if (destination == null) {
+            log.warning("Null destination during subscribe");
+            return;
+        }
 
-                        log.info("Auto joining user " + userEmail + " to chat room for auction: " + auctionId);
-                        chatService.joinChatRoom(user, UUID.fromString(auctionId));
+        try {
+            Matcher auctionMatcher = AUCTION_CHAT_PATTERN.matcher(destination);
+            Matcher privateChatMatcher = PRIVATE_CHAT_PATTERN.matcher(destination);
+            Matcher groupChatMatcher = GROUP_CHAT_PATTERN.matcher(destination);
+            Matcher supportChatMatcher = SUPPORT_CHAT_PATTERN.matcher(destination);
+
+            if (auctionMatcher.find()) {
+                String auctionId = auctionMatcher.group(1);
+
+                if (user.getRoleEnum().equals(UserRoleEnum.SELLER)) {
+                    boolean isSellerOwnedAuction = auctionRepository.isSellerOwnerOfAuction(UUID.fromString(auctionId), user.getSeller().getId());
+                    if (!isSellerOwnedAuction) {
+                        log.warning("Seller user " + userEmail + " not owner of auction " + auctionId);
+                        return;
                     }
-                } catch (Exception e) {
-                    log.warning("Error joining chat room: " + e.getMessage());
                 }
+
+                log.info("Joining auction chat room for user " + userEmail + " auction: " + auctionId);
+                chatService.joinChatRoom(user, UUID.fromString(auctionId));
             }
-        } else {
-            log.info("Guest user subscribing to chat (read only)");
+            else if (privateChatMatcher.find()) {
+                String chatId = privateChatMatcher.group(1);
+                if (!isUserMemberOfChatRoom(user, chatId)) {
+                    log.warning("User " + userEmail + " not authorized for private chat: " + chatId);
+                    return;
+                }
+                log.info("Joining private chat room " + chatId + " for user " + userEmail);
+                chatService.joinChatRoom(user, UUID.fromString(chatId), ChatRoomType.PRIVATE);
+            }
+            else if (groupChatMatcher.find()) {
+                String groupId = groupChatMatcher.group(1);
+                if (!isUserMemberOfChatRoom(user, groupId)) {
+                    log.warning("User " + userEmail + " not authorized for group chat: " + groupId);
+                    return;
+                }
+                log.info("Joining group chat room " + groupId + " for user " + userEmail);
+                chatService.joinChatRoom(user, UUID.fromString(groupId), ChatRoomType.GROUP);
+            }
+            else if (supportChatMatcher.find()) {
+                String chatRoomId = supportChatMatcher.group(1);
+                if (!isUserMemberOfChatRoom(user, chatRoomId)) {
+                    log.warning("User " + userEmail + " not authorized for chat room: " + chatRoomId);
+                    return;
+                }
+                log.info("Joining generic chat room " + chatRoomId + " for user " + userEmail);
+                chatService.joinChatRoom(user, UUID.fromString(chatRoomId), ChatRoomType.SUPPORT);
+            }
+            else {
+                log.info("Unknown chat subscription destination: " + destination);
+            }
+        } catch (Exception e) {
+            log.warning("Error joining chat room: " + e.getMessage());
+        }
+    }
+
+
+    private boolean isUserMemberOfChatRoom(User user, String chatRoomId) {
+        try {
+            UUID uuid = UUID.fromString(chatRoomId);
+            return chatRoomRepository.isUserMemberOfChatRoom(uuid, user.getId());
+        } catch (IllegalArgumentException e) {
+            log.warning("Invalid chatRoomId UUID format: " + chatRoomId);
+            return false;
         }
     }
 }

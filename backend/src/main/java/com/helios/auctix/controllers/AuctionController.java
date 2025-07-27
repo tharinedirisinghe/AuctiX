@@ -257,6 +257,8 @@ public class AuctionController {
 
             Auction createdAuction = auctionService.createAuction(auction);
 
+
+
             log.info("Auction created successfully with ID: " + createdAuction.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdAuction);
 

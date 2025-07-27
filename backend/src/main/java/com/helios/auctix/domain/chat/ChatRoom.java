@@ -42,4 +42,8 @@ public class ChatRoom {
     public void prePersist() {
         this.id = UUID.randomUUID();  // so it won't give an error when we try to save a chat room without an id
     }
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "chat_room_type")
+    private ChatRoomType type;
 }

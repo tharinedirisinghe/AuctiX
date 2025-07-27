@@ -84,15 +84,13 @@ export const getAllowedNextStatuses = (currentStatus: string): string[] => {
   const currentOrder = getStatusOrder(currentStatus);
   const allowedStatuses: string[] = [];
   
-  // Add statuses that are equal or ahead in progression
-  for (let i = currentOrder; i < STATUS_ORDER.length; i++) {
-    allowedStatuses.push(STATUS_ORDER[i]);
+  // Only add the immediate next status, not all future ones
+  if (currentOrder < STATUS_ORDER.length - 1) {
+    allowedStatuses.push(STATUS_ORDER[currentOrder + 1]);
   }
   
-  // Always allow CANCELLED
-  if (!allowedStatuses.includes('CANCELLED')) {
-    allowedStatuses.push('CANCELLED');
-  }
+  // Always allow CANCELLED from any status
+  allowedStatuses.push('CANCELLED');
   
   return allowedStatuses;
 };
@@ -102,12 +100,14 @@ export const isStatusButtonDisabled = (currentStatus: string, targetStatus: stri
   const normalizedCurrent = currentStatus?.toUpperCase();
   const normalizedTarget = targetStatus?.toUpperCase();
   
-  // Button is disabled if:
-  // 1. It's the current status
-  // 2. The target status is before the current status in progression (going backwards)
+  // Button is disabled if it's the current status
   if (normalizedCurrent === normalizedTarget) {
     return true;
   }
   
-  return !isStatusChangeAllowed(currentStatus, targetStatus);
+  // Get allowed next statuses
+  const allowedStatuses = getAllowedNextStatuses(currentStatus);
+  
+  // Button is disabled if the target status is not in the allowed next statuses
+  return !allowedStatuses.includes(normalizedTarget);
 };

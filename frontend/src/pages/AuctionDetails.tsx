@@ -981,7 +981,9 @@ const AuctionDetailsPage = () => {
             className="p-4 border rounded-md mt-2"
           >
             <h2 className="text-lg font-semibold mb-4">About this product</h2>
-            <p className="text-sm text-gray-600 mb-4">{product.description}</p>
+            <div className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">
+              {product.description}
+            </div>
           </TabsContent>
 
           <TabsContent

@@ -359,6 +359,29 @@ public class DeliveryService {
         deliveryRepository.delete(delivery);
     }
 
+    @Transactional
+    public DeliveryDTO requestAddress(UUID id, User currentUser) {
+        logger.info("Requesting address for delivery: " + id);
+
+        Delivery delivery = deliveryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Delivery not found"));
+
+        // Check if user is seller of the delivery or admin
+        boolean isAuthorized = delivery.getSeller().getId().equals(currentUser.getId()) ||
+                currentUser.getRoleEnum() == UserRoleEnum.ADMIN ||
+                currentUser.getRoleEnum() == UserRoleEnum.SUPER_ADMIN;
+
+        if (!isAuthorized) {
+            throw new IllegalArgumentException("Only the seller or admin can request address for this delivery");
+        }
+
+        // Set address requested flag
+        delivery.setAddressRequested(true);
+        delivery = deliveryRepository.save(delivery);
+
+        return mapToDTO(delivery);
+    }
+
     // Helper method to map Delivery entity to DeliveryDTO
     private DeliveryDTO mapToDTO(Delivery delivery) {
         DeliveryDTO dto = DeliveryDTO.builder()
@@ -375,14 +398,25 @@ public class DeliveryService {
                 .notes(delivery.getNotes())
                 .amount(delivery.getAmount())
                 .trackingNumber(delivery.getTrackingNumber())
+                .addressRequested(delivery.getAddressRequested())
                 .createdAt(delivery.getCreatedAt())
                 .updatedAt(delivery.getUpdatedAt())
                 .build();
 
-        // Try to get buyer location from user address if available
+        // Try to get buyer address from user address table if available
         UserAddress buyerAddress = delivery.getBuyer().getUserAddress();
         if (buyerAddress != null) {
+            // Set buyer location
             dto.setBuyerLocation(buyerAddress.getCity() + ", " + buyerAddress.getCountry());
+            
+            // If delivery doesn't have address or has placeholder text, use buyer's actual address
+            if (delivery.getDeliveryAddress() == null || 
+                delivery.getDeliveryAddress().contains("Address not provided") ||
+                delivery.getDeliveryAddress().trim().isEmpty()) {
+                
+                String fullAddress = getBuyerDeliveryAddress(delivery.getBuyer());
+                dto.setDeliveryAddress(fullAddress);
+            }
         }
 
         // Try to get auction image if available

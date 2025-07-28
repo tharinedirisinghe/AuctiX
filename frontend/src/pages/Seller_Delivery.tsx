@@ -11,6 +11,7 @@ import {
   selectDeliveryError,
   clearDeliveryError,
 } from '@/store/slices/deliverySlice';
+import { requestDeliveryAddress } from '@/services/deliveryService';
 import { AppDispatch } from '@/store/store'; // Added missing import
 import { toast } from '@/components/ui/use-toast';
 import { Delivery } from '@/services/deliveryService';
@@ -254,6 +255,26 @@ const SellerDeliveryPage = () => {
     setSearchTerm('');
   };
 
+  // Request address from buyer
+  const handleRequestAddress = async (id: string) => {
+    try {
+      await requestDeliveryAddress(id);
+      toast({
+        title: 'Address Requested',
+        description: 'The buyer has been notified to provide their delivery address.',
+        variant: 'default',
+      });
+      // Refresh deliveries to update the UI
+      dispatch(fetchSellerDeliveries());
+    } catch (error) {
+      toast({
+        title: 'Request Failed',
+        description: 'Could not request address from buyer. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Refresh deliveries
   const handleRefresh = () => {
     dispatch(clearDeliveryError());
@@ -331,6 +352,7 @@ const SellerDeliveryPage = () => {
                 handleUpdateStatus={handleUpdateStatus}
                 openDatePicker={openDatePicker}
                 viewDeliveryDetails={viewDeliveryDetails}
+                handleRequestAddress={handleRequestAddress}
                 isLoading={isLoading}
               />
             ))}

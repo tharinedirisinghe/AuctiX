@@ -1,14 +1,29 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import SupportChatList from '@/components/molecules/SupportChatList';
-import SupportChatView from '@/components/organisms/SupportChatView';
+import LiveChat from '@/components/organisms/live-chat';
+
+interface OpenChatMetaData {
+  id: string;
+  name: string;
+}
 
 export default function AdminSupportChatManager() {
+  const [openChats, setOpenChats] = useState<OpenChatMetaData[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+
+  const openChat = (id: string, name: string) => {
+    const alreadyOpen = openChats.some((chat) => chat.id === id);
+
+    if (!alreadyOpen) {
+      setOpenChats([...openChats, { id, name }]);
+    }
+
+    setSelectedChatId(id);
+  };
 
   return (
     <div className="flex h-screen max-h-screen bg-white text-gray-900">
-      {/* Left Sidebar: Chat list */}
       <div className="w-96 border-r border-gray-200 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
           <h2 className="text-lg font-semibold">Support Chats</h2>
@@ -24,20 +39,31 @@ export default function AdminSupportChatManager() {
         </div>
 
         <div className="flex-grow overflow-auto">
-          <SupportChatList onSelectChat={setSelectedChatId} />
+          <SupportChatList onSelectChat={openChat} />
         </div>
       </div>
 
-      {/* Right Content: Chat View */}
-      <main className="flex-grow bg-gray-50 flex flex-col">
-        {selectedChatId ? (
-          <SupportChatView chatRoomId={selectedChatId} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <p>Select a chat from the list to start messaging</p>
+      <div className="flex-1 relative">
+        {openChats.map((chat) => (
+          <div
+            key={chat.id}
+            className={chat.id === selectedChatId ? 'block' : 'hidden'}
+            style={{ height: '100%' }}
+          >
+            <LiveChat
+              chatRoomId={chat.id}
+              type="SUPPORT"
+              title={chat.name}
+              limitUIHeight={false}
+            />
+          </div>
+        ))}
+        {!selectedChatId && (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            Select a chat from the left to start
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

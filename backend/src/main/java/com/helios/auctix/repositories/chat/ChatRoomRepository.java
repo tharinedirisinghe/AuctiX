@@ -63,6 +63,11 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
         JOIN chat_room_participants crp ON cr.id = crp.chat_room_id
         JOIN users u ON crp.user_id = u.id
         JOIN user_roles ur ON u.role_id = ur.id
+        JOIN (
+            SELECT cm.chat_room_id, MAX(cm.timestamp) AS latest_timestamp
+            FROM chat_messages cm
+            GROUP BY cm.chat_room_id
+        ) latest ON latest.chat_room_id = cr.id
         WHERE cr.chat_room_type = 'SUPPORT'
         AND (ur.role_name = 'SELLER' OR ur.role_name = 'BIDDER')
         AND (
@@ -70,7 +75,7 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
             OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :search, '%'))
         )
-        ORDER BY cr.id DESC
+        ORDER BY latest.latest_timestamp DESC
         LIMIT :limit OFFSET :offset
         """,
         nativeQuery = true

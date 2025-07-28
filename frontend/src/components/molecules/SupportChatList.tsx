@@ -16,7 +16,7 @@ interface SupportChatDTO {
 export default function SupportChatList({
   onSelectChat,
 }: {
-  onSelectChat: (id: string) => void;
+  onSelectChat: (id: string, name: string) => void;
 }) {
   const [supportChats, setSupportChats] = useState<SupportChatDTO[]>([]);
   const [search, setSearch] = useState('');
@@ -67,7 +67,12 @@ export default function SupportChatList({
               <Card
                 key={chat.chatId}
                 className="p-3 cursor-pointer hover:bg-gray-100 transition rounded-md shadow-sm"
-                onClick={() => onSelectChat(chat.chatId)}
+                onClick={() =>
+                  onSelectChat(
+                    chat.chatId,
+                    `Support Chat - @${chat.username}  ${chat.role.toLowerCase()}`,
+                  )
+                }
               >
                 <p className="font-semibold truncate" title={chat.fullName}>
                   {chat.fullName}{' '}

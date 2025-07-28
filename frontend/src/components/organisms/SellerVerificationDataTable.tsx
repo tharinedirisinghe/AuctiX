@@ -1,6 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowUpDown, Check, Clock, X, AlertCircle } from 'lucide-react';
+import { ArrowUpDown, Check, Clock, X, AlertCircle, Eye } from 'lucide-react';
 import { DataTable } from '@/components/molecules/DataTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@radix-ui/react-checkbox';
@@ -9,6 +9,7 @@ import AxiosRequest from '@/services/axiosInspector';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import AdminActionsDropDown from '../molecules/AdminActionsDropDown';
+import { Link, Links, NavLink, useNavigate } from 'react-router-dom';
 
 export enum SellerVerificationStatusEnum {
   PENDING = 'PENDING',
@@ -312,6 +313,20 @@ export default function SellerVerificationRequestsTable() {
         const dateA = new Date(rowA.getValue('submittedAt')).getTime();
         const dateB = new Date(rowB.getValue('submittedAt')).getTime();
         return dateA - dateB;
+      },
+    },
+    {
+      id: 'view',
+      cell: ({ row }) => {
+        const username = row.getValue('username');
+        return (
+          <Link to={`/seller-verifications/${username}`}>
+            <Button variant="outline" className="gap-2">
+              <Eye className="h-4 w-4" />
+              View
+            </Button>
+          </Link>
+        );
       },
     },
     {

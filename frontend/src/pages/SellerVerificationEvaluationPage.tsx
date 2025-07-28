@@ -58,7 +58,7 @@ export function SellerVerificationEvaluationPage() {
   }, [username]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <ProfileCard
         isInEditMode={false}
         username={sellerData?.username || ''}

@@ -42,11 +42,11 @@ export function VerificationSubmissionList({
   };
 
   return (
-    <Card className="border-l-2 border-yellow-500 bg-gray-50">
+    <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[90vh] mb-6">
       <CardHeader>
         <CardTitle className="text-lg">Verification Submissions</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
         {isLoading ? (
           <>
             <div className="border rounded-lg p-4">
@@ -84,12 +84,12 @@ export function VerificationSubmissionList({
               onClick={() => onDocumentSelect?.(doc)}
             >
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium">{doc.docTitle}</h3>
+                <div className="flex-1 min-w-0 mr-3">
+                  <h3 className="font-medium truncate">{doc.docTitle}</h3>
                   <p className="text-sm text-gray-500">
                     Submitted On: {formatDate(doc.createdAt)}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 truncate">
                     {formatFileSize(doc.docSize)} • {doc.docType}
                   </p>
                 </div>
@@ -101,7 +101,7 @@ export function VerificationSubmissionList({
                         ? 'success'
                         : 'destructive'
                   }
-                  className="ml-2"
+                  className="ml-2 whitespace-nowrap flex-shrink-0"
                 >
                   {doc.status}
                 </Badge>

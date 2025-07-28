@@ -2,6 +2,7 @@ package com.helios.auctix.services.user;
 
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
+import com.helios.auctix.dtos.SellerVerificationStatsDTO;
 import com.helios.auctix.dtos.VerificationRequestDTO;
 import com.helios.auctix.dtos.VerificationStatusDTO;
 import com.helios.auctix.exception.InvalidUserException;
@@ -213,6 +214,11 @@ public class SellerService {
          return verificationRequests.stream()
          .map(verificationRequestMapperImpl::mapTo)
          .toList();
+    }
+
+    public SellerVerificationStatsDTO sellerVerificationStats() {
+        SellerVerificationStatsDTO status = sellerVerificationRequestRepository.getSellerVerificationStats();
+        return status;
     }
 
 

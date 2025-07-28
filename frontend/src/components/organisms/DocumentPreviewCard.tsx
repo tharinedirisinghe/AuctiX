@@ -2,6 +2,96 @@ import { Check, Download, MessageSquare, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { VerificationDocument } from './VerificationSubmissionList';
+import { useEffect, useState } from 'react';
+import { downloadForPreview } from '@/services/sellerVerificationService';
+import AxiosRequest from '@/services/axiosInspector';
+
+const DocumentPreviewViewer = ({
+  document,
+}: {
+  document: VerificationDocument;
+}) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [contentType, setContentType] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const axiosInstance = AxiosRequest().axiosInstance;
+
+  useEffect(() => {
+    let cleanup: (() => void) | null = null;
+
+    const loadPreview = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const result = await downloadForPreview(document.docId, axiosInstance);
+        if (result) {
+          setPreviewUrl(result.url);
+          setContentType(result.contentType);
+          cleanup = result.cleanup;
+        }
+      } catch (err) {
+        setError('Failed to load preview');
+        console.error('Preview load error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [document.docId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center text-gray-500 h-64">
+        <p>Loading preview...</p>
+      </div>
+    );
+  }
+
+  if (error || !previewUrl) {
+    return (
+      <div className="flex items-center justify-center text-gray-500 h-64">
+        <p>{error || 'Preview not available'}</p>
+      </div>
+    );
+  }
+
+  // For PDF files
+  if (contentType === 'application/pdf') {
+    return (
+      <iframe
+        src={previewUrl}
+        title={document.docTitle}
+        className="w-full h-64 border-0"
+      />
+    );
+  }
+
+  // For image files
+  if (contentType.startsWith('image/')) {
+    return (
+      <img
+        src={previewUrl}
+        alt={document.docTitle}
+        className="max-h-full max-w-full object-contain"
+        onError={() => setError('Failed to display image')}
+      />
+    );
+  }
+
+  // For other file types
+  return (
+    <div className="flex items-center justify-center text-gray-500 h-64">
+      <p>Preview not available for this file type ({contentType})</p>
+    </div>
+  );
+};
 
 export function DocumentPreviewCard({
   document,
@@ -40,20 +130,8 @@ export function DocumentPreviewCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="border rounded-lg p-4 bg-white">
-          {/* Image preview placeholder */}
           <div className="bg-gray-100 h-64 flex items-center justify-center">
-            <img
-              src={`/api/documents/${document.docId}/preview`}
-              alt={document.docTitle}
-              className="max-h-full max-w-full object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling!.style.display = 'flex';
-              }}
-            />
-            <div className="hidden items-center justify-center text-gray-500">
-              Preview not available
-            </div>
+            <DocumentPreviewViewer document={document} />
           </div>
         </div>
 

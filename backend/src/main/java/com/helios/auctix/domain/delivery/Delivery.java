@@ -58,6 +58,10 @@ public class Delivery {
     @Column(name = "tracking_number")
     private String trackingNumber;
 
+    @Column(name = "address_requested", nullable = false)
+    @Builder.Default
+    private Boolean addressRequested = false;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 

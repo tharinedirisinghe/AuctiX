@@ -6,6 +6,7 @@ import com.helios.auctix.domain.user.*;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.repositories.*;
 import com.helios.auctix.services.JwtService;
+import com.helios.auctix.services.CoinTransactionService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.source.InvalidConfigurationPropertyValueException;
@@ -29,6 +30,7 @@ public class UserRegisterService {
     private final SupperAdminConfig supperAdminConfig;
     private final PasswordEncoder encoder;
     private final UserDetailsService userDetailsService;
+    private final CoinTransactionService coinTransactionService;
 
 
     /**
@@ -146,6 +148,9 @@ public class UserRegisterService {
             // Register required action for seller
             userDetailsService.registerUserRequiredAction(user, UserRequiredActionEnum.COMPLETE_PROFILE);
             log.info("Required action for seller registered successfully");
+
+            // Create wallet for seller
+            createWalletForUser(user);
         }
         else if(UserRoleEnum.BIDDER == role) {
         // save bidder data
@@ -162,6 +167,9 @@ public class UserRegisterService {
             // Register required action for bidder
             userDetailsService.registerUserRequiredAction(user, UserRequiredActionEnum.COMPLETE_PROFILE);
             log.info("Required action for bidder registered successfully");
+
+            // Create wallet for bidder
+            createWalletForUser(user);
         }
         else if(UserRoleEnum.ADMIN == role) {
         // save admin data
@@ -248,7 +256,22 @@ public class UserRegisterService {
         return userRepository.findByEmail(email);
     }
 
-
+    /**
+     * Creates a wallet for the given user automatically during registration
+     * 
+     * @param user The user for whom to create the wallet
+     */
+    private void createWalletForUser(User user) {
+        try {
+            log.info("Creating wallet for user: " + user.getId());
+            coinTransactionService.createWalletForUser(user.getId());
+            log.info("Wallet created successfully for user: " + user.getId());
+        } catch (Exception e) {
+            log.error("Failed to create wallet for user " + user.getId() + ": " + e.getMessage());
+            // Don't fail the registration if wallet creation fails
+            // The user can manually create wallet later if needed
+        }
+    }
 
 
 }

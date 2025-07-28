@@ -249,12 +249,10 @@ export function AddressSection({ form }: AddressSectionProps) {
         },
       }}
     >
-      <h3 className="text-lg font-medium">Address Information</h3>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FormField
           control={form.control}
-          name="address.number"
+          name="address.addressNumber"
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>House/Building Number</FormLabel>

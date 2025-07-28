@@ -96,22 +96,22 @@ public class HelloController {
         }
     }
 
-    @GetMapping("/{chatRoomId}/messages")
-    public ResponseEntity<List<ChatMessageDTO>> getChatMessages(
-            @PathVariable String chatRoomId,
-            @RequestParam int page,
-            @RequestParam int size,
-            @RequestParam LocalDateTime beforeTimestamp) {
-
-        List<ChatMessage> messages = chatService.getMessagesBeforeTimestamp(
-                chatRoomId, beforeTimestamp, page, size);
-
-        List<ChatMessageDTO> response = messages.stream()
-                .map(chatMessageDTOMapper::mapTo)
-                .toList();
-
-        return ResponseEntity.ok(response);
-    }
+//    @GetMapping("/{chatRoomId}/messages")
+//    public ResponseEntity<List<ChatMessageDTO>> getChatMessages(
+//            @PathVariable String chatRoomId,
+//            @RequestParam int page,
+//            @RequestParam int size,
+//            @RequestParam LocalDateTime beforeTimestamp) {
+//
+//        List<ChatMessage> messages = chatService.getMessagesBeforeTimestamp(
+//                chatRoomId, beforeTimestamp, page, size);
+//
+//        List<ChatMessageDTO> response = messages.stream()
+//                .map(chatMessageDTOMapper::mapTo)
+//                .toList();
+//
+//        return ResponseEntity.ok(response);
+//    }
 
 
 

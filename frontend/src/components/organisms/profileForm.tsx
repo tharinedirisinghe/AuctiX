@@ -3,11 +3,17 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, X } from 'lucide-react';
+import { CheckCircle2, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Card, CardContent } from '@/components/ui/card';
-import { ImageResult } from '../molecules/ImageUploadPopup';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { ImageResult } from '../molecules/ImageUploadModal';
 import {
   deleteBannerPhoto,
   deleteProfilePhoto,
@@ -29,6 +35,8 @@ import { PersonalBasicInfoSection } from '../molecules/ProfileBasicInfoSection';
 import { assets } from '@/config/assets';
 import { IUser } from '@/types/IUser';
 import { fetchPendingRequiredActions } from '@/store/slices/requiredActionsSlice';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 const profileFormSchema = z.object({
   firstName: z
@@ -56,7 +64,7 @@ const profileFormSchema = z.object({
       message: 'Bio must be at least 4 characters.',
     }),
   address: z.object({
-    number: z.string().optional(),
+    addressNumber: z.string().optional(),
     addressLine1: z.string().optional(),
     addressLine2: z.string().optional(),
     country: z.string().optional(),
@@ -74,7 +82,6 @@ const profileFormSchema = z.object({
     .optional()
     .superRefine((urls, ctx) => {
       if (urls) {
-        // Check for duplicate URLs
         const urlValues = urls.map((u) => u.value.toLowerCase());
         const duplicates = urlValues.filter(
           (item, index) => urlValues.indexOf(item) !== index,
@@ -98,7 +105,7 @@ const defaultValues: Partial<ProfileFormValues> = {
   lastName: '',
   bio: '',
   address: {
-    number: '',
+    addressNumber: '',
     addressLine1: '',
     addressLine2: '',
     country: '',
@@ -107,7 +114,6 @@ const defaultValues: Partial<ProfileFormValues> = {
 };
 
 export function ProfileForm() {
-  // useState hooks
   const [croppedImg, setCroppedImg] = useState<string | null>(null);
   const [bannerImg, setBannerImg] = useState<string>(
     assets.default_banner_image,
@@ -117,18 +123,17 @@ export function ProfileForm() {
   const [isProfilePictureLoading, setIsProfilePictureLoading] = useState(false);
   const [isBannerLoading, setIsBannerLoading] = useState(false);
 
-  // hooks
   const { toast } = useToast();
   const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
   const dispatch = useAppDispatch();
   const userData = useAppSelector<IUser>((state) => state.user);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,
     mode: 'onChange',
   });
 
-  // useEffect hooks
   useEffect(() => {
     const values = {
       ...defaultValues,
@@ -137,16 +142,15 @@ export function ProfileForm() {
   }, [form]);
 
   useEffect(() => {
-    // default values for the form
     const values: ProfileFormValues = {
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
-      bio: '',
+      bio: userData.bio || '',
       address: {
-        number: '',
-        addressLine1: '',
-        addressLine2: '',
-        country: '',
+        addressNumber: userData.address?.addressNumber || '',
+        addressLine1: userData.address?.addressLine1 || '',
+        addressLine2: userData.address?.addressLine2 || '',
+        country: userData.address?.country || '',
       },
       urls: [],
     };
@@ -157,7 +161,8 @@ export function ProfileForm() {
 
     if ('address' in userData && userData.address) {
       const address = userData.address as any;
-      if (address.number) values.address.number = address.number;
+      if (address.addressNumber)
+        values.address.addressNumber = address.addressNumber;
       if (address.addressLine1)
         values.address.addressLine1 = address.addressLine1;
       if (address.addressLine2)
@@ -181,33 +186,33 @@ export function ProfileForm() {
     setIsAlertOpen(true);
   }
 
-  const onProfilePhotoSet = useCallback((e: ImageResult) => {
-    console.log(e);
-    if (e.croppedImageBase64 != undefined && e.croppedImageFile) {
-      setCroppedImg(e.croppedImageBase64);
-      setIsProfilePictureLoading(true);
-      updateProfilePhoto(e.croppedImageFile, axiosInstance)
-        .then(() => {
-          console.log('Profile picture uploaded successfully.');
-          toast({
-            title: 'Profile picture uploaded successfully.',
-            description: 'Your profile picture has been updated.',
+  const onProfilePhotoSet = useCallback(
+    (e: ImageResult) => {
+      if (e.croppedImageBase64 != undefined && e.croppedImageFile) {
+        setCroppedImg(e.croppedImageBase64);
+        setIsProfilePictureLoading(true);
+        updateProfilePhoto(e.croppedImageFile, axiosInstance)
+          .then(() => {
+            toast({
+              title: 'Profile picture uploaded successfully.',
+              description: 'Your profile picture has been updated.',
+            });
+            dispatch(fetchCurrentUser());
+          })
+          .finally(() => {
+            setIsProfilePictureLoading(false);
+          })
+          .catch(() => {
+            toast({
+              variant: 'destructive',
+              title: 'Profile picture not uploaded.',
+              description: 'There was an error uploading your profile picture.',
+            });
           });
-          dispatch(fetchCurrentUser());
-        })
-        .finally(() => {
-          setIsProfilePictureLoading(false);
-        })
-        .catch(() => {
-          console.error('Profile picture not uploaded.');
-          toast({
-            variant: 'destructive',
-            title: 'Profile picture not uploaded.',
-            description: 'There was an error uploading your profile picture.',
-          });
-        });
-    }
-  }, []);
+      }
+    },
+    [axiosInstance, dispatch, toast],
+  );
 
   const onBannerPhotoSet = useCallback(
     (e: ImageResult) => {
@@ -216,7 +221,7 @@ export function ProfileForm() {
         setIsBannerLoading(true);
         updateBannerPhoto(e.croppedImageFile, axiosInstance)
           .then(() => {
-            dispatch(fetchCurrentUser);
+            dispatch(fetchCurrentUser());
           })
           .finally(() => {
             setIsBannerLoading(false);
@@ -231,16 +236,14 @@ export function ProfileForm() {
           });
       }
     },
-    [axiosInstance, dispatch],
+    [axiosInstance, dispatch, toast],
   );
 
   const onRemoveBanner = () => {
     setIsBannerLoading(true);
     setBannerImg(assets.default_banner_image);
-    // TODO: API call to remove banner
     deleteBannerPhoto(userData.username || '', axiosInstance)
       .then(() => {
-        console.log('Banner image deleted successfully.');
         toast({
           title: 'Banner image deleted successfully.',
           description: 'Your banner image has been removed.',
@@ -268,7 +271,6 @@ export function ProfileForm() {
       axiosInstance,
     )
       .then(() => {
-        console.log('Profile picture deleted successfully.');
         toast({
           title: 'Profile picture deleted successfully.',
           description: 'Your profile picture has been removed.',
@@ -281,99 +283,82 @@ export function ProfileForm() {
           title: 'Profile picture not deleted.',
           description: 'There was an error deleting your profile picture.',
         });
-        console.error('Profile picture not deleted.');
       });
-  }, []);
+  }, [axiosInstance, dispatch, toast, userData.username]);
 
   const handleSubmit = () => {
     setIsSubmitting(true);
-    setTimeout(() => {
-      const formData = form.getValues();
-      console.log('Submitting form data:', formData);
-      let validUrls: string[] = [];
-      if (formData.urls && formData.urls.length > 0) {
-        validUrls = formData.urls
-          .filter((url) => url.value.trim() !== '')
-          .map((url) => url.value);
-        console.log('URLs to submit:', validUrls);
-      }
+    const formData = form.getValues();
 
-      // Prepare profile data for submission
-      const profileData: IProfileUpdateData = {
-        bio: formData.bio,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        urls: validUrls,
-        address: {
-          number: formData.address.number || '',
-          addressLine1: formData.address.addressLine1 || '',
-          addressLine2: formData.address.addressLine2 || '',
-          country: formData.address.country || '',
-        },
-      };
+    const profileData: IProfileUpdateData = {
+      bio: formData.bio,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      urls:
+        formData.urls
+          ?.filter((url) => url.value.trim() !== '')
+          .map((url) => url.value) || [],
+      address: {
+        addressNumber: formData.address.addressNumber || '',
+        addressLine1: formData.address.addressLine1 || '',
+        addressLine2: formData.address.addressLine2 || '',
+        country: formData.address.country || '',
+      },
+    };
 
-      updateProfileInfo(profileData, axiosInstance)
-        .then(() => {
-          toast({
-            title: 'Profile details updated successfully',
-            description: 'Your profile details has been updated.',
-          });
-          dispatch(fetchPendingRequiredActions());
-        })
-        .catch((err) => {
-          console.error('Error updating profile details:', err);
-          toast({
-            variant: 'destructive',
-            title: 'Profile details not updated.',
-            description:
-              'There was an error when updating your profile details.',
-          });
+    updateProfileInfo(profileData, axiosInstance)
+      .then(() => {
+        toast({
+          title: 'Profile updated successfully',
+          description: 'Your profile details have been updated.',
         });
-
-      setIsSubmitting(false);
-      setIsAlertOpen(false);
-    }, 1500);
-  };
-
-  const formVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: 'spring',
-        stiffness: 100,
-      },
-    },
+        dispatch(fetchPendingRequiredActions());
+      })
+      .catch((err) => {
+        console.error('Error updating profile details:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Profile update failed',
+          description: 'There was an error updating your profile details.',
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+        setIsAlertOpen(false);
+      });
   };
 
   return (
-    <>
+    <div className="py-6 max-w-6xl mx-auto">
       {/* Update profile alert */}
       <AlertBox
-        onAlertOpenChange={(e) => {
-          setIsAlertOpen(e);
-        }}
+        onAlertOpenChange={(e) => setIsAlertOpen(e)}
         IconElement={<CheckCircle2 />}
         alertOpen={isAlertOpen}
-        continueAction={() => handleSubmit()}
+        continueAction={handleSubmit}
         title="Confirm Profile Update"
         message="Are you sure you want to update your profile information?"
         continueBtn="Confirm"
         cancelBtn="Cancel"
       />
 
-      {/* Profile Card Component */}
+      {/* Profile Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          My Profile
+          {isSubmitting && (
+            <Badge className="bg-brandGoldYellow text-gray-900">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Saving...
+            </Badge>
+          )}
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Manage your profile information and settings
+        </p>
+      </div>
+
+      {/* Profile Card */}
       <ProfileCard
         username={userData.username || ''}
         email={userData.email || ''}
@@ -389,46 +374,58 @@ export function ProfileForm() {
         isInEditMode={true}
       />
 
+      {/* Profile Form */}
       <Card className="mt-6">
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>
+            Update your personal details and contact information
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <Form {...form}>
             <motion.form
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-8"
-              variants={formVariants}
-              initial="hidden"
-              animate="visible"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
             >
-              {/* PersonalInfoSection */}
-              <div className="space-y-6">
-                <motion.div variants={itemVariants}>
-                  <h3 className="text-lg font-medium">Personal Information</h3>
-                  <div className="h-0.5 w-full bg-gray-100 my-2"></div>
-                </motion.div>
-
-                <PersonalBasicInfoSection form={form} />
+              {/* Personal Information Section */}
+              <div className="space-y-6 pt-12">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-500">
+                    Personal Information
+                  </h3>
+                  <Separator className="my-4 border-gray-200 border-t-2" />
+                </div>
+                <div className="p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
+                  <PersonalBasicInfoSection form={form} />
+                </div>
               </div>
 
-              {/* Address section */}
-              <div className="space-y-6 pt-4">
-                <motion.div variants={itemVariants}>
-                  <h3 className="text-lg font-medium">Address Information</h3>
-                  <div className="h-0.5 w-full bg-gray-100 my-2"></div>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
+              {/* Address Section */}
+              <div className="space-y-6 pt-12">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-500">
+                    Address Details
+                  </h3>
+                  <Separator className="my-4 border-gray-200 border-t-2" />
+                </div>
+                <div className="bg-gray-50 p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
                   <AddressSection form={form} />
-                </motion.div>
+                </div>
               </div>
 
-              {/* URLs section */}
-              <div className="space-y-6 pt-4">
-                <motion.div variants={itemVariants}>
-                  <h3 className="text-lg font-medium">Online Presence</h3>
-                  <div className="h-0.5 w-full bg-gray-100 my-2"></div>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
+              {/* URLs Section */}
+              <div className="space-y-6 pt-12">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-500">
+                    Online Presence
+                  </h3>
+                  <Separator className="my-4 border-gray-200 border-t-2" />
+                </div>
+                <div className="bg-gray-50 p-6 rounded-lg border-l-2 border-yellow-500">
                   <FormField
                     control={form.control}
                     name="urls"
@@ -444,22 +441,29 @@ export function ProfileForm() {
                       </FormItem>
                     )}
                   />
-                </motion.div>
+                </div>
               </div>
 
-              <motion.div className="pt-6" variants={itemVariants}>
+              <div className="pt-6 flex justify-end">
                 <Button
                   type="submit"
-                  className="w-full md:w-auto bg-yellow-500 hover:bg-yellow-600 text-white"
+                  className="bg-brandGoldYellow hover:bg-brandGoldYellow/80 text-gray-900"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Updating...' : 'Update profile'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update Profile'
+                  )}
                 </Button>
-              </motion.div>
+              </div>
             </motion.form>
           </Form>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }

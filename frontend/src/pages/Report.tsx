@@ -50,15 +50,14 @@ export default function ComplaintReports() {
 
   return (
     <div className="bg-white">
-      <div className="p-6 max-w-6xl mx-auto">
-        <header className="mb-4">
-          <h1 className="text-3xl font-bold mb-1">Complain Reports</h1>
-          <p className="text-gray-500">
-            View and manage reports by users on auction listings
-          </p>
-        </header>
-
-        <div className="grid grid-cols-4 gap-4 mb-8">
+      <header className="relative h-28 w-full bg-yellow-400">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+        <h1 className="text-4xl font-bold text-white absolute bottom-0 left-0 right-0 px-6 md:px-8 mb-4">
+          Complaints
+        </h1>
+      </header>
+      <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
+        <div className="grid grid-cols-4 gap-6 mb-8">
           <Card className="p-4 border-none shadow-none bg-gray-100">
             <div className="text-4xl font-bold">{complaints.length}</div>
             <div className="text-sm font-semibold text-gray-500">Reports</div>

@@ -1,4 +1,8 @@
+import { assets } from '@/config/assets';
+import { IUser } from '@/types/IUser';
 import { AxiosInstance } from 'axios';
+
+const baseURL = import.meta.env.VITE_API_URL;
 
 export interface IFilteredAdminActionsLogParams {
   limit?: number;
@@ -51,4 +55,42 @@ export const banUser = async (
     },
   });
   return response.data;
+};
+
+export const deleteProfilePhoto = async (
+  axiosInstance: AxiosInstance,
+  username: string,
+) => {
+  const response = await axiosInstance.delete('/admin/deleteUserProfilePhoto', {
+    params: {
+      username,
+    },
+  });
+
+  return response.data;
+};
+
+export const getUserDetails = async (
+  axiosInstance: AxiosInstance,
+  username: string,
+) => {
+  const response = await axiosInstance.get(`/user/getUser`, {
+    params: {
+      username,
+    },
+  });
+
+  // Add additional setup for user data
+  const userData = {
+    ...response.data,
+    profile_photo: response.data.profilePicture?.id
+      ? `${baseURL}/user/getUserProfilePhoto?file_uuid=${response.data.profilePicture.id}`
+      : assets.default_profile_image,
+    banner_photo: response.data.seller?.bannerId
+      ? `${baseURL}/user/getUserBannerPhoto?file_uuid=${response.data.seller.bannerId}`
+      : assets.default_banner_image,
+  };
+  delete userData.profilePicture;
+
+  return userData as IUser;
 };

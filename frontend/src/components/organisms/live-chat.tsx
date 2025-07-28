@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Client } from '@stomp/stompjs';
+import { Client, StompHeaders } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { ChatMessageDTO } from '@/types/IChatMessageDTO';
 import { IAuthUser } from '@/types/IAuthUser';
@@ -12,7 +12,26 @@ import { Label } from '@radix-ui/react-dropdown-menu';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
-const AuctionChat = ({ auctionId }: { auctionId: string }) => {
+type ChatRoomProps =
+  | {
+      type: 'AUCTION';
+      auctionId: string;
+      title?: string;
+      limitUIHeight?: boolean;
+    }
+  | {
+      type: 'SUPPORT' | 'DIRECT' | 'GROUP';
+      chatRoomId: string;
+      title?: string;
+      limitUIHeight?: boolean;
+    };
+
+const LiveChat = (props: ChatRoomProps) => {
+  const { type, title, limitUIHeight } = props;
+
+  const chatRoomId = type !== 'AUCTION' ? props.chatRoomId : undefined;
+  const auctionId = type === 'AUCTION' ? props.auctionId : undefined;
+
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [messages, setMessages] = useState<ChatMessageProps[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -37,6 +56,39 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  let topicPath = '';
+  const sendMessageDestination = `/app/chat.sendMessage/${type}/${type === 'AUCTION' ? auctionId : chatRoomId}`;
+
+  const getMessageFetchEndpoint = (
+    chatType: string,
+    auctionId?: string,
+    chatRoomId?: string,
+  ): string => {
+    const id = chatType === 'AUCTION' ? auctionId : chatRoomId;
+    if (!id) throw new Error(`Missing ID for chatType: ${chatType}`);
+    return `/chat/${chatType}/${id}/messages`;
+  };
+
+  const setTopicPath = () => {
+    switch (type) {
+      case 'AUCTION':
+        topicPath = `/topic/chat/auction/${auctionId}`;
+        break;
+      case 'SUPPORT':
+        topicPath = `/topic/chat/support/${chatRoomId}`;
+        break;
+      case 'DIRECT':
+        topicPath = `/topic/chat/direct/${chatRoomId}`;
+        break;
+      case 'GROUP':
+        topicPath = `/topic/chat/group/${chatRoomId}`;
+        break;
+      default:
+        console.error('Invalid chat type');
+        return;
+    }
+  };
 
   // Flag to control scroll behavior
   const isLoadingOlderMessages = useRef(false);
@@ -64,12 +116,15 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
       }
 
       try {
-        const response = await axiosInstance.get(
-          `/public/chat/${auctionId}/messages`,
-          {
-            params: { page: pageNum, size: 3 },
-          },
+        const msgFetchPath = getMessageFetchEndpoint(
+          type,
+          auctionId,
+          chatRoomId,
         );
+
+        const response = await axiosInstance.get(msgFetchPath, {
+          params: { page: pageNum, size: limitUIHeight ? 5 : 3 },
+        });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const newMessages: any[] = response.data;
@@ -171,6 +226,34 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
 
   // Connect to WebSocket
   useEffect(() => {
+    setTopicPath();
+
+    if (topicPath == null) {
+      return;
+    }
+
+    let connectHeaders: StompHeaders | undefined;
+
+    if (
+      isAuthenticated &&
+      userAuth.token &&
+      (type === 'AUCTION' ? auctionId : chatRoomId)
+    ) {
+      connectHeaders = {
+        Authorization: `Bearer ${userAuth.token}`,
+        chatType: type,
+        chatId: type === 'AUCTION' ? auctionId! : chatRoomId!,
+      };
+    } else if (!isAuthenticated && type === 'AUCTION' && auctionId) {
+      // Allow anonymous read for auction chats
+      connectHeaders = {
+        chatType: 'AUCTION',
+        chatId: auctionId,
+      };
+    } else {
+      connectHeaders = undefined;
+    }
+
     const client = new Client({
       webSocketFactory: () => new SockJS(webSocketURL),
       debug: function (str) {
@@ -179,12 +262,7 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
-      connectHeaders: isAuthenticated
-        ? {
-            Authorization: `Bearer ${userAuth.token}`,
-            auctionId: auctionId,
-          }
-        : {},
+      connectHeaders: connectHeaders,
       onConnect: (frame) => {
         console.log('Connected to WebSocket');
         const serverUserName = frame.headers['user-name'];
@@ -200,7 +278,7 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
         // Subscribe to the auction chat topic only if not already subscribed
         if (!subscriptionRef.current) {
           subscriptionRef.current = client.subscribe(
-            `/topic/auction/${auctionId}/chat`,
+            topicPath,
             (messageOutput) => {
               try {
                 const receivedMessage: ChatMessageDTO = JSON.parse(
@@ -278,6 +356,8 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
     };
   }, [
     auctionId,
+    chatRoomId,
+    topicPath,
     webSocketURL,
     user,
     isAuthenticated,
@@ -304,7 +384,7 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
 
       // Send to server
       stompClient.publish({
-        destination: `/app/chat.sendMessage/${auctionId}`,
+        destination: sendMessageDestination,
         body: JSON.stringify(chatMessage),
         headers: {
           Authorization: `Bearer ${userAuth.token}`,
@@ -360,12 +440,14 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-2 border-b">
-        <h2 className="font-medium">Auction Chat</h2>
+        <h2 className="font-medium">{title ? title : 'Chat'}</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm">
-            {isGuest
-              ? 'Connected in Guest Mode (Read Only)'
-              : 'Connected to chat'}
+            {connected
+              ? isGuest
+                ? 'Connected in Guest Mode (Read Only)'
+                : 'Connected to chat'
+              : 'Disconnected'}
           </span>
           <div
             className={`h-2 w-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}
@@ -375,7 +457,9 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
       </div>
 
       <div
-        className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[500px]"
+        className={`flex-1 p-4 space-y-4 overflow-y-auto ${
+          limitUIHeight ? 'max-h-[500px]' : ''
+        }`}
         ref={scrollContainerRef}
       >
         {hasMore ? (
@@ -476,4 +560,4 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   );
 };
 
-export default AuctionChat;
+export default LiveChat;

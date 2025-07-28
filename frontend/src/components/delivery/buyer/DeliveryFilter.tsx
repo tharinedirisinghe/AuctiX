@@ -3,7 +3,6 @@ import React from 'react';
 import { Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DeliveryFilterProps {
   activeTab: string;
@@ -41,39 +40,6 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <Tabs
-          defaultValue="all"
-          className="w-full md:w-auto"
-          onValueChange={(value) => setActiveTab(value)}
-          value={activeTab}
-        >
-          <TabsList className="grid grid-cols-4 w-full md:w-auto bg-gray-100 p-1">
-            <TabsTrigger
-              value="all"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              All
-            </TabsTrigger>
-            <TabsTrigger
-              value="packing"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              Packing
-            </TabsTrigger>
-            <TabsTrigger
-              value="shipping"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              Shipping
-            </TabsTrigger>
-            <TabsTrigger
-              value="delivered"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              Delivered
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         <div className="flex w-full md:w-auto gap-2">
           <div className="relative flex-grow md:w-64">

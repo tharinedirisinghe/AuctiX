@@ -22,7 +22,7 @@ interface AuctionResult {
 const getImageUrl = (uuid?: string) => {
   return uuid
     ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${uuid}`
-    : '/api/placeholder/400/250';
+    : '';
 };
 
 export default function AuctionSearchBar() {
@@ -31,6 +31,9 @@ export default function AuctionSearchBar() {
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<AuctionResult[]>([]);
+  const [imageLoadedMap, setImageLoadedMap] = useState<Record<string, boolean>>(
+    {},
+  );
   const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -82,7 +85,6 @@ export default function AuctionSearchBar() {
 
     return () => clearTimeout(delayDebounce);
   }, [query, isFocused]);
-
   // Hide dropdown when clicking outside input or dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -161,38 +163,56 @@ export default function AuctionSearchBar() {
 
       {showDropdown && results.length > 0 && (
         <div className="absolute top-full z-10 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
-          {results.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
-              onClick={() => handleSelect(item.id)}
-            >
-              <img
-                src={getImageUrl(item.images[0])}
-                alt={item.title}
-                className="w-12 h-12 object-cover rounded-md mr-4"
-              />
+          {results.map((item) => {
+            const imgUuid = item.images[0];
+            const isLoaded = imageLoadedMap[imgUuid];
 
-              <div className="flex flex-col w-full">
-                <div className="text-sm font-semibold">
-                  {highlightMatch(item.title)}
-                </div>
-
-                <div className="text-xs text-gray-500">
-                  Seller:{' '}
-                  {highlightMatch(
-                    item.seller.firstName && item.seller.lastName
-                      ? `${item.seller.firstName} ${item.seller.lastName}`
-                      : item.seller.username,
+            return (
+              <div
+                key={item.id}
+                className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleSelect(item.id)}
+              >
+                <div className="w-12 h-12 relative mr-4">
+                  {!isLoaded && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-md" />
                   )}
+                  <img
+                    src={getImageUrl(imgUuid)}
+                    alt={item.title}
+                    className={`w-full h-full object-cover rounded-md transition-opacity duration-300 ${
+                      isLoaded ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onLoad={() =>
+                      setImageLoadedMap((prev) => ({
+                        ...prev,
+                        [imgUuid]: true,
+                      }))
+                    }
+                  />
                 </div>
 
-                <div className="text-xs text-gray-400">
-                  {highlightMatch(item.category)}
+                <div className="flex flex-col w-full">
+                  <div className="text-sm font-semibold">
+                    {highlightMatch(item.title)}
+                  </div>
+
+                  <div className="text-xs text-gray-500">
+                    Seller:{' '}
+                    {highlightMatch(
+                      item.seller.firstName && item.seller.lastName
+                        ? `${item.seller.firstName} ${item.seller.lastName}`
+                        : item.seller.username,
+                    )}
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+                    {highlightMatch(item.category)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

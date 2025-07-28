@@ -1,20 +1,30 @@
 package com.helios.auctix.services.user;
 
 import com.helios.auctix.domain.user.*;
+import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
 import com.helios.auctix.dtos.VerificationStatusDTO;
+import com.helios.auctix.exception.InvalidUserException;
 import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
 import com.helios.auctix.mappers.impl.VerificationStatusMapperImpl;
 import com.helios.auctix.repositories.SellerRepository;
 import com.helios.auctix.repositories.SellerVerificationRequestRepository;
 import com.helios.auctix.services.fileUpload.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.websocket.AuthenticationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -107,5 +117,77 @@ public class SellerService {
         }
 
         return sellerVerificationRequestRepository.findAllBySellerId(seller.getId());
+    }
+
+    public Page<SellerVerificationRequestSummaryDTO> getSellerVerificationSummary(
+            @NotNull String search,
+            String filterBy,
+            String filterValue,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection
+    ) {
+        if( sortBy == null || sortBy.isEmpty() ) {
+            sortBy = "createdAt";
+            sortDirection = "desc";
+        }
+        Map<String, String> SORT_FIELD_MAPPINGS = Map.of(
+                "submittedAt", "createdAt",
+                "verificationStatus", "isApproved",
+                "sellerFirstName", "u.firstName",
+                "sellerLastName", "u.lastName",
+                "email", "u.email",
+                "username", "u.username",
+                "documentsSubmitted", "pendingCount"
+        );
+
+        if(SORT_FIELD_MAPPINGS.containsKey(sortBy)){
+            sortBy = SORT_FIELD_MAPPINGS.get(sortBy);
+        } else {
+            throw new IllegalArgumentException("Invalid sortBy value: " + sortBy);
+        }
+
+        Map<String,String> FILTER_FIELD_MAPPINGS = Map.of(
+                "verificationStatus", "r.verificationStatus"
+        );
+
+        // validate filterBy and filterValue
+        // sample values filterBy=[%22verificationStatus%22]
+        // filterValue=[[%22PENDING%22,%22APPROVED%22]]
+
+
+        if(filterBy != null && !filterBy.isEmpty() && !FILTER_FIELD_MAPPINGS.containsKey(filterBy)){
+            throw new IllegalArgumentException("Invalid filterBy value: " + filterBy);
+        }
+
+        Pageable pageable = PageRequest.of(page, size,
+                sortDirection.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+
+        SellerVerificationStatusEnum status = null;
+        if ( filterBy != null && !filterBy.isEmpty() ) {
+            switch (filterBy){
+                case "verificationStatus" -> {
+                    if (filterValue != null && !filterValue.isEmpty()) {
+                        status = SellerVerificationStatusEnum.fromString(filterValue);
+                    }
+                }
+                default -> {
+                    throw new IllegalArgumentException("Invalid filterBy value: " + filterBy);
+                }
+
+            }
+        }
+        else{
+            filterBy = null;
+            filterValue = null;
+        }
+
+        if (search == null || search.isEmpty()) {
+            search = "";
+        }
+
+        return sellerVerificationRequestRepository.searchAndFilter(search, status , pageable);
+
     }
 }

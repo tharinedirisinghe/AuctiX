@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,7 +16,18 @@ interface AuctionCardProps {
   sellerName: string;
   sellerAvatar: string;
   startingPrice: string;
-  timeRemaining: string;
+  startTime: string;
+  endTime: string;
+}
+
+function formatCountdown(ms: number) {
+  if (ms <= 0) return 'Ended';
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / (3600 * 24));
+  const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }
 
 export default function AuctionCard({
@@ -25,10 +37,49 @@ export default function AuctionCard({
   sellerName,
   sellerAvatar,
   startingPrice,
-  timeRemaining,
+  startTime,
+  endTime,
 }: AuctionCardProps) {
-  // Check if the timeRemaining starts with "0d" (indicating the last day)
-  const isEndingSoon = timeRemaining.startsWith('0d');
+  const [timerLabel, setTimerLabel] = useState<string>('Ends in:');
+  const [countdown, setCountdown] = useState<string>('');
+  const [badgeColor, setBadgeColor] = useState<string>(
+    'bg-yellow-400 text-gray-900 hover:bg-yellow-400 hover:text-gray-900',
+  );
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = Date.now();
+      const start = new Date(startTime).getTime();
+      const end = new Date(endTime).getTime();
+
+      if (now < start) {
+        // Upcoming auction
+        setTimerLabel('Starts in:');
+        setCountdown(formatCountdown(start - now));
+        setBadgeColor(
+          'bg-blue-900 text-white hover:bg-blue-900 hover:text-white',
+        );
+      } else if (now >= start && now < end) {
+        // Ongoing auction
+        setTimerLabel('Ends in:');
+        setCountdown(formatCountdown(end - now));
+        setBadgeColor(
+          'bg-yellow-400 text-gray-900 hover:bg-yellow-400 hover:text-gray-900',
+        );
+      } else {
+        // Ended auction
+        setTimerLabel('Ended');
+        setCountdown('');
+        setBadgeColor(
+          'bg-red-500 text-white hover:bg-red-500 hover:text-white',
+        );
+      }
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [startTime, endTime]);
 
   return (
     <Card className="overflow-hidden shadow-none h-full flex flex-col">
@@ -40,13 +91,11 @@ export default function AuctionCard({
           className="w-full h-40 object-cover"
         />
         <Badge
-          className={`absolute top-0 left-0 ${
-            isEndingSoon
-              ? 'bg-red-500 text-white hover:bg-red-500 hover:text-white'
-              : 'bg-yellow-400 text-gray-900 hover:bg-yellow-400 hover:text-gray-900'
-          } font-bold px-3 py-1 rounded-none rounded-br-md text-sm flex items-center shadow-none`}
+          className={`absolute top-0 left-0 ${badgeColor} font-bold px-3 py-1 rounded-none rounded-br-md text-sm flex items-center shadow-none`}
         >
-          <Clock className="w-4 h-4 mr-1" /> {timeRemaining}
+          <Clock className="w-4 h-4 mr-1" />
+          {timerLabel}
+          {timerLabel !== 'Ended' && <span className="ml-1">{countdown}</span>}
         </Badge>
       </div>
 

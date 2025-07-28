@@ -43,9 +43,8 @@ public class Delivery {
     @Column(nullable = false)
     private LocalDate deliveryDate;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DeliveryStatus status;
+    private String status;
 
     @Column(name = "delivery_address", length = 500)
     private String deliveryAddress;
@@ -58,6 +57,10 @@ public class Delivery {
 
     @Column(name = "tracking_number")
     private String trackingNumber;
+
+    @Column(name = "address_requested", nullable = false)
+    @Builder.Default
+    private Boolean addressRequested = false;
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

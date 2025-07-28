@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -34,5 +35,13 @@ public interface UserRepository extends JpaRepository<User,UUID> , JpaSpecificat
     Page<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String username, String email, String firstName, String lastName, Pageable pageable);
 
     Collection<Object> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(String usernameKeyword,String emailKeyword);
+
+    public interface RoleUserCount {
+        String getRoleName();
+        Long getUserCount();
+    }
+
+    @Query("SELECT u.role.name as roleName, COUNT(u) as userCount FROM User u GROUP BY u.role.name")
+    List<RoleUserCount> countUsersByRole();
 
 }

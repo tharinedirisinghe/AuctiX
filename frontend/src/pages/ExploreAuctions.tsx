@@ -55,121 +55,6 @@ interface PaginationInfo {
 
 type FilterType = 'active' | 'ended' | 'upcoming';
 
-// AuctionTimer hook and util for time remaining and auction status
-
-export type AuctionStatus = 'upcoming' | 'active' | 'ended';
-
-export function useAuctionTimer(
-  startTime: string,
-  endTime: string,
-): [TimeRemaining, AuctionStatus] {
-  const [timeRemaining, setTimeRemaining] = useState<TimeRemaining>({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-
-  const [status, setStatus] = useState<AuctionStatus>('active');
-
-  useEffect(() => {
-    const calculateTimeRemaining = () => {
-      const now = Date.now();
-      const start = new Date(startTime).getTime();
-      const end = new Date(endTime).getTime();
-
-      if (now < start) {
-        const diff = start - now;
-        const newStatus: AuctionStatus = 'upcoming';
-        const newTime = {
-          days: Math.floor(diff / 86400000),
-          hours: Math.floor((diff % 86400000) / 3600000),
-          minutes: Math.floor((diff % 3600000) / 60000),
-          seconds: Math.floor((diff % 60000) / 1000),
-        };
-
-        // Only update if status or time actually changed
-        setStatus((prevStatus) =>
-          prevStatus !== newStatus ? newStatus : prevStatus,
-        );
-        setTimeRemaining((prevTime) => {
-          if (
-            prevTime.days !== newTime.days ||
-            prevTime.hours !== newTime.hours ||
-            prevTime.minutes !== newTime.minutes ||
-            prevTime.seconds !== newTime.seconds
-          ) {
-            return newTime;
-          }
-          return prevTime;
-        });
-      } else if (now < end) {
-        const diff = end - now;
-        const newStatus: AuctionStatus = 'active';
-        const newTime = {
-          days: Math.floor(diff / 86400000),
-          hours: Math.floor((diff % 86400000) / 3600000),
-          minutes: Math.floor((diff % 3600000) / 60000),
-          seconds: Math.floor((diff % 60000) / 1000),
-        };
-
-        // Only update if status or time actually changed
-        setStatus((prevStatus) =>
-          prevStatus !== newStatus ? newStatus : prevStatus,
-        );
-        setTimeRemaining((prevTime) => {
-          if (
-            prevTime.days !== newTime.days ||
-            prevTime.hours !== newTime.hours ||
-            prevTime.minutes !== newTime.minutes ||
-            prevTime.seconds !== newTime.seconds
-          ) {
-            return newTime;
-          }
-          return prevTime;
-        });
-      } else {
-        const newStatus: AuctionStatus = 'ended';
-        const newTime = { days: 0, hours: 0, minutes: 0, seconds: 0 };
-
-        setStatus((prevStatus) =>
-          prevStatus !== newStatus ? newStatus : prevStatus,
-        );
-        setTimeRemaining((prevTime) => {
-          if (
-            prevTime.days !== 0 ||
-            prevTime.hours !== 0 ||
-            prevTime.minutes !== 0 ||
-            prevTime.seconds !== 0
-          ) {
-            return newTime;
-          }
-          return prevTime;
-        });
-      }
-    };
-
-    calculateTimeRemaining();
-    const interval = setInterval(calculateTimeRemaining, 1000);
-    return () => clearInterval(interval);
-  }, [startTime, endTime]);
-
-  return [timeRemaining, status];
-}
-
-// Util to format the timer text output for display
-export function getAuctionTimerText(
-  time: TimeRemaining,
-  status: AuctionStatus,
-) {
-  const { days, hours, minutes, seconds } = time;
-  if (status === 'upcoming')
-    return `Starts in: ${days}d ${hours}h ${minutes}m ${seconds}s`;
-  if (status === 'active')
-    return `Ends in: ${days}d ${hours}h ${minutes}m ${seconds}s`;
-  return 'Auction Ended';
-}
-
 const CATEGORIES = [
   'Electronics',
   'Computers & Tech',
@@ -490,66 +375,42 @@ const AuctionsPage: React.FC = () => {
     navigate(`/auction-details/${auctionId}`);
   };
 
-  // Create a memoized component for auction card with timer
-  const AuctionCardWithTimer = React.memo<{
-    auction: Auction;
-    onCardClick: (id: string) => void;
-  }>(({ auction, onCardClick }) => {
-    const [timeRemaining, status] = useAuctionTimer(
-      auction.startTime,
-      auction.endTime,
-    );
-    const timerText = getAuctionTimerText(timeRemaining, status);
+  // Remove AuctionCardWithTimer, use AuctionCard directly
+  const renderedAuctions = useMemo(() => {
+    return auctions.map((auction) => {
+      const imageUrl =
+        auction.images && auction.images.length > 0
+          ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.images[0]}`
+          : '/api/placeholder/400/250';
 
-    // Memoize image URL construction to prevent flickering
-    const imageUrl = useMemo(() => {
-      return auction.images && auction.images.length > 0
-        ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.images[0]}`
-        : '/api/placeholder/400/250';
-    }, [auction.images]);
+      const sellerAvatarUrl =
+        auction.seller.profilePicture && auction.seller.profilePicture.id
+          ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.seller.profilePicture.id}`
+          : '/api/placeholder/24/24';
 
-    // Memoize seller avatar URL
-    const sellerAvatarUrl = useMemo(() => {
-      if (auction.seller.profilePicture && auction.seller.profilePicture.id) {
-        return `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.seller.profilePicture.id}`;
-      }
-      return '/api/placeholder/24/24';
-    }, [auction.seller.profilePicture]);
-
-    // Memoize seller name
-    const sellerName = useMemo(() => {
-      return auction.seller.firstName
+      const sellerName = auction.seller.firstName
         ? `${auction.seller.firstName} ${auction.seller.lastName}`
         : auction.seller.username;
-    }, [
-      auction.seller.firstName,
-      auction.seller.lastName,
-      auction.seller.username,
-    ]);
 
-    return (
-      <div className="cursor-pointer" onClick={() => onCardClick(auction.id)}>
-        <AuctionCard
-          imageUrl={imageUrl}
-          productName={auction.title}
-          category={auction.category}
-          sellerName={sellerName}
-          sellerAvatar={sellerAvatarUrl}
-          startingPrice={auction.startingPrice.toLocaleString()}
-          timeRemaining={timerText}
-        />
-      </div>
-    );
-  });
-
-  const renderedAuctions = useMemo(() => {
-    return auctions.map((auction) => (
-      <AuctionCardWithTimer
-        key={auction.id}
-        auction={auction}
-        onCardClick={handleCardClick}
-      />
-    ));
+      return (
+        <div
+          key={auction.id}
+          className="cursor-pointer"
+          onClick={() => handleCardClick(auction.id)}
+        >
+          <AuctionCard
+            imageUrl={imageUrl}
+            productName={auction.title}
+            category={auction.category}
+            sellerName={sellerName}
+            sellerAvatar={sellerAvatarUrl}
+            startingPrice={auction.startingPrice.toLocaleString()}
+            startTime={auction.startTime}
+            endTime={auction.endTime}
+          />
+        </div>
+      );
+    });
   }, [auctions]);
 
   if (loading) {

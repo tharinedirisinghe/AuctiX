@@ -8,7 +8,7 @@ import AxiosRequest from '@/services/axiosInspector';
 import { useToast } from '@/hooks/use-toast';
 import AuctionReport from '@/components/organisms/AuctionReport';
 import { title } from 'process';
-import AuctionChat from '@/components/organisms/auction-chat';
+import LiveChat from '@/components/organisms/live-chat';
 import AddToWatchlistButton from '@/components/molecules/AddToWatchlistButton';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
@@ -1029,7 +1029,11 @@ const AuctionDetailsPage = () => {
         <h2 className="text-lg font-semibold mb-4">Live Chat</h2>
         <p className="text-sm text-gray-500">
           {auctionId ? (
-            <AuctionChat auctionId={auctionId} />
+            <LiveChat
+              auctionId={auctionId}
+              type="AUCTION"
+              title="Auction Chat"
+            />
           ) : (
             <div>Sorry chat is unavailable</div>
           )}

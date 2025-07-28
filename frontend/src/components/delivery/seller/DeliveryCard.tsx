@@ -24,6 +24,7 @@ interface DeliveryCardProps {
   handleUpdateStatus: (id: string, newStatus: string) => void;
   openDatePicker: (id: string, currentDate: string) => void;
   viewDeliveryDetails: (delivery: Delivery) => void;
+  handleRequestAddress?: (id: string) => void;
   isLoading: boolean;
 }
 
@@ -32,10 +33,16 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   handleUpdateStatus,
   openDatePicker,
   viewDeliveryDetails,
+  handleRequestAddress,
   isLoading,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
   const daysInfo = getDaysInfo(delivery.deliveryDate, delivery.status);
+
+  // Check if buyer has valid address
+  const hasValidAddress = delivery.deliveryAddress && 
+    delivery.deliveryAddress.trim() !== '' && 
+    !delivery.deliveryAddress.includes('Address not provided');
 
   // State for confirmation dialog
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -161,6 +168,39 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Display buyer address status */}
+      {hasValidAddress ? (
+        <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
+          <div className="flex items-start">
+            <MapPin size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-sm">Buyer's Delivery Address</p>
+              <p className="text-sm">{delivery.deliveryAddress}</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-md flex items-center justify-between text-sm border border-amber-200">
+          <div className="flex items-center">
+            <MapPin size={16} className="mr-2 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Buyer Address Required</p>
+              <p>{delivery.addressRequested ? 'Waiting for buyer to provide delivery address. The buyer has been notified.' : 'Click to request delivery address from buyer.'}</p>
+            </div>
+          </div>
+          {!delivery.addressRequested && handleRequestAddress && (
+            <Button
+              size="sm"
+              onClick={() => handleRequestAddress(delivery.id)}
+              disabled={isLoading}
+              className="bg-amber-600 hover:bg-amber-700 text-white ml-4 flex-shrink-0"
+            >
+              Request Address
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Warning for overdue deliveries */}
       {daysInfo.isOverdue && (

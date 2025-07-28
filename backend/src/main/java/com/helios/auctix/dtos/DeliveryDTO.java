@@ -27,6 +27,7 @@ public class DeliveryDTO {
     private String notes;
     private Double amount;
     private String trackingNumber;
+    private Boolean addressRequested;
     private Instant createdAt;
     private Instant updatedAt;
     private String buyerLocation;

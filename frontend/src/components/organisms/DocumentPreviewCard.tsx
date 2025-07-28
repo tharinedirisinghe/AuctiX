@@ -1,10 +1,21 @@
 import { Check, Download, MessageSquare, X } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../ui/card';
 import { VerificationDocument } from './VerificationSubmissionList';
 import { useEffect, useState } from 'react';
-import { downloadForPreview } from '@/services/sellerVerificationService';
+import {
+  downloadAndOpenFile,
+  downloadForPreview,
+} from '@/services/sellerVerificationService';
 import AxiosRequest from '@/services/axiosInspector';
+
+const PREVIEW_INNER_HEIGHT = 'h-[calc(60vh-150px)]';
 
 const DocumentPreviewViewer = ({
   document,
@@ -48,7 +59,9 @@ const DocumentPreviewViewer = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center text-gray-500 h-64">
+      <div
+        className={`flex items-center justify-center text-gray-500 ${PREVIEW_INNER_HEIGHT}`}
+      >
         <p>Loading preview...</p>
       </div>
     );
@@ -56,7 +69,9 @@ const DocumentPreviewViewer = ({
 
   if (error || !previewUrl) {
     return (
-      <div className="flex items-center justify-center text-gray-500 h-64">
+      <div
+        className={`flex items-center justify-center text-gray-500 ${PREVIEW_INNER_HEIGHT}`}
+      >
         <p>{error || 'Preview not available'}</p>
       </div>
     );
@@ -68,7 +83,7 @@ const DocumentPreviewViewer = ({
       <iframe
         src={previewUrl}
         title={document.docTitle}
-        className="w-full h-64 border-0"
+        className={`w-full ${PREVIEW_INNER_HEIGHT} border-0`}
       />
     );
   }
@@ -79,7 +94,7 @@ const DocumentPreviewViewer = ({
       <img
         src={previewUrl}
         alt={document.docTitle}
-        className="max-h-full max-w-full object-contain"
+        className={`max-h-full ${PREVIEW_INNER_HEIGHT} max-w-full object-contain`}
         onError={() => setError('Failed to display image')}
       />
     );
@@ -98,6 +113,7 @@ export function DocumentPreviewCard({
 }: {
   document: VerificationDocument | null;
 }) {
+  const axiosInstance = AxiosRequest().axiosInstance;
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -106,15 +122,18 @@ export function DocumentPreviewCard({
 
   if (!document) {
     return (
-      <Card className="border-l-2 border-yellow-500 bg-gray-50">
+      <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
         <CardHeader>
-          <CardTitle className="text-lg">Document Preview</CardTitle>
+          <CardTitle className="text-lg font-medium text-gray-900">
+            Document Preview
+          </CardTitle>
+          <CardDescription>
+            Select a document from the submission list to preview
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="border rounded-lg p-4 bg-white">
-            <div className="bg-gray-100 h-64 flex items-center justify-center">
-              <p className="text-gray-500">No document selected</p>
-            </div>
+        <CardContent className="space-y-4 h-[calc(100%-140px)] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-500">No document selected</p>
           </div>
         </CardContent>
       </Card>
@@ -122,56 +141,83 @@ export function DocumentPreviewCard({
   }
 
   return (
-    <Card className="border-l-2 border-yellow-500 bg-gray-50">
+    <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
       <CardHeader>
-        <CardTitle className="text-lg">
-          Preview of: {document.docTitle}
+        <CardTitle className="text-lg font-medium text-gray-900">
+          Document Preview
         </CardTitle>
+        <CardDescription>
+          {document.docTitle} • {formatFileSize(document.docSize)} •{' '}
+          {document.docType}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="border rounded-lg p-4 bg-white">
-          <div className="bg-gray-100 h-64 flex items-center justify-center">
-            <DocumentPreviewViewer document={document} />
+      <CardContent className="space-y-4 h-[calc(100%-140px)]">
+        {/* Preview Section */}
+        <div className="space-y-4">
+          <div className="border rounded-lg p-4 bg-white">
+            <div
+              className={`bg-gray-100 flex items-center justify-center ${PREVIEW_INNER_HEIGHT}`}
+            >
+              <DocumentPreviewViewer document={document} />
+            </div>
           </div>
         </div>
 
+        {/* Document Details Section */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Type:</p>
-            <p className="font-medium">{document.docType}</p>
+          <div className="p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
+            <p className="text-xs text-gray-600">File Type</p>
+            <p className="text-sm font-medium text-gray-900">
+              {document.docType}
+            </p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Size:</p>
-            <p className="font-medium">{formatFileSize(document.docSize)}</p>
+          <div className="p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
+            <p className="text-xs text-gray-600">File Size</p>
+            <p className="text-sm font-medium text-gray-900">
+              {formatFileSize(document.docSize)}
+            </p>
           </div>
         </div>
 
-        {document.description && document.description !== 'no review notes' && (
-          <div>
-            <p className="text-sm text-gray-600">Notes:</p>
-            <p className="font-medium">{document.description}</p>
+        {/* Notes Section */}
+        <div className="p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
+          <p className="text-xs text-gray-600 mb-2">Review Notes</p>
+          <div className="text-xs text-gray-800 max-h-16 overflow-y-auto">
+            {document.description === 'no review notes'
+              ? 'No review notes available'
+              : document.description}
           </div>
-        )}
+        </div>
 
-        <div className="flex flex-wrap gap-2 pt-4">
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
+        {/* Action Buttons Section */}
+        <div className="grid grid-cols-2 gap-2 p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => downloadAndOpenFile(document.docId, axiosInstance)}
+          >
+            <Download className="h-3 w-3" />
             Download
           </Button>
+
+          <Button variant="outline" size="sm" className="gap-1">
+            <MessageSquare className="h-3 w-3" />
+            Edit Note
+          </Button>
+
           <Button
             variant="default"
-            className="bg-green-600 hover:bg-green-700 gap-2"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 gap-1"
           >
-            <Check className="h-4 w-4" />
+            <Check className="h-3 w-3" />
             Approve
           </Button>
-          <Button variant="destructive" className="gap-2">
-            <X className="h-4 w-4" />
+
+          <Button variant="destructive" size="sm" className="gap-1">
+            <X className="h-3 w-3" />
             Reject
-          </Button>
-          <Button variant="outline" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Add Note
           </Button>
         </div>
       </CardContent>

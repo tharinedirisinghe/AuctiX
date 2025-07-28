@@ -1,4 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 
@@ -42,73 +48,81 @@ export function VerificationSubmissionList({
   };
 
   return (
-    <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[90vh] mb-6">
+    <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
       <CardHeader>
-        <CardTitle className="text-lg">Verification Submissions</CardTitle>
+        <CardTitle className="text-lg font-medium text-gray-900">
+          Verification Submissions
+        </CardTitle>
+        <CardDescription>
+          {documents.length > 0
+            ? `${documents.length} document${documents.length !== 1 ? 's' : ''} submitted for review`
+            : 'No documents submitted'}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
-        {isLoading ? (
-          <>
-            <div className="border rounded-lg p-4">
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-[200px]" />
-                  <Skeleton className="h-4 w-[150px]" />
+      <CardContent className="h-[calc(100%-140px)]">
+        <div className="space-y-3 h-full overflow-y-auto">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="p-4 bg-white border rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-[200px]" />
+                      <Skeleton className="h-4 w-[150px]" />
+                      <Skeleton className="h-3 w-[100px]" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                  </div>
                 </div>
-                <Skeleton className="h-6 w-20" />
-              </div>
+              ))}
             </div>
-            <div className="border rounded-lg p-4">
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-[180px]" />
-                  <Skeleton className="h-4 w-[150px]" />
+          ) : documents.length === 0 ? (
+            <div className="p-8 text-center bg-white border rounded-lg">
+              <p className="text-gray-500">No verification submissions found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Documents will appear here once submitted
+              </p>
+            </div>
+          ) : (
+            documents.map((doc) => (
+              <div
+                key={doc.docId}
+                className={`p-4 bg-white border rounded-lg cursor-pointer transition-all hover:shadow-sm border-l-4 ${
+                  selectedDocumentId === doc.docId
+                    ? 'border-l-yellow-500 border-yellow-500 shadow-sm bg-yellow-50'
+                    : 'border-l-yellow-500 hover:border-gray-300 hover:border-l-yellow-500'
+                }`}
+                onClick={() => onDocumentSelect?.(doc)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0 mr-3">
+                    <h4 className="font-medium text-gray-900 truncate mb-1">
+                      {doc.docTitle}
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Submitted: {formatDate(doc.createdAt)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {formatFileSize(doc.docSize)} • {doc.docType}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      doc.status === 'PENDING'
+                        ? 'warning'
+                        : doc.status === 'APPROVED'
+                          ? 'success'
+                          : 'destructive'
+                    }
+                    className="whitespace-nowrap flex-shrink-0"
+                  >
+                    {doc.status}
+                  </Badge>
                 </div>
-                <Skeleton className="h-6 w-20" />
               </div>
-            </div>
-          </>
-        ) : documents.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">
-            No verification submissions
-          </p>
-        ) : (
-          documents.map((doc) => (
-            <div
-              key={doc.docId}
-              className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-white ${
-                selectedDocumentId === doc.docId
-                  ? 'bg-white border-yellow-500 shadow-sm'
-                  : 'hover:border-gray-300'
-              }`}
-              onClick={() => onDocumentSelect?.(doc)}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1 min-w-0 mr-3">
-                  <h3 className="font-medium truncate">{doc.docTitle}</h3>
-                  <p className="text-sm text-gray-500">
-                    Submitted On: {formatDate(doc.createdAt)}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {formatFileSize(doc.docSize)} • {doc.docType}
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    doc.status === 'PENDING'
-                      ? 'default'
-                      : doc.status === 'APPROVED'
-                        ? 'success'
-                        : 'destructive'
-                  }
-                  className="ml-2 whitespace-nowrap flex-shrink-0"
-                >
-                  {doc.status}
-                </Badge>
-              </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </CardContent>
     </Card>
   );

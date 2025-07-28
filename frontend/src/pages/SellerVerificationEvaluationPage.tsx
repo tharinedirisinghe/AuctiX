@@ -11,6 +11,8 @@ import {
 } from '@/services/adminService';
 import AxiosRequest from '@/services/axiosInspector';
 import { ISeller } from '@/types/IUser';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -58,35 +60,67 @@ export function SellerVerificationEvaluationPage() {
   }, [username]);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <ProfileCard
-        isInEditMode={false}
-        username={sellerData?.username || ''}
-        email={sellerData?.email || ''}
-        role={sellerData?.role || ''}
-        profilePhoto={sellerData?.profile_photo || ''}
-        bannerPhoto={sellerData?.banner_photo || ''}
-        isProfileLoading={isSellerLoading}
-        isBannerLoading={isSellerLoading}
-        onProfilePhotoSet={() => {}}
-        onProfilePhotoDelete={() => {}}
-        onBannerPhotoSet={() => {}}
-        onRemoveBanner={() => {}}
-      />
+    <div className="py-6 max-w-6xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          Seller Verification Review
+          {(isSellerLoading || isVerificationsLoading) && (
+            <Badge className="bg-brandGoldYellow text-gray-900">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Loading...
+            </Badge>
+          )}
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Review and evaluate seller verification documents
+        </p>
+      </div>
 
-      <Separator />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <DocumentPreviewCard document={selectedDocument} />
+      {/* Profile Section */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-500">Seller Profile</h3>
+          <Separator className="my-4 border-gray-200 border-t-2" />
         </div>
-        <div className="lg:col-span-1">
-          <VerificationSubmissionList
-            documents={documents}
-            isLoading={isVerificationsLoading}
-            selectedDocumentId={selectedDocument?.docId}
-            onDocumentSelect={setSelectedDocument}
+        <div className="p-6 rounded-lg border-l-4 border-l-yellow-500 bg-gray-50">
+          <ProfileCard
+            isInEditMode={false}
+            username={sellerData?.username || ''}
+            email={sellerData?.email || ''}
+            role={sellerData?.role || ''}
+            profilePhoto={sellerData?.profile_photo || ''}
+            bannerPhoto={sellerData?.banner_photo || ''}
+            isProfileLoading={isSellerLoading}
+            isBannerLoading={isSellerLoading}
+            onProfilePhotoSet={() => {}}
+            onProfilePhotoDelete={() => {}}
+            onBannerPhotoSet={() => {}}
+            onRemoveBanner={() => {}}
           />
+        </div>
+      </div>
+
+      {/* Document Review Section */}
+      <div className="space-y-6 pt-12">
+        <div>
+          <h3 className="text-lg font-medium text-gray-500">
+            Document Review & Verification
+          </h3>
+          <Separator className="my-4 border-gray-200 border-t-2" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <DocumentPreviewCard document={selectedDocument} />
+          </div>
+          <div className="lg:col-span-1">
+            <VerificationSubmissionList
+              documents={documents}
+              isLoading={isVerificationsLoading}
+              selectedDocumentId={selectedDocument?.docId}
+              onDocumentSelect={setSelectedDocument}
+            />
+          </div>
         </div>
       </div>
     </div>

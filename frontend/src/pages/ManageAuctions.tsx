@@ -225,7 +225,7 @@ const ManageAuctions = () => {
   ) => {
     if (action === 'view') {
       // Navigate to auction details page
-      navigate(`/auctions/${auctionId}`);
+      navigate(`/auction-details/${auctionId}`);
       setShowDropdown(null);
       return;
     }

@@ -13,6 +13,7 @@ import AddToWatchlistButton from '@/components/molecules/AddToWatchlistButton';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useAuctionWebSocket } from '@/hooks/useAuctionWebSocket';
+import { Link } from 'react-router-dom';
 
 // Import the timer utilities from your auction page or create them here
 interface TimeRemaining {
@@ -187,6 +188,12 @@ interface ProductDetails {
     firstName: string;
     lastName: string;
     profilePicture: string | null;
+    seller?: {
+      sellerId: string;
+      isVerified: boolean;
+      isActive: boolean;
+      bannerId: string | null;
+    };
   };
   endTime: string;
   startTime: string;
@@ -236,7 +243,7 @@ const AuctionDetailsPage = () => {
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  console.log('Product Deleted Status:', product?.deletionStatus);
+  // console.log('Product Deleted Status:', product?.deletionStatus);
 
   const isBiddingDisabled = product?.deletionStatus === 'DELETED';
 
@@ -589,11 +596,11 @@ const AuctionDetailsPage = () => {
     ) {
       try {
         await navigator.share(shareData);
-        toast({
-          title: 'Shared Successfully',
-          description: 'Auction shared successfully!',
-          variant: 'default',
-        });
+        // toast({
+        //   title: 'Shared Successfully',
+        //   description: 'Auction shared successfully!',
+        //   variant: 'default',
+        // });
       } catch (error) {
         // User cancelled sharing or error occurred
         console.log('Share cancelled or failed:', error);
@@ -628,10 +635,10 @@ const AuctionDetailsPage = () => {
   const renderBidButton = () => {
     if (!product) return null;
 
-    console.log('DEBUG: product status', {
-      isDeleted: product.deleted,
-      // status: product.status,
-    });
+    // console.log('DEBUG: product status', {
+    //   isDeleted: product.deleted,
+    //   // status: product.status,
+    // });
 
     if (product.deleted) {
       return (
@@ -900,6 +907,7 @@ const AuctionDetailsPage = () => {
                 min="0"
                 max="999999999"
                 step="100"
+                readOnly
               />
               <Button
                 variant="outline"
@@ -943,7 +951,10 @@ const AuctionDetailsPage = () => {
 
           <div className="flex items-center mt-6">
             <p className="text-sm mr-2">By</p>
-            <span className="border rounded-full p-1 pr-2 flex items-center">
+            <Link
+              to={`/seller/${product.seller.seller?.sellerId}`}
+              className="border rounded-full p-1 pr-2 flex items-center hover:bg-gray-100 transition"
+            >
               <img
                 src={
                   product.seller.profilePicture || '/defaultProfilePhoto.jpg'
@@ -954,7 +965,7 @@ const AuctionDetailsPage = () => {
               <p className="text-sm">
                 {product.seller.firstName} {product.seller.lastName}
               </p>
-            </span>
+            </Link>
           </div>
         </div>
       </div>

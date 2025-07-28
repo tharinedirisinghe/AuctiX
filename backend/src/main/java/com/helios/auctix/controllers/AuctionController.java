@@ -12,7 +12,7 @@ import com.helios.auctix.services.fileUpload.FileUploadUseCaseEnum;
 import com.helios.auctix.services.user.UserDetailsService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -446,9 +446,11 @@ public class AuctionController {
      * @return List of seller's auctions
      */
     @GetMapping("/seller/auctions")
-    public ResponseEntity<List<SellerAuctionDTO>> getSellerAuctions(
+    public ResponseEntity<Page<AuctionDetailsDTO>> getSellerAuctions(
             @RequestParam(value = "filter", defaultValue = "total") String filter,
-            @RequestParam(value = "search", required = false) String searchTerm) {
+            @RequestParam(value = "search", required = false) String searchTerm,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User seller = userDetailsService.getAuthenticatedUser(authentication);
@@ -457,13 +459,14 @@ public class AuctionController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
             }
 
-            // Map frontend filter names to backend filter names
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
             String mappedFilter = mapFrontendFilterToBackend(filter);
 
-            List<SellerAuctionDTO> auctions = auctionService.getSellerAuctions(
-                    seller.getSeller().getId(), mappedFilter, searchTerm);
-
-            return ResponseEntity.ok(auctions);
+            Page<AuctionDetailsDTO> detailedPage = auctionService.getDetailedSellerAuctions(
+                    seller.getId(), mappedFilter, searchTerm, pageable
+            );
+            return ResponseEntity.ok(detailedPage);
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (Exception e) {
@@ -650,27 +653,25 @@ public class AuctionController {
 
 
     @GetMapping("/seller/{id}")
-    public ResponseEntity<List<AuctionDetailsDTO>> getAuctionsBySeller(
+    public ResponseEntity<Page<AuctionDetailsDTO>> getAuctionsBySeller(
             @PathVariable UUID id,
             @RequestParam(value = "filter", defaultValue = "total") String filter,
-            @RequestParam(value = "search", required = false) String searchTerm) {
+            @RequestParam(value = "search", required = false) String searchTerm,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         try {
             if (id == null) {
                 return ResponseEntity.badRequest().build();
             }
 
-            // Map frontend filter names to backend filter names (if needed)
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             String mappedFilter = mapFrontendFilterToBackend(filter);
 
-            // Get the basic auction list first
-            List<SellerAuctionDTO> auctions = auctionService.getSellerAuctions(id, mappedFilter, searchTerm);
+            // ✅ Directly get detailed page from service
+            Page<AuctionDetailsDTO> detailedPage = auctionService.getDetailedSellerAuctions(id, mappedFilter, searchTerm, pageable);
 
-            // Convert each auction to detailed DTO
-            List<AuctionDetailsDTO> detailedAuctions = auctions.stream()
-                    .map(auction -> auctionService.getAuctionDetails(UUID.fromString(auction.getId())))
-                    .collect(Collectors.toList());
+            return ResponseEntity.ok(detailedPage);
 
-            return ResponseEntity.ok(detailedAuctions);
         } catch (IllegalArgumentException e) {
             log.warning("Invalid argument provided: " + e.getMessage());
             return ResponseEntity.badRequest().build();
@@ -679,6 +680,8 @@ public class AuctionController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+
 
     @GetMapping("/search")
     public ResponseEntity<List<AuctionDetailsDTO>> searchAuctions(@RequestParam String q) {

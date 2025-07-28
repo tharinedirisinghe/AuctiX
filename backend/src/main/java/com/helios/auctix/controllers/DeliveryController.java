@@ -176,4 +176,21 @@ public class DeliveryController {
                     .body("Error deleting delivery: " + e.getMessage());
         }
     }
+
+    @PostMapping("/{id}/request-address")
+    public ResponseEntity<?> requestAddress(@PathVariable UUID id) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+
+            DeliveryDTO updatedDelivery = deliveryService.requestAddress(id, currentUser);
+            return ResponseEntity.ok(updatedDelivery);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            logger.warning("Error requesting address: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error requesting address: " + e.getMessage());
+        }
+    }
 }

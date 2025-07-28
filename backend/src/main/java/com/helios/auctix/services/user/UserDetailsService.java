@@ -9,6 +9,7 @@ import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.ProfileUpdateDataDTO;
 import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.dtos.UserStatsDTO;
+import com.helios.auctix.dtos.UserAddressDTO;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
 import com.helios.auctix.repositories.*;
@@ -27,6 +28,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.naming.LimitExceededException;
 import java.security.InvalidParameterException;
@@ -508,5 +510,49 @@ private final UserRepository userRepository;
         }
         log.info("Valid reset code for email: {}", email);
         return true;
+    }
+
+    @Transactional
+    public UserAddress saveUserAddress(User user, UserAddressDTO addressDTO) {
+        log.info("Saving user address for user: " + user.getUsername());
+        
+        try {
+            // Refresh the user entity to get the latest state
+            User refreshedUser = userRepository.findById(user.getId()).orElseThrow();
+            
+            UserAddress address = userAddressRepository.findByIdWithLock(refreshedUser.getId()).orElse(null);
+            
+            if (address == null) {
+                // Create new address - don't set ID explicitly, let @MapsId handle it
+                address = new UserAddress();
+                address.setUser(refreshedUser); // This will set the ID via @MapsId
+                address.setAddressNumber(addressDTO.getAddressNumber());
+                address.setAddressLine1(addressDTO.getAddressLine1());
+                address.setAddressLine2(addressDTO.getAddressLine2());
+                address.setCity(addressDTO.getCity());
+                address.setState(addressDTO.getState());
+                address.setPostalCode(addressDTO.getPostalCode());
+                address.setCountry(addressDTO.getCountry());
+                log.info("Creating new address for user: " + refreshedUser.getUsername());
+            } else {
+                // Update existing address
+                address.setAddressNumber(addressDTO.getAddressNumber());
+                address.setAddressLine1(addressDTO.getAddressLine1());
+                address.setAddressLine2(addressDTO.getAddressLine2());
+                address.setCity(addressDTO.getCity());
+                address.setState(addressDTO.getState());
+                address.setPostalCode(addressDTO.getPostalCode());
+                address.setCountry(addressDTO.getCountry());
+                log.info("Updating existing address for user: " + refreshedUser.getUsername());
+            }
+            
+            UserAddress savedAddress = userAddressRepository.save(address);
+            log.info("Successfully saved user address for user: " + refreshedUser.getUsername());
+            
+            return savedAddress;
+        } catch (Exception e) {
+            log.error("Error saving user address for user: " + user.getUsername() + " - " + e.getMessage(), e);
+            throw e;
+        }
     }
 }

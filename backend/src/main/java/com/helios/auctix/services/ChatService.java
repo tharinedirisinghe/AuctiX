@@ -5,6 +5,7 @@ import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.domain.chat.ChatRoomType;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.chat.ChatMessageRepository;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
@@ -147,5 +148,27 @@ public class ChatService {
 
         return savedChatRoom;
     }
+
+
+    public ChatRoom getOrCreateSupportChatForUser(User user) {
+        if (user.getRoleEnum() != UserRoleEnum.SELLER && user.getRoleEnum() != UserRoleEnum.BIDDER) {
+            throw new IllegalStateException("Only sellers and bidders have support chats.");
+        }
+
+        Optional<ChatRoom> existingChat = chatRoomRepository.findSupportChatByUserId(user.getId());
+        if (existingChat.isPresent()) {
+            return existingChat.get();
+        }
+
+        ChatRoom newChat = new ChatRoom();
+        newChat.setType(ChatRoomType.SUPPORT);
+        chatRoomRepository.save(newChat);
+
+        joinChatRoom(user, newChat.getId(), ChatRoomType.SUPPORT);
+        return chatRoomRepository.save(newChat);
+    }
+
+
+
 
 }

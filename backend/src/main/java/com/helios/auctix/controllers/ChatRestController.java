@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -99,6 +99,21 @@ public class ChatRestController  {
                 .toList();
 
         return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/support")
+    public ResponseEntity<Map<String, UUID>> getOrCreateSupportChat() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = null;
+        try {
+            user = userDetailsService.getAuthenticatedUser(authentication);
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        ChatRoom supportChat = chatService.getOrCreateSupportChatForUser(user);
+        return ResponseEntity.ok(Map.of("id", supportChat.getId()));
     }
 
 }

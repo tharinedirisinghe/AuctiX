@@ -225,7 +225,9 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
 
                     case SUPPORT:
                         if (!chatRoomRepository.isUserMemberOfChatRoom(UUID.fromString(id), user.getId())) {
-                            if (!(user.getRoleEnum().equals(UserRoleEnum.ADMIN) || user.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN))) {
+                            if ((user.getRoleEnum().equals(UserRoleEnum.ADMIN) || user.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN))) {
+                                chatService.joinChatRoom(user, UUID.fromString(id), ChatRoomType.SUPPORT);
+                            } else {
                                 log.warning("Only admins can access support chat");
                                 return null;
                             }

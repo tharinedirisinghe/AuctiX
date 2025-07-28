@@ -33,7 +33,7 @@ import SecuritySettingsPage from '@/pages/SecuritySettingsPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
 import FeedbackManagement from '@/pages/FeedbackManagement';
 import { NoticePage } from '@/pages/NoticePage';
-import SupportChat from '@/pages/SupportChat';
+import SupportChat from '@/pages/UserSupportChat';
 
 export default function AppRouter() {
   useNotificationRegistration();

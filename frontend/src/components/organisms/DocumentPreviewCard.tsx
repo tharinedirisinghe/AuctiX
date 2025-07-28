@@ -14,6 +14,9 @@ import {
   downloadForPreview,
 } from '@/services/sellerVerificationService';
 import AxiosRequest from '@/services/axiosInspector';
+import { ApproveDocumentModal } from '../molecules/ApproveDocumentModal';
+import { RejectDocumentModal } from '../molecules/RejectDocumentModal';
+import { AddNoteModal } from '../molecules/AddNoteModal';
 
 const PREVIEW_INNER_HEIGHT = 'h-[calc(60vh-150px)]';
 
@@ -114,6 +117,10 @@ export function DocumentPreviewCard({
   document: VerificationDocument | null;
 }) {
   const axiosInstance = AxiosRequest().axiosInstance;
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -139,6 +146,21 @@ export function DocumentPreviewCard({
       </Card>
     );
   }
+
+  const handleApprove = async (docId: string, notes: string) => {
+    // TODO: Implement approve API call
+    console.log('Approving document:', docId, 'with notes:', notes);
+  };
+
+  const handleReject = async (docId: string, notes: string) => {
+    // TODO: Implement reject API call
+    console.log('Rejecting document:', docId, 'with notes:', notes);
+  };
+
+  const handleAddNote = async (docId: string, notes: string) => {
+    // TODO: Implement add note API call
+    console.log('Adding note to document:', docId, 'note:', notes);
+  };
 
   return (
     <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
@@ -194,14 +216,19 @@ export function DocumentPreviewCard({
           <Button
             variant="outline"
             size="sm"
-            className="gap-1"
+            className="gap-1 border-yellow-500 text-gray-800 bg-brandGoldYellow hover:bg-yellow-300"
             onClick={() => downloadAndOpenFile(document.docId, axiosInstance)}
           >
             <Download className="h-3 w-3" />
             Download
           </Button>
 
-          <Button variant="outline" size="sm" className="gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 border-yellow-500 text-gray-800 bg-brandGoldYellow hover:bg-yellow-300"
+            onClick={() => setIsAddNoteModalOpen(true)}
+          >
             <MessageSquare className="h-3 w-3" />
             Edit Note
           </Button>
@@ -210,17 +237,45 @@ export function DocumentPreviewCard({
             variant="default"
             size="sm"
             className="bg-green-600 hover:bg-green-700 gap-1"
+            onClick={() => setIsApproveModalOpen(true)}
           >
             <Check className="h-3 w-3" />
             Approve
           </Button>
 
-          <Button variant="destructive" size="sm" className="gap-1">
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1"
+            onClick={() => setIsRejectModalOpen(true)}
+          >
             <X className="h-3 w-3" />
             Reject
           </Button>
         </div>
       </CardContent>
+
+      {/* Modals */}
+      <ApproveDocumentModal
+        isOpen={isApproveModalOpen}
+        onClose={() => setIsApproveModalOpen(false)}
+        onConfirm={handleApprove}
+        document={document}
+      />
+
+      <RejectDocumentModal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        onConfirm={handleReject}
+        document={document}
+      />
+
+      <AddNoteModal
+        isOpen={isAddNoteModalOpen}
+        onClose={() => setIsAddNoteModalOpen(false)}
+        onConfirm={handleAddNote}
+        document={document}
+      />
     </Card>
   );
 }

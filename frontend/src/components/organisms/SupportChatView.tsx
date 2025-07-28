@@ -6,6 +6,11 @@ export default function SupportChatView({
   chatRoomId: string;
 }) {
   return (
-    <LiveChat chatRoomId={chatRoomId} type="SUPPORT" title="Support Chat" />
+    <LiveChat
+      chatRoomId={chatRoomId}
+      type="SUPPORT"
+      title="Support Chat"
+      limitUIHeight={false}
+    />
   );
 }

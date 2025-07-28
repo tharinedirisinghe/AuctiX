@@ -17,15 +17,17 @@ type ChatRoomProps =
       type: 'AUCTION';
       auctionId: string;
       title?: string;
+      limitUIHeight?: boolean;
     }
   | {
       type: 'SUPPORT' | 'DIRECT' | 'GROUP';
       chatRoomId: string;
       title?: string;
+      limitUIHeight?: boolean;
     };
 
 const LiveChat = (props: ChatRoomProps) => {
-  const { type, title } = props;
+  const { type, title, limitUIHeight } = props;
 
   const chatRoomId = type !== 'AUCTION' ? props.chatRoomId : undefined;
   const auctionId = type === 'AUCTION' ? props.auctionId : undefined;
@@ -121,7 +123,7 @@ const LiveChat = (props: ChatRoomProps) => {
         );
 
         const response = await axiosInstance.get(msgFetchPath, {
-          params: { page: pageNum, size: 3 },
+          params: { page: pageNum, size: limitUIHeight ? 5 : 3 },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -455,7 +457,9 @@ const LiveChat = (props: ChatRoomProps) => {
       </div>
 
       <div
-        className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[500px]"
+        className={`flex-1 p-4 space-y-4 overflow-y-auto ${
+          limitUIHeight ? 'max-h-[500px]' : ''
+        }`}
         ref={scrollContainerRef}
       >
         {hasMore ? (

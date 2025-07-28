@@ -8,6 +8,8 @@ import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.ProfileUpdateDataDTO;
 import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.dtos.UserStatsDTO;
+import com.helios.auctix.dtos.UserAddressDTO;
+import com.helios.auctix.domain.user.UserAddress;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
@@ -494,6 +496,56 @@ public class UserController {
 
         UserStatsDTO count = userDetailsService.getRegisteredUserCount(currentUser);
         return ResponseEntity.ok(count);
+    }
+
+    // User Address endpoints
+    @GetMapping("/address")
+    public ResponseEntity<?> getUserAddress() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+            
+            UserAddress userAddress = currentUser.getUserAddress();
+            if (userAddress == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No address found for user");
+            }
+            
+            return ResponseEntity.ok(userAddress);
+        } catch (Exception e) {
+            log.warning("Error fetching user address: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching user address: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/address")
+    public ResponseEntity<?> saveUserAddress(@RequestBody UserAddressDTO addressDTO) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+            
+            UserAddress savedAddress = userDetailsService.saveUserAddress(currentUser, addressDTO);
+            return ResponseEntity.ok(savedAddress);
+        } catch (Exception e) {
+            log.warning("Error saving user address: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error saving user address: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/address")
+    public ResponseEntity<?> updateUserAddress(@RequestBody UserAddressDTO addressDTO) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+            
+            UserAddress updatedAddress = userDetailsService.saveUserAddress(currentUser, addressDTO);
+            return ResponseEntity.ok(updatedAddress);
+        } catch (Exception e) {
+            log.warning("Error updating user address: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating user address: " + e.getMessage());
+        }
     }
 
 }

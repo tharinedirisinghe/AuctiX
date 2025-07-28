@@ -2,12 +2,11 @@ package com.helios.auctix.controllers;
 
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.AdminActionDTO;
+import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
+import com.helios.auctix.exception.InvalidUserException;
 import com.helios.auctix.repositories.UserRepository;
 import com.helios.auctix.services.AuctionSchedulerService;
-import com.helios.auctix.services.user.AdminActionService;
-import com.helios.auctix.services.user.UserDetailsService;
-import com.helios.auctix.services.user.UserServiceResponse;
-import com.helios.auctix.services.user.UserUploadsService;
+import com.helios.auctix.services.user.*;
 import jakarta.validation.constraints.Null;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.checkerframework.checker.units.qual.A;
@@ -20,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -34,14 +35,16 @@ public class AdminController {
     private final UserUploadsService userUploadsService;
     private final AdminActionService adminActionService;
     private final UserRepository userRepository;
+    private final SellerService sellerService;
 
     @Autowired
-    public AdminController(AuctionSchedulerService auctionSchedulerService, UserDetailsService userDetailsService, UserUploadsService userUploadsService, AdminActionService adminActionService, UserRepository userRepository) {
+    public AdminController(AuctionSchedulerService auctionSchedulerService, UserDetailsService userDetailsService, UserUploadsService userUploadsService, AdminActionService adminActionService, UserRepository userRepository, SellerService sellerService) {
         this.auctionSchedulerService = auctionSchedulerService;
         this.userDetailsService = userDetailsService;
         this.userUploadsService = userUploadsService;
         this.adminActionService = adminActionService;
         this.userRepository = userRepository;
+        this.sellerService = sellerService;
     }
 
     /**
@@ -174,6 +177,46 @@ public class AdminController {
         adminActionService.banUser(targetUserUsername, currentUser, reason, SuspentionDurationEnum.ONE_MONTH); // TODO: give the control to the admin to choose the duration
         return ResponseEntity.ok().body("User banned successfully");
 
+    }
+
+    @GetMapping("/getSellerVerificationRequests")
+    public ResponseEntity<Page<SellerVerificationRequestSummaryDTO>> getSellerVerificationRequests(
+            @RequestParam(value = "limit", required = false, defaultValue = "10") Integer limit,
+            @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset,
+            @RequestParam(value = "sortBy", required = false, defaultValue = "submittedAt") String sortBy,
+            @RequestParam(value = "order", required = false, defaultValue = "asc") String order,
+            @RequestParam(value = "filterBy", required = false, defaultValue = "") String filterBy,
+            @RequestParam(value = "filterValue", required = false, defaultValue = "") String filterValue,
+            @RequestParam(value = "search", required = false, defaultValue = "") String search
+    ) throws AuthenticationException {
+        // Get the current authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+
+        logger.info("Retrieving sellers verification summary");
+        if (!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new InvalidUserException("Invalid role");
+        }
+
+        // decode from url encoded parameters
+        if (search != null) {
+            search = URLDecoder.decode(search, StandardCharsets.UTF_8);
+        }
+        if (filterBy != null) {
+            filterBy = URLDecoder.decode(filterBy, StandardCharsets.UTF_8);
+        }
+        if (sortBy != null) {
+            sortBy = URLDecoder.decode(sortBy, StandardCharsets.UTF_8);
+        }
+        if (order != null) {
+            order = URLDecoder.decode(order, StandardCharsets.UTF_8);
+        }
+        if (filterValue != null) {
+            filterValue = URLDecoder.decode(filterValue, StandardCharsets.UTF_8);
+        }
+
+        Page<SellerVerificationRequestSummaryDTO> summary = sellerService.getSellerVerificationSummary(search,filterBy,filterValue,offset,limit,sortBy,order);
+        return ResponseEntity.ok(summary);
     }
 
 

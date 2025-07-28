@@ -12,6 +12,7 @@ import {
 } from '@/store/slices/deliverySlice';
 import { Delivery } from '@/services/deliveryService';
 import { reviewService } from '@/services/reviewService';
+import { updateDeliveryAddress, AddressData } from '@/services/addressService';
 
 // Import components
 import { DeliveryHeroBanner } from '@/components/delivery/buyer/DeliveryHeroBanner';
@@ -26,6 +27,7 @@ import { LoadingIndicator } from '@/components/delivery/shared/LoadingIndicator'
 import { DeliverySkeletons } from '@/components/delivery/shared/DeliverySkeletons';
 import { Pagination } from '@/components/delivery/seller/Pagination';
 import { ReviewFormDialog } from '@/components/review/ReviewFormDialog';
+import { AddAddressDialog } from '@/components/delivery/buyer/AddAddressDialog';
 
 const UserDeliveryPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -53,6 +55,11 @@ const UserDeliveryPage = () => {
   const [reviewDelivery, setReviewDelivery] = useState<Delivery | null>(null);
   const [reviewEligibility, setReviewEligibility] = useState<{[key: string]: boolean}>({});
   const [existingReviews, setExistingReviews] = useState<{[key: string]: boolean}>({});
+
+  // Address state
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState<boolean>(false);
+  const [selectedDeliveryForAddress, setSelectedDeliveryForAddress] = useState<Delivery | null>(null);
+  const [isAddressLoading, setIsAddressLoading] = useState<boolean>(false);
 
   // Fetch deliveries on mount
   useEffect(() => {
@@ -248,6 +255,43 @@ const UserDeliveryPage = () => {
     setReviewDelivery(null);
   };
 
+  // Handle add address click
+  const handleAddAddress = (delivery: Delivery) => {
+    setSelectedDeliveryForAddress(delivery);
+    setIsAddressDialogOpen(true);
+  };
+
+  // Handle save address
+  const handleSaveAddress = async (addressData: AddressData) => {
+    if (!selectedDeliveryForAddress) return;
+    
+    setIsAddressLoading(true);
+    try {
+      await updateDeliveryAddress(selectedDeliveryForAddress.id, addressData);
+      
+      toast({
+        title: 'Address Updated',
+        description: 'Your delivery address has been saved successfully.',
+        variant: 'default',
+      });
+
+      // Refresh deliveries to get updated address
+      dispatch(fetchBuyerDeliveries());
+      
+      setIsAddressDialogOpen(false);
+      setSelectedDeliveryForAddress(null);
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save address. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddressLoading(false);
+    }
+  };
+
   // Reset filters
   const resetFilters = () => {
     setTypeFilter('all');
@@ -322,6 +366,7 @@ const UserDeliveryPage = () => {
                 onReviewClick={handleReviewClick}
                 canReview={reviewEligibility[delivery.id] || false}
                 hasReview={existingReviews[delivery.id] || false}
+                onAddAddress={handleAddAddress}
               />
             ))}
           </div>
@@ -366,6 +411,18 @@ const UserDeliveryPage = () => {
         onClose={() => setIsReviewDialogOpen(false)}
         delivery={reviewDelivery}
         onReviewSubmitted={handleReviewSubmitted}
+      />
+
+      {/* Add Address Dialog */}
+      <AddAddressDialog
+        isOpen={isAddressDialogOpen}
+        onClose={() => {
+          setIsAddressDialogOpen(false);
+          setSelectedDeliveryForAddress(null);
+        }}
+        onSave={handleSaveAddress}
+        isLoading={isAddressLoading}
+        deliveryId={selectedDeliveryForAddress?.id || ''}
       />
     </div>
   );

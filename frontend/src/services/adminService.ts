@@ -1,5 +1,5 @@
 import { assets } from '@/config/assets';
-import { IUser } from '@/types/IUser';
+import { ISeller, IUser } from '@/types/IUser';
 import { AxiosInstance } from 'axios';
 
 const baseURL = import.meta.env.VITE_API_URL;
@@ -93,4 +93,47 @@ export const getUserDetails = async (
   delete userData.profilePicture;
 
   return userData as IUser;
+};
+
+export const getSellerDetails = async (
+  axiosInstance: AxiosInstance,
+  sellerUserName: string,
+) => {
+  const response = await axiosInstance.get('/user/getUser', {
+    params: {
+      username: sellerUserName,
+    },
+  });
+
+  // Add additional setup for user data
+  const userData = {
+    ...response.data,
+    profile_photo: response.data.profilePicture?.id
+      ? `${baseURL}/user/getUserProfilePhoto?file_uuid=${response.data.profilePicture.id}`
+      : assets.default_profile_image,
+    banner_photo: response.data.seller?.bannerId
+      ? `${baseURL}/user/getUserBannerPhoto?file_uuid=${response.data.seller.bannerId}`
+      : assets.default_banner_image,
+    isVerified: response.data.seller?.isVerified || false,
+    role: response.data?.userRole?.userRole || 'SELLER',
+  };
+  delete userData.profilePicture;
+
+  return userData as ISeller;
+};
+
+export const getSellerVerifications = async (
+  axiosInstance: AxiosInstance,
+  sellerUserName: string,
+) => {
+  const response = await axiosInstance.get(
+    '/admin/getSellerVerifications/view',
+    {
+      params: {
+        sellerUserName,
+      },
+    },
+  );
+
+  return response.data;
 };

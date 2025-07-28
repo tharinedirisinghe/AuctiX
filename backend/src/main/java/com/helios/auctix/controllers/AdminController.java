@@ -1,18 +1,23 @@
 package com.helios.auctix.controllers;
 
+import com.azure.core.util.BinaryData;
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.AdminActionDTO;
 import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
+import com.helios.auctix.dtos.VerificationRequestDTO;
 import com.helios.auctix.exception.InvalidUserException;
 import com.helios.auctix.repositories.UserRepository;
 import com.helios.auctix.services.AuctionSchedulerService;
+import com.helios.auctix.services.fileUpload.FileUploadResponse;
 import com.helios.auctix.services.user.*;
 import jakarta.validation.constraints.Null;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -218,6 +223,25 @@ public class AdminController {
         Page<SellerVerificationRequestSummaryDTO> summary = sellerService.getSellerVerificationSummary(search,filterBy,filterValue,offset,limit,sortBy,order);
         return ResponseEntity.ok(summary);
     }
+
+
+    @GetMapping("/getSellerVerifications/view")
+    public ResponseEntity<?> viewSellerVerifications(
+            @RequestParam String sellerUserName
+    ) throws AuthenticationException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        List<VerificationRequestDTO> requests = sellerService.viewSellerVerifications(sellerUserName);
+
+
+        return ResponseEntity.ok(requests);
+    }
+
 
 
 }

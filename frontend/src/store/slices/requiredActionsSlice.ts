@@ -51,6 +51,41 @@ export const fetchPendingRequiredActions = createAsyncThunk(
   },
 );
 
+// TODO: Implement the markAsResolved action to handle marking actions as resolved
+export const markAsResolved = createAsyncThunk(
+  'requiredActions/markAsResolved',
+  async (actionId: string, { rejectWithValue, getState, dispatch }) => {
+    try {
+      const baseURL = import.meta.env.VITE_API_URL;
+      const authUser = (getState() as any).auth as IAuthUser;
+      const response = await axios.post(
+        `${baseURL}/user/requiredActionResolved`,
+        { actionId },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authUser?.token}`,
+          },
+        },
+      );
+      console.log('Announcement marked as resolved:', response.data);
+      if (!response.data) {
+        return rejectWithValue('Failed to mark announcement as resolved');
+      }
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        console.error('Unauthorized! logging out...');
+        dispatch(logout());
+      }
+      return rejectWithValue(
+        error.response?.data?.message ||
+          'Failed to fetch pending required actions',
+      );
+    }
+  },
+);
+
 const requiredActionsSlice = createSlice({
   name: 'requiredActions',
   initialState,
@@ -66,8 +101,14 @@ const requiredActionsSlice = createSlice({
         state.loading = false;
         state.pendingActions = action.payload.map((recode: any) => {
           return {
-            ...recode,
             actionType: recode.actionType || null,
+            context:
+              typeof recode.context === 'string'
+                ? JSON.parse(recode.context)
+                : recode.context,
+            resolvedAt: recode.resolvedAt || null,
+            createdAt: recode.createdAt || null,
+            resolved: recode.resolved || true,
           };
         });
         console.log('pending actions updated:', action.payload);

@@ -17,7 +17,8 @@ import {
 import AxiosRequest from '@/services/axiosInspector';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Bell } from 'lucide-react';
+import { Bell, BellRing } from 'lucide-react';
+import { PushPermissionModal } from '@/components/molecules/PushPermissionModal';
 
 export default function NotificationPreferencesPage() {
   const [preferences, setPreferences] =
@@ -26,6 +27,8 @@ export default function NotificationPreferencesPage() {
     useState<NotificationSettingsUpdateRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPushPermissionModal, setShowPushPermissionModal] = useState(false);
+
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
 
@@ -209,6 +212,41 @@ export default function NotificationPreferencesPage() {
         </div>
 
         <div className="py-6">
+          <div className="rounded-2xl border px-6 py-5 shadow-sm bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <BellRing className="text-brandGoldYellow h-6 w-6" />
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Browser Push Settings
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Control whether this browser can show push notifications
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => setShowPushPermissionModal(true)}
+                // className="bg-brandGoldYellow text-black hover:bg-brandGoldYellow/90"
+              >
+                Configure
+              </Button>
+            </div>
+
+            {typeof Notification === 'undefined' ? (
+              <p className="text-sm text-red-600">
+                This browser does not support notifications.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Current browser permission:{' '}
+                <span className="font-medium">{Notification.permission}</span>
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="py-6">
           <h2 className="mb-1 text-xl font-medium">Global Settings</h2>
           <p className="mb-3">
             This controls enabling or disabling notifications globally for all
@@ -288,7 +326,7 @@ export default function NotificationPreferencesPage() {
               )}
             </Tabs>
           </div>
-          <div className="w-full sm:w-auto flex float-end">
+          <div className="w-full sm:w-auto flex float-end mb-10">
             <Button
               className="w-full sm:w-auto bg-brandGoldYellow text-black hover:bg-brandGoldYellow/80 text-center whitespace-normal break-words"
               onClick={handleSave}
@@ -299,6 +337,10 @@ export default function NotificationPreferencesPage() {
           </div>
         </div>
       </div>
+      <PushPermissionModal
+        open={showPushPermissionModal}
+        onOpenChange={setShowPushPermissionModal}
+      />
     </div>
   );
 }

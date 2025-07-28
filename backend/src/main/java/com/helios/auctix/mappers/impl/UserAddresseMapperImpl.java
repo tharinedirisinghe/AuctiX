@@ -23,6 +23,7 @@ public class UserAddresseMapperImpl implements Mapper<UserAddress, UserAddressDT
         try {
             return UserAddressDTO.builder()
                     .id(userAddress.getId())
+                    .addressNumber(userAddress.getAddressNumber())
                     .addressLine1(userAddress.getAddressLine1())
                     .addressLine2(userAddress.getAddressLine2())
                     // Use safe getters to prevent NullPointerException
@@ -49,6 +50,7 @@ public class UserAddresseMapperImpl implements Mapper<UserAddress, UserAddressDT
         try {
             return UserAddress.builder()
                     .id(userAddressDTO.getId())
+                    .addressNumber(userAddressDTO.getAddressNumber())
                     .addressLine1(userAddressDTO.getAddressLine1())
                     .addressLine2(userAddressDTO.getAddressLine2())
                     .city(userAddressDTO.getCity())

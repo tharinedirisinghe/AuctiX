@@ -1,9 +1,6 @@
 package com.helios.auctix.controllers;
 
-import com.helios.auctix.domain.user.AdminAction;
-import com.helios.auctix.domain.user.AdminActionsEnum;
-import com.helios.auctix.domain.user.User;
-import com.helios.auctix.domain.user.UserRoleEnum;
+import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.AdminActionDTO;
 import com.helios.auctix.repositories.UserRepository;
 import com.helios.auctix.services.AuctionSchedulerService;
@@ -11,6 +8,7 @@ import com.helios.auctix.services.user.AdminActionService;
 import com.helios.auctix.services.user.UserDetailsService;
 import com.helios.auctix.services.user.UserServiceResponse;
 import com.helios.auctix.services.user.UserUploadsService;
+import jakarta.validation.constraints.Null;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -152,6 +150,29 @@ public class AdminController {
         }
         Page<AdminActionDTO> pageData = adminActionService.getAllAdminActions(limit, offset, search, actionTypeFilter, order);
         return ResponseEntity.ok(pageData);
+    }
+
+    @PostMapping("/banUser")
+    public ResponseEntity<String> banUser(
+            @RequestParam("username") String targetUserUsername,
+            @RequestParam("reason") String reason
+    ) throws AuthenticationException {
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Ban request by user " + currentUser.getEmail()+" for user "+targetUserUsername);
+
+
+        if (reason == null || reason.isEmpty()) {
+            throw new IllegalArgumentException("Reason for banning the user is required");
+        }
+
+        if(targetUserUsername==null || targetUserUsername.isEmpty()) {
+            throw new IllegalArgumentException("Username is the same");
+        }
+
+        adminActionService.banUser(targetUserUsername, currentUser, reason, SuspentionDurationEnum.ONE_MONTH); // TODO: give the control to the admin to choose the duration
+        return ResponseEntity.ok().body("User banned successfully");
 
     }
 

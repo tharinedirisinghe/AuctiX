@@ -43,9 +43,8 @@ public class Delivery {
     @Column(nullable = false)
     private LocalDate deliveryDate;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DeliveryStatus status;
+    private String status;
 
     @Column(name = "delivery_address", length = 500)
     private String deliveryAddress;

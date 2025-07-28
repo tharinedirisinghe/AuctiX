@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { Filter } from 'lucide-react';
 import AuctionCard from '../components/molecules/auctionCard';
-
+import { useNavigate, useSearchParams } from 'react-router-dom';
 interface Seller {
   id: string;
   username: string;
@@ -237,6 +237,10 @@ const AuctionsPage: React.FC = () => {
   });
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') ?? '';
+  const navigate = useNavigate();
+
   const fetchAuctions = useCallback(
     async (filter: FilterType, page: number = 1, category: string = '') => {
       try {
@@ -252,6 +256,7 @@ const AuctionsPage: React.FC = () => {
           page: page.toString(),
           limit: pagination.itemsPerPage.toString(),
           sort: 'latest',
+          searchQuery: searchQuery,
         });
 
         if (category && category !== '') {
@@ -331,7 +336,7 @@ const AuctionsPage: React.FC = () => {
         setLoading(false);
       }
     },
-    [pagination.itemsPerPage],
+    [pagination.itemsPerPage, searchQuery],
   ); // Only depend on itemsPerPage
 
   // Initial load and when applied filters change
@@ -367,7 +372,7 @@ const AuctionsPage: React.FC = () => {
   };
 
   const handleCardClick = (auctionId: string) => {
-    window.location.href = `/auction-details/${auctionId}`;
+    navigate(`/auction-details/${auctionId}`);
   };
 
   // Remove AuctionCardWithTimer, use AuctionCard directly

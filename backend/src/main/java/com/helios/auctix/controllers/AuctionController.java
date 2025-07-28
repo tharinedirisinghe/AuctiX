@@ -12,6 +12,7 @@ import com.helios.auctix.services.fileUpload.FileUploadUseCaseEnum;
 import com.helios.auctix.services.user.UserDetailsService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -381,35 +382,55 @@ public class AuctionController {
     // Add this method to your existing AuctionController class
 
     @GetMapping("/all")
-    public ResponseEntity<List<AuctionDetailsDTO>> getAllAuctions(
+    public ResponseEntity<?> getAllAuctions(
             @RequestParam(value = "filter", defaultValue = "active") String filter,
-            @RequestParam(value = "category", required = false) String category)
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "searchQuery", required = false) String searchQuery,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "limit", defaultValue = "12") int limit)
+
     {
         // DEBUG LOG
         System.out.println("Received filter: " + filter + ", category: " + category);
 
         try {
-            List<AuctionDetailsDTO> auctions;
+            String tsQuery = auctionService.buildTsQuery(searchQuery);
+
+            Page<Auction> pagedAuctions;
+            List<AuctionDetailsDTO> auctionDTOs;
 
             switch (filter.toLowerCase()) {
                 case "active":
-                    auctions = auctionService.getActiveAuctionsDTO(category);
+
+                    pagedAuctions = auctionService.getActiveAuctionsPaged(category, tsQuery, page, limit);
                     break;
                 case "expired":
-                    auctions = auctionService.getExpiredAuctionsDTO(category);
+                    pagedAuctions = auctionService.getExpiredAuctionsPaged(category, tsQuery, page, limit);
                     break;
-                case "upcoming":  // Add new case for upcoming
-                    auctions = auctionService.getUpcomingAuctionsDTO(category);
+                case "upcoming":
+                    pagedAuctions = auctionService.getUpcomingAuctionsPaged(category, tsQuery, page, limit);
                     break;
                 default:
-                    auctions = auctionService.getAllAuctionsDTO(category);
+                    pagedAuctions = auctionService.getAllAuctionsPaged(category, tsQuery, page, limit);
+
                     break;
             }
 
-            // DEBUG LOG
-            System.out.println("Returning " + auctions.size() + " auctions");
 
-            return ResponseEntity.ok(auctions);
+            // DEBUG LOG
+//            System.out.println("Returning " + auctions.size() + " auctions");
+
+            auctionDTOs = pagedAuctions.getContent().stream()
+                    .map(auctionService::convertToDTO)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("auctions", auctionDTOs);
+            response.put("currentPage", pagedAuctions.getNumber() + 1);
+            response.put("totalPages", pagedAuctions.getTotalPages());
+            response.put("totalItems", pagedAuctions.getTotalElements());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.warning("Error fetching auctions with filter " + filter + ": " + e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -553,7 +574,9 @@ public class AuctionController {
      * @return Response message
      */
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteAuction(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteAuction(
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User seller = userDetailsService.getAuthenticatedUser(authentication);
@@ -575,17 +598,23 @@ public class AuctionController {
             // Check if auction has bids
             boolean hasBids = bidService.hasAuctionReceivedBids(id);
 
-            String result = auctionService.deleteAuction(id, hasBids);
-            return ResponseEntity.ok(result);
+            if (hasBids && (requestBody == null || requestBody.get("reason") == null || requestBody.get("reason").trim().isEmpty())) {
+                return ResponseEntity.badRequest().body("Deletion reason is required for auctions with bids");
+            }
+
+            String deletionReason = hasBids ? requestBody.get("reason") : null;
+            String result = auctionService.deleteAuction(id, hasBids, deletionReason, seller.getSeller().getId());
+            return ResponseEntity.ok(Map.of("message", result));
 
         } catch (IllegalArgumentException e) {
             log.warning("Invalid request parameters: " + e.getMessage());
-            return ResponseEntity.badRequest().body("Invalid request parameters.");
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authentication required"));
         } catch (Exception e) {
             log.warning("Error deleting auction: " + e.getMessage());
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
 
@@ -649,6 +678,17 @@ public class AuctionController {
             log.warning("Error fetching seller auctions: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<AuctionDetailsDTO>> searchAuctions(@RequestParam String q) {
+        List<Auction> results = auctionService.searchAuctions(q);
+
+        List<AuctionDetailsDTO> dtos = results.stream()
+                .map(auctionService::convertToDTO)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
     }
 
 

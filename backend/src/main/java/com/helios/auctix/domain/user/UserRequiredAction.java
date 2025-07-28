@@ -1,7 +1,6 @@
 package com.helios.auctix.domain.user;
 
 import com.fasterxml.jackson.annotation.*;
-import com.google.api.client.json.Json;
 import com.helios.auctix.converters.JsonMapConverter;
 import jakarta.persistence.*;
 import lombok.*;

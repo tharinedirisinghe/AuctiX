@@ -7,6 +7,7 @@ import {
   User,
   CalendarClock,
   Clock,
+  Star,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,12 +21,18 @@ interface DeliveryCardProps {
   delivery: Delivery;
   handleContactSeller: (delivery: Delivery) => void;
   viewDeliveryDetails: (delivery: Delivery) => void;
+  onReviewClick?: (delivery: Delivery) => void;
+  canReview?: boolean;
+  hasReview?: boolean;
 }
 
 export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   delivery,
   handleContactSeller,
   viewDeliveryDetails,
+  onReviewClick,
+  canReview = false,
+  hasReview = false,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
   const daysInfo = getDaysInfo(delivery.deliveryDate, delivery.status);
@@ -138,6 +145,28 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
           >
             <Truck className="mr-1.5" size={16} />
             Track Package
+          </Button>
+        )}
+        {canReview && onReviewClick && (
+          <Button
+            variant="outline"
+            className="border-green-300 text-green-600 hover:bg-green-50 flex items-center"
+            size="sm"
+            onClick={() => onReviewClick(delivery)}
+          >
+            <Star className="mr-1.5" size={16} />
+            Write Review
+          </Button>
+        )}
+        {hasReview && (
+          <Button
+            variant="outline"
+            className="border-blue-300 text-blue-600 hover:bg-blue-50 flex items-center"
+            size="sm"
+            disabled
+          >
+            <Star className="mr-1.5" size={16} />
+            Reviewed
           </Button>
         )}
       </div>

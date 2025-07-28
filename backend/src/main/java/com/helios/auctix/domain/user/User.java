@@ -71,6 +71,15 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PasswordResetRequest> passwordResetRequest;
 
+    @Column(name = "is_suspended", nullable = false)
+    private boolean isSuspended = false;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<SuspendedUser> suspensions;
+
+    @OneToMany(mappedBy = "suspendedBy", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<SuspendedUser> suspensionsIssued;
+
     // helper method to make it cleaner to get the role enum
     @JsonProperty("role")
     public UserRoleEnum getRoleEnum() {

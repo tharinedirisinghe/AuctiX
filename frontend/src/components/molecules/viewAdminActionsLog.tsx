@@ -1,6 +1,4 @@
-'use client';
-
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter } from 'lucide-react';
 
@@ -20,120 +18,78 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getFilteredAdminActionsLog } from '@/services/adminService';
+import AxiosRequest from '@/services/axiosInspector';
 
-// Mock data for admin actions log
-const mockAdminActions = [
-  {
-    id: 1,
-    adminName: 'John Doe',
-    action: 'Verified user account',
-    target: 'jane.smith@example.com',
-    timestamp: '2023-05-09T14:30:00Z',
-    actionType: 'Verify Users',
-  },
-  {
-    id: 2,
-    adminName: 'Sarah Johnson',
-    action: 'Banned user for policy violation',
-    target: 'mike.brown@example.com',
-    timestamp: '2023-05-09T13:15:00Z',
-    actionType: 'Band Users',
-  },
-  {
-    id: 3,
-    adminName: 'Mike Brown',
-    action: 'Processed refund',
-    target: 'Order #38291',
-    timestamp: '2023-05-09T12:45:00Z',
-    actionType: 'Refund',
-  },
-  {
-    id: 4,
-    adminName: 'Jane Smith',
-    action: 'Verified user account',
-    target: 'alex.wilson@example.com',
-    timestamp: '2023-05-08T16:20:00Z',
-    actionType: 'Verify Users',
-  },
-  {
-    id: 5,
-    adminName: 'Robert Jones',
-    action: 'Banned user for suspicious activity',
-    target: 'sarah.johnson@example.com',
-    timestamp: '2023-05-08T11:10:00Z',
-    actionType: 'Band Users',
-  },
-  {
-    id: 6,
-    adminName: 'Alex Wilson',
-    action: 'Verified user account',
-    target: 'john.doe@example.com',
-    timestamp: '2023-05-07T09:30:00Z',
-    actionType: 'Verify Users',
-  },
-  {
-    id: 7,
-    adminName: 'John Doe',
-    action: 'Processed refund',
-    target: 'Order #42587',
-    timestamp: '2023-05-07T08:45:00Z',
-    actionType: 'Refund',
-  },
-  {
-    id: 8,
-    adminName: 'Sarah Johnson',
-    action: 'Banned user for fraudulent activity',
-    target: 'david.miller@example.com',
-    timestamp: '2023-05-06T15:20:00Z',
-    actionType: 'Band Users',
-  },
-];
+export interface IAdminAction {
+  id: string;
+  adminId: string;
+  adminUsername: string;
+  adminEmail: string;
+  adminFirstName: string;
+  adminLastName: string;
+  adminRole: string;
+  adminProfilePhotoId: string | null;
+  userId: string;
+  userUsername: string;
+  userEmail: string;
+  userFirstName: string;
+  userLastName: string;
+  userRole: string;
+  userProfilePhotoId: string | null;
+  activityType: string;
+  description: string;
+  createdAt: string;
+}
 
-type ActionType = 'Verify Users' | 'Band Users' | 'Refund' | 'all';
+enum ActionType {
+  ALL = 'ALL',
+  USER_PROFILE_PHOTO_REMOVE = 'USER_PROFILE_PHOTO_REMOVE',
+  USER_BAN = 'USER_BAN',
+  USER_UNBAN = 'USER_UNBAN',
+  VERIFICATION_DOCS_APPROVE = 'VERIFICATION_DOCS_APPROVE',
+  VERIFICATION_DOCS_VIEW = 'VERIFICATION_DOCS_VIEW',
+  VERIFICATION_DOCS_REJECT = 'VERIFICATION_DOCS_REJECT',
+}
 
 export function ViewAdminActionsLog() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedActionTypes, setSelectedActionTypes] = useState<ActionType[]>([
-    'all',
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedActionType, setSelectedActionType] = useState<ActionType>(
+    ActionType.ALL,
+  );
+  const [adminActions, setAdminActions] = useState<IAdminAction[]>([]);
+  const axiosInstance = AxiosRequest().axiosInstance;
+
+  useEffect(() => {
+    setSearchQuery('');
+    setSelectedActionType(ActionType.ALL);
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(true);
+    getFilteredAdminActionsLog(axiosInstance, {
+      limit: 10,
+      offset: 0,
+      order: 'desc',
+      search: searchQuery,
+      actionTypeFilter: selectedActionType,
+    })
+      .then((data) => {
+        console.log('Fetched admin actions log:', data);
+        setAdminActions(data?.content);
+      })
+      .catch((error) => {
+        console.error('Error fetching admin actions log:', error);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [searchQuery, selectedActionType]);
 
   const handleActionTypeChange = (actionType: ActionType) => {
-    if (actionType === 'all') {
-      setSelectedActionTypes(['all']);
-      return;
-    }
-
-    // If "all" is currently selected and user selects a specific type
-    if (selectedActionTypes.includes('all')) {
-      setSelectedActionTypes([actionType]);
-      return;
-    }
-
-    // Toggle the selected action type
-    if (selectedActionTypes.includes(actionType)) {
-      const newTypes = selectedActionTypes.filter(
-        (type) => type !== actionType,
-      );
-      setSelectedActionTypes(newTypes.length ? newTypes : ['all']);
-    } else {
-      setSelectedActionTypes([...selectedActionTypes, actionType]);
-    }
+    setSelectedActionType(actionType);
   };
-
-  const filteredActions = mockAdminActions.filter((action) => {
-    // Apply search filter
-    const matchesSearch =
-      action.adminName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      action.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      action.target.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Apply action type filter
-    const matchesType =
-      selectedActionTypes.includes('all') ||
-      selectedActionTypes.includes(action.actionType as ActionType);
-
-    return matchesSearch && matchesType;
-  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -177,28 +133,50 @@ export function ViewAdminActionsLog() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuCheckboxItem
-                  checked={selectedActionTypes.includes('all')}
-                  onCheckedChange={() => handleActionTypeChange('all')}
+                  checked={selectedActionType === ActionType.ALL}
+                  onCheckedChange={() => handleActionTypeChange(ActionType.ALL)}
                 >
                   All Actions
                 </DropdownMenuCheckboxItem>
+
                 <DropdownMenuCheckboxItem
-                  checked={selectedActionTypes.includes('Verify Users')}
-                  onCheckedChange={() => handleActionTypeChange('Verify Users')}
+                  checked={
+                    selectedActionType === ActionType.USER_PROFILE_PHOTO_REMOVE
+                  }
+                  onCheckedChange={() =>
+                    handleActionTypeChange(ActionType.USER_PROFILE_PHOTO_REMOVE)
+                  }
                 >
-                  Create
+                  Profile Photo Remove
                 </DropdownMenuCheckboxItem>
+
                 <DropdownMenuCheckboxItem
-                  checked={selectedActionTypes.includes('Band Users')}
-                  onCheckedChange={() => handleActionTypeChange('Band Users')}
+                  checked={selectedActionType === ActionType.USER_BAN}
+                  onCheckedChange={() =>
+                    handleActionTypeChange(ActionType.USER_BAN)
+                  }
                 >
-                  Update
+                  User Ban
                 </DropdownMenuCheckboxItem>
+
                 <DropdownMenuCheckboxItem
-                  checked={selectedActionTypes.includes('Refund')}
-                  onCheckedChange={() => handleActionTypeChange('Refund')}
+                  checked={selectedActionType === ActionType.USER_UNBAN}
+                  onCheckedChange={() =>
+                    handleActionTypeChange(ActionType.USER_UNBAN)
+                  }
                 >
-                  Delete
+                  User Unban
+                </DropdownMenuCheckboxItem>
+
+                <DropdownMenuCheckboxItem
+                  checked={
+                    selectedActionType === ActionType.VERIFICATION_DOCS_APPROVE
+                  }
+                  onCheckedChange={() =>
+                    handleActionTypeChange(ActionType.VERIFICATION_DOCS_APPROVE)
+                  }
+                >
+                  Verification Docs Approve
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -207,9 +185,9 @@ export function ViewAdminActionsLog() {
         <CardContent>
           <ScrollArea className="h-[400px] rounded-md border">
             <div className="p-4">
-              {filteredActions.length > 0 ? (
+              {adminActions.length > 0 ? (
                 <ul className="space-y-4">
-                  {filteredActions.map((action, index) => (
+                  {adminActions.map((action, index) => (
                     <motion.li
                       key={action.id}
                       initial={{ opacity: 0, x: -10 }}
@@ -218,14 +196,18 @@ export function ViewAdminActionsLog() {
                       className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border"
                     >
                       <div className="space-y-1">
-                        <p className="font-medium">{action.adminName}</p>
+                        <p className="font-medium">
+                          {action.adminFirstName} {action.adminLastName}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {action.action}:{' '}
-                          <span className="font-medium">{action.target}</span>
+                          {action.activityType}:{' '}
+                          <span className="font-medium">
+                            {action.description}
+                          </span>
                         </p>
                       </div>
                       <div className="mt-2 sm:mt-0 text-sm text-muted-foreground">
-                        {formatDate(action.timestamp)}
+                        {formatDate(action.createdAt)}
                       </div>
                     </motion.li>
                   ))}

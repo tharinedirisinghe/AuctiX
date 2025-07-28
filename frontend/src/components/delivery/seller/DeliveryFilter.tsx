@@ -1,5 +1,5 @@
 // File: components/delivery/seller/DeliveryFilter.tsx
-import { Filter, Plus, Search } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +11,6 @@ interface DeliveryFilterProps {
   setSearchTerm: (term: string) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
-  setShowNewDeliveryModal: (show: boolean) => void;
   isLoading: boolean;
   typeFilter: string;
   setTypeFilter: (filter: string) => void;
@@ -29,7 +28,6 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
   setSearchTerm,
   showFilters,
   setShowFilters,
-  setShowNewDeliveryModal,
   isLoading,
   typeFilter,
   setTypeFilter,
@@ -93,14 +91,6 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
-          </Button>
-          <Button
-            className="bg-amber-300 hover:bg-amber-400 text-gray-900 flex items-center"
-            onClick={() => setShowNewDeliveryModal(true)}
-            disabled={isLoading}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            New Delivery
           </Button>
         </div>
       </div>

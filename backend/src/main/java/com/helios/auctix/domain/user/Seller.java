@@ -29,7 +29,7 @@ public class Seller {
     @Column(name="banner_id", nullable = true)
     private UUID bannerId;
 
-
+    @JsonIgnore
     @OneToMany(mappedBy = "seller", fetch = FetchType.LAZY)
     private List<SellerVerificationRequest> sellerVerificationRequests;
 

@@ -34,6 +34,7 @@ public class AuctionSchedulerService {
     private final BidRepository bidRepository;
     private final BidService bidService;
     private final CoinTransactionService transactionService;
+    private final DeliveryService deliveryService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
@@ -83,6 +84,7 @@ public class AuctionSchedulerService {
             BidRepository bidRepository,
             BidService bidService,
             CoinTransactionService transactionService,
+            DeliveryService deliveryService,
             NotificationEventPublisher notificationEventPublisher,
             UserRepository userRepository,
             WalletRepository walletRepository,
@@ -91,6 +93,7 @@ public class AuctionSchedulerService {
         this.bidRepository = bidRepository;
         this.bidService = bidService;
         this.transactionService = transactionService;
+        this.deliveryService = deliveryService;
         this.notificationEventPublisher = notificationEventPublisher;
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
@@ -102,19 +105,21 @@ public class AuctionSchedulerService {
             .withZone(ZoneId.of("Asia/Colombo"));
 
     /**
-     * Scheduled job to check for completed auctions every minute
+     * Scheduled job to check for completed auctions every second
      */
-    @Scheduled(fixedRate = 60000) // Run every minute
+    @Scheduled(fixedRate = 1000) // Run every 1 second
     @Transactional
     public void processCompletedAuctions() {
         try {
             Instant now = Instant.now();
-            logger.info("Running scheduled job to process completed auctions at " + now);
 
             // Find auctions that have ended but haven't been processed yet
             List<Auction> completedAuctions = auctionRepository.findByEndTimeBeforeAndCompletedFalse(now);
 
-            logger.info("Found " + completedAuctions.size() + " completed auctions to process");
+            // Only log when there are auctions to process (reduce log noise)
+            if (!completedAuctions.isEmpty()) {
+                logger.info("Found " + completedAuctions.size() + " completed auctions to process at " + now);
+            }
 
             for (Auction auction : completedAuctions) {
                 try {
@@ -165,7 +170,19 @@ public class AuctionSchedulerService {
                             winningBid.getAmount()
                     );
 
-                    // 3. Send notifications
+                    // 3. Automatically create delivery
+                    try {
+                        deliveryService.createAutomaticDelivery(
+                                auctionId,
+                                winningBid.getBidderId(),
+                                winningBid.getAmount()
+                        );
+                        logger.info("Successfully created automatic delivery for auction: " + auctionId);
+                    } catch (Exception e) {
+                        logger.warning("Failed to create automatic delivery for auction " + auctionId + ": " + e.getMessage());
+                    }
+
+                    // 4. Send notifications
                     if (bidder != null) {
                         try {
                             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -223,7 +240,7 @@ public class AuctionSchedulerService {
                         }
                     }
 
-                    // 4. Mark the auction as completed
+                    // 5. Mark the auction as completed
                     auction.setCompleted(true);
                     auction.setWinningBidId(winningBid.getId());
                     auctionRepository.save(auction);

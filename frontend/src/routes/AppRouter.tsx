@@ -18,6 +18,7 @@ import ProfileSettings from '@/pages/ProfileSettings';
 import { useNotificationRegistration } from '@/hooks/use-notification-registration';
 import UserDeliveryPage from '@/pages/User_Delivery';
 import SellerDeliveryPage from '@/pages/Seller_Delivery';
+import SellerReviews from '@/pages/SellerReviews';
 import AuctionsPage from '@/pages/ExploreAuctions';
 import ManageAuctions from '@/pages/ManageAuctions';
 import AdminManagementPage from '@/pages/AdminManagementPage';
@@ -31,6 +32,7 @@ import SellerVerificationSubmitPage from '@/pages/SellerVerificationSubmitPage';
 import SecuritySettingsPage from '@/pages/SecuritySettingsPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
 import FeedbackManagement from '@/pages/FeedbackManagement';
+import { NoticePage } from '@/pages/NoticePage';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -53,6 +55,8 @@ export default function AppRouter() {
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/about" element={<AboutUs />} />
           <Route path="/password-reset" element={<PasswordResetPage />} />
+
+          <Route path="/notice" element={<NoticePage />} />
         </Route>
 
         {/* Routes using DashboardLayout */}
@@ -180,6 +184,7 @@ export default function AppRouter() {
         <Route path="/register" element={<Register />} />
         <Route path="/user-delivery" element={<UserDeliveryPage />} />
         <Route path="/seller-delivery" element={<SellerDeliveryPage />} />
+        <Route path="/seller-reviews" element={<SellerReviews />} />
 
         <Route path="/403" element={<h2>403 Unauthorized</h2>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />

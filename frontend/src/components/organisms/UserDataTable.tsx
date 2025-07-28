@@ -1,28 +1,18 @@
 import { ColumnDef, Table } from '@tanstack/react-table';
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { DataTable } from '@/components/molecules/DataTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@radix-ui/react-checkbox';
 import { AxiosInstance } from 'axios';
 import AxiosReqest from '@/services/axiosInspector';
 import { Skeleton } from '../ui/skeleton';
-import { BanUserModal } from '../molecules/BanUserModal';
-import { Card } from '@/components/ui/card';
 import { assets } from '@/config/assets';
 import RoleFilterDropdown from '../molecules/RoleFilterDropdown';
-import { RemoveProfilePictureModal } from './RemoveProfilePictureModal';
 import { IUser } from '@/types/IUser';
 import { useToast } from '@/hooks/use-toast';
-const baseURL = import.meta.env.VITE_API_URL;
+
+import AdminActionsDropDown from '../molecules/AdminActionsDropDown';
 
 interface IProfilePhoto {
   category: string;
@@ -31,7 +21,7 @@ interface IProfilePhoto {
   fileType: string;
   isPublic: boolean;
 }
-interface ITableUser {
+export interface ITableUser {
   id: number;
   username: string;
   firstName: string;
@@ -42,7 +32,6 @@ interface ITableUser {
 }
 
 export default function UserDataTable() {
-  const { toast } = useToast();
   const axiosInstance: AxiosInstance = AxiosReqest().axiosInstance;
   const [users, setUsers] = useState<ITableUser[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,12 +52,6 @@ export default function UserDataTable() {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(10);
   const [isInSearchDelay, setIsInSearchDelay] = useState<boolean>(false);
-
-  const [isBanUserModalOpen, setIsBanUserModalOpen] = useState(false);
-  const [isRemoveProfilePictureModalOpen, setIsRemoveProfilePictureModalOpen] =
-    useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<IUser | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -382,39 +365,7 @@ export default function UserDataTable() {
       id: 'actions',
       enableHiding: false,
       cell: ({ row }) => {
-        const user = row.original;
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(user.username)}
-              >
-                Copy Username
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() =>
-                  handleRemoveProfilePictureModalOpen(row.getValue('username'))
-                }
-              >
-                Remove Profile Picture
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleBanUserModelOpen(row.getValue('username'))}
-              >
-                Ban User
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
+        return <AdminActionsDropDown row={row} />;
       },
     },
   ];
@@ -443,80 +394,6 @@ export default function UserDataTable() {
     [setSearch],
   );
 
-  const convertITableUserToIUser = useCallback((user: ITableUser): IUser => {
-    return {
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role as 'BIDDER' | 'SELLER' | 'ADMIN',
-      profile_photo: user.profilePicture
-        ? `${baseURL}/user/getUserProfilePhoto?file_uuid=${user.profilePicture.id}`
-        : assets.default_profile_image,
-      banner_photo: assets.default_banner_image,
-    };
-  }, []);
-
-  const handleBanUserModelOpen = useCallback(
-    async (userName: string) => {
-      const user = users?.find((user) => user.username === userName);
-      if (!user) {
-        console.error('User not found');
-        return;
-      }
-      setSelectedUser(convertITableUserToIUser(user));
-      setIsBanUserModalOpen(true);
-      console.log('Banning user with ID:', userName);
-    },
-    [users, convertITableUserToIUser],
-  );
-
-  const handleRemoveProfilePictureModalOpen = useCallback(
-    async (userName: string) => {
-      const user = users?.find((user) => user.username === userName);
-      if (!user) {
-        console.error('User not found');
-        return;
-      }
-      setSelectedUser(convertITableUserToIUser(user));
-      setIsRemoveProfilePictureModalOpen(true);
-      console.log('Removing profile picture for user:', userName);
-    },
-    [users, convertITableUserToIUser],
-  );
-
-  const handleRemoveProfilePicture = useCallback(
-    async (user: IUser) => {
-      try {
-        const response = await axiosInstance.delete(
-          `${baseURL}/admin/deleteUserProfilePhoto`,
-          {
-            params: {
-              username: user.username,
-            },
-          },
-        );
-        setIsRemoveProfilePictureModalOpen(false);
-        console.log(
-          'Profile picture removed successfully for user:',
-          user.username,
-        );
-        toast({
-          title: 'Success',
-          description: 'Profile picture removed successfully',
-        });
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to remove profile picture',
-          variant: 'destructive',
-        });
-        console.error('Error removing profile picture:', error);
-      }
-    },
-    [axiosInstance],
-  );
-
   return (
     <>
       <DataTable
@@ -530,23 +407,6 @@ export default function UserDataTable() {
         setSearchText={searchHandler}
         searchText={search}
       />
-      {selectedUser && (
-        <BanUserModal
-          isOpen={isBanUserModalOpen}
-          onClose={() => setIsBanUserModalOpen(false)}
-          onConfirm={() => {}} // Change to handle ban user
-          user={selectedUser}
-        />
-      )}
-
-      {selectedUser && (
-        <RemoveProfilePictureModal
-          isOpen={isRemoveProfilePictureModalOpen}
-          onClose={() => setIsRemoveProfilePictureModalOpen(false)}
-          user={selectedUser}
-          onRemove={() => handleRemoveProfilePicture(selectedUser)}
-        />
-      )}
     </>
   );
 }

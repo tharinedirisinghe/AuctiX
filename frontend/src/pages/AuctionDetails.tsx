@@ -13,6 +13,7 @@ import AddToWatchlistButton from '@/components/molecules/AddToWatchlistButton';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useAuctionWebSocket } from '@/hooks/useAuctionWebSocket';
+import { Link } from 'react-router-dom';
 
 // Import the timer utilities from your auction page or create them here
 interface TimeRemaining {
@@ -47,31 +48,6 @@ export function useAuctionTimer(
         setServerOffset(0);
         setIsOffsetReady(true);
         console.log('Using client time for testing');
-
-        /* UNCOMMENT THIS WHEN TESTING SERVER TIME SYNC
-      const clientTime = Date.now();
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auctions/server-time`,
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch server time');
-      }
-
-      const data = await response.json();
-      const serverTime = data.timestamp;
-      const offset = serverTime - clientTime;
-
-      setServerOffset(offset);
-      setIsOffsetReady(true);
-
-      console.log('Server time synced:', {
-        offset: offset,
-        serverTime: new Date(serverTime).toISOString(),
-        clientTime: new Date(clientTime).toISOString(),
-        offsetMinutes: Math.round(offset / 1000 / 60),
-      });
-      */
       } catch (error) {
         console.error('Failed to sync server time, using client time:', error);
         setServerOffset(0);
@@ -212,10 +188,18 @@ interface ProductDetails {
     firstName: string;
     lastName: string;
     profilePicture: string | null;
+    seller?: {
+      sellerId: string;
+      isVerified: boolean;
+      isActive: boolean;
+      bannerId: string | null;
+    };
   };
   endTime: string;
   startTime: string;
   bidHistory: BidHistory[];
+  deletionStatus?: 'ACTIVE' | 'DELETED';
+  deleted?: boolean;
 }
 
 function calculateBidIncrement(
@@ -259,6 +243,9 @@ const AuctionDetailsPage = () => {
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  // console.log('Product Deleted Status:', product?.deletionStatus);
+
+  const isBiddingDisabled = product?.deletionStatus === 'DELETED';
 
   // Use the auction timer hook
   const [timeRemaining, auctionStatus] = useAuctionTimer(
@@ -484,6 +471,15 @@ const AuctionDetailsPage = () => {
   const handlePlaceBid = async () => {
     if (!product || !auctionId) return;
 
+    if (product.deleted) {
+      toast({
+        title: 'Auction Deleted',
+        description: 'You cannot place a bid on a deleted auction.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Pre-validation checks
     if (auctionStatus !== 'active') {
       toast({
@@ -584,6 +580,8 @@ const AuctionDetailsPage = () => {
   };
 
   const handleShareAuction = async () => {
+    if (!product) return;
+
     const shareData = {
       title: `${product.title} - Auction`,
       text: `Check out this auction: ${product.title}\nCurrent bid: LKR ${product.currentBid?.toLocaleString()}\n${getTimerLabel(auctionStatus)}: ${timerText}`,
@@ -598,11 +596,11 @@ const AuctionDetailsPage = () => {
     ) {
       try {
         await navigator.share(shareData);
-        toast({
-          title: 'Shared Successfully',
-          description: 'Auction shared successfully!',
-          variant: 'default',
-        });
+        // toast({
+        //   title: 'Shared Successfully',
+        //   description: 'Auction shared successfully!',
+        //   variant: 'default',
+        // });
       } catch (error) {
         // User cancelled sharing or error occurred
         console.log('Share cancelled or failed:', error);
@@ -634,12 +632,15 @@ const AuctionDetailsPage = () => {
     }
   };
 
-  // REPLACE the entire renderBidButton function with this:
   const renderBidButton = () => {
     if (!product) return null;
 
-    // Check if auction is deleted
-    if (product.isDeleted || product.status?.toLowerCase() === 'deleted') {
+    // console.log('DEBUG: product status', {
+    //   isDeleted: product.deleted,
+    //   // status: product.status,
+    // });
+
+    if (product.deleted) {
       return (
         <Button
           className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
@@ -680,9 +681,15 @@ const AuctionDetailsPage = () => {
 
     return (
       <div className="space-y-2">
+        {isBiddingDisabled && (
+          <p className="text-red-500 text-sm mt-2">
+            ❌ This auction is deleted. Bidding is disabled.
+          </p>
+        )}
+
         <Button
           onClick={handlePlaceBid}
-          disabled={!validation.isValid}
+          disabled={!validation.isValid || isBiddingDisabled}
           className={`w-full ${
             validation.isValid
               ? 'bg-yellow-400 hover:bg-yellow-500 text-black'
@@ -900,6 +907,7 @@ const AuctionDetailsPage = () => {
                 min="0"
                 max="999999999"
                 step="100"
+                readOnly
               />
               <Button
                 variant="outline"
@@ -946,7 +954,10 @@ const AuctionDetailsPage = () => {
 
           <div className="flex items-center mt-6">
             <p className="text-sm mr-2">By</p>
-            <span className="border rounded-full p-1 pr-2 flex items-center">
+            <Link
+              to={`/seller/${product.seller.seller?.sellerId}`}
+              className="border rounded-full p-1 pr-2 flex items-center hover:bg-gray-100 transition"
+            >
               <img
                 src={
                   product.seller.profilePicture || '/defaultProfilePhoto.jpg'
@@ -957,7 +968,7 @@ const AuctionDetailsPage = () => {
               <p className="text-sm">
                 {product.seller.firstName} {product.seller.lastName}
               </p>
-            </span>
+            </Link>
           </div>
         </div>
       </div>

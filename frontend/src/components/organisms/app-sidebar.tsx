@@ -19,6 +19,7 @@ import {
 import { IUser } from '@/types/IUser';
 import { useAppSelector } from '@/hooks/hooks';
 import { Link, useLocation } from 'react-router-dom';
+import { title } from 'process';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userData = useAppSelector((state) => state.user as IUser);
@@ -64,6 +65,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: 'Admin Management',
               url: '/admin-management',
               roles: ['SUPER_ADMIN'],
+            },
+            {
+              title: 'Support Chat',
+              url: '/support/admin',
+              roles: ['SUPER_ADMIN', 'ADMIN'],
             },
           ],
         },

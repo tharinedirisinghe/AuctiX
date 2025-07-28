@@ -102,25 +102,14 @@ public class ChatService {
 //        return chatMessageRepository.findByChatRoomIdOrderByTimestampAsc(chatRoomId, pageable);
 //    }
 
-    public List<ChatMessage> getMessagesBeforeTimestamp(String auctionId, LocalDateTime beforeTimestamp, int page, int size) {
+    public List<ChatMessage> getMessagesBeforeTimestamp(ChatRoom chatRoom, LocalDateTime beforeTimestamp, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("timestamp")));
 
-        UUID auctionUUID;
-        try {
-            auctionUUID = UUID.fromString(auctionId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid auctionId UUID");
+        if (chatRoom == null) {
+            throw new IllegalArgumentException("Chat Room is empty");
         }
 
-        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findChatRoomByAuctionId(auctionUUID);
-
-        if (chatRoomOpt.isEmpty()) {
-            throw new NoSuchElementException("Chat room not found for auctionId " + auctionId);
-        }
-
-        ChatRoom chatRoom = chatRoomOpt.get();
         UUID chatRoomId = chatRoom.getId();
-
         return chatMessageRepository.findByChatRoomIdAndTimestampBeforeOrderByTimestampDesc(chatRoomId, beforeTimestamp, pageable);
     }
 

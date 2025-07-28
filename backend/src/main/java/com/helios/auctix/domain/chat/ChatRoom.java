@@ -27,6 +27,7 @@ public class ChatRoom {
 
     // TODO fix these joins etc
     @ManyToMany
+    @EqualsAndHashCode.Exclude
     @JoinTable(
             name = "chat_room_participants",
             joinColumns = @JoinColumn(name = "chat_room_id"),

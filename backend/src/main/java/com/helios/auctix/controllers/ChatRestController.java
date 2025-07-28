@@ -5,23 +5,26 @@ import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.domain.chat.ChatRoomType;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.ChatMessageDTO;
+import com.helios.auctix.dtos.SupportChatDTO;
 import com.helios.auctix.mappers.Mapper;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
 import com.helios.auctix.services.ChatService;
 import com.helios.auctix.services.user.UserDetailsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.websocket.AuthenticationException;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequestMapping("/api/chat")  // Getting chat messages should be allowed for non-logged-in users as well
@@ -86,13 +89,14 @@ public class ChatRestController  {
 
             }
 
-            if (!isUserInChatRoom) {
+            if (!isUserInChatRoom &&
+                    !(currentUser.getRoleEnum() == UserRoleEnum.ADMIN || currentUser.getRoleEnum() == UserRoleEnum.SUPER_ADMIN)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
         }
 
         List<ChatMessage> messages = chatService.getMessagesBeforeTimestamp(
-                id, beforeTimestamp, page, size);
+                chatRoom, beforeTimestamp, page, size);
 
         List<ChatMessageDTO> response = messages.stream()
                 .map(chatMessageDTOMapper::mapTo)
@@ -115,5 +119,32 @@ public class ChatRestController  {
         ChatRoom supportChat = chatService.getOrCreateSupportChatForUser(user);
         return ResponseEntity.ok(Map.of("id", supportChat.getId()));
     }
+
+    @GetMapping("/support/all")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<Page<SupportChatDTO>> getSupportChats(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        List<Object[]> rows = chatRoomRepository.findSupportChatsNative(search, size, page * size);
+
+        List<SupportChatDTO> dtos = rows.stream().map(row -> new SupportChatDTO(
+                UUID.fromString(row[0].toString()), // chatId
+                UUID.fromString(row[1].toString()), // userId
+                row[2].toString(), // username
+                row[3].toString(), // email
+                row[4].toString() + " " + row[5].toString(), // fullName
+                row[6].toString() // role
+        )).toList();
+
+        return ResponseEntity.ok(new PageImpl<>(dtos, PageRequest.of(page, size), dtos.size()));
+
+
+    }
+
+
+
 
 }

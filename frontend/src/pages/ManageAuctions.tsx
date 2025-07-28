@@ -17,6 +17,7 @@ const ManageAuctions = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>('total');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState({
@@ -185,7 +186,27 @@ const ManageAuctions = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setAllAuctions(response.data.content || response.data);
+      // FIX: Handle your specific API response structure
+      const responseData = response.data;
+
+      // Your API structure: { content: [...], page: { totalElements: X } }
+      if (responseData.content && responseData.page) {
+        setAllAuctions(responseData.content);
+        setTotalCount(responseData.page.totalElements);
+      }
+      // Fallback for simple array responses
+      else if (Array.isArray(responseData)) {
+        setAllAuctions(responseData);
+        setTotalCount(responseData.length);
+      }
+      // Another fallback
+      else {
+        setAllAuctions(responseData.content || responseData);
+        setTotalCount(
+          responseData.totalElements ||
+            (responseData.content || responseData).length,
+        );
+      }
     } catch (error) {
       toast.error('Failed to load auctions');
     } finally {
@@ -234,12 +255,9 @@ const ManageAuctions = () => {
   }, [allAuctions]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredAuctions.length / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedAuctions = filteredAuctions.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const paginatedAuctions = allAuctions;
 
   // Reset to first page when filter or search changes
   useEffect(() => {
@@ -687,8 +705,8 @@ const ManageAuctions = () => {
             <div className="flex justify-between items-center mt-4">
               <span className="text-sm text-gray-500">
                 Showing {startIndex + 1} to{' '}
-                {Math.min(startIndex + itemsPerPage, filteredAuctions.length)}{' '}
-                of {filteredAuctions.length} auctions
+                {Math.min(startIndex + allAuctions.length, totalCount)} of{' '}
+                {totalCount} auctions
               </span>
               <div className="flex items-center space-x-2">
                 <button

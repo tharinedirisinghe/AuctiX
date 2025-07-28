@@ -5,6 +5,7 @@ import com.helios.auctix.domain.user.SellerVerificationStatusEnum;
 import com.helios.auctix.domain.user.UserRole;
 import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
+import com.helios.auctix.dtos.SellerVerificationStatsDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -51,4 +52,16 @@ public interface SellerVerificationRequestRepository extends JpaRepository<Selle
             @Param("search") String search,
             @Param("statusFilter") SellerVerificationStatusEnum statusFilter,
             Pageable pageable);
+
+    @Query("""
+    SELECT new com.helios.auctix.dtos.SellerVerificationStatsDTO(
+        COUNT(CASE WHEN r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED THEN 1 END) AS approvedCount,
+        COUNT(CASE WHEN r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.PENDING THEN 1 END) AS pendingCount,
+        COUNT(CASE WHEN r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.REJECTED THEN 1 END) AS rejectedCount,
+        COUNT(DISTINCT r.seller.id) AS verifiedSellersCount
+    )
+    FROM SellerVerificationRequest r
+    WHERE r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED
+    """)
+    SellerVerificationStatsDTO getSellerVerificationStats();
 }

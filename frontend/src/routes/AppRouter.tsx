@@ -38,6 +38,7 @@ import AdminSupportChatManager from '@/pages/AdminSupportChatManager';
 import UserSupportChat from '@/pages/UserSupportChat';
 import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
 import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
+import { SellerVerificationEvaluationPage } from '@/pages/SellerVerificationEvaluationPage';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -138,6 +139,17 @@ export default function AppRouter() {
                 redirectPath="/403"
               >
                 <SellerVerificationMngPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/seller-verifications/:username"
+            element={
+              <ProtectedRoute
+                allowedUsers={['ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <SellerVerificationEvaluationPage />
               </ProtectedRoute>
             }
           />

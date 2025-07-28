@@ -17,6 +17,7 @@ import java.util.UUID;
 @Data
 @Builder
 public class SellerVerificationRequestSummaryDTO {
+    private UUID id;
     private String sellerFirstName;
     private String sellerLastName;
     private String username;
@@ -27,7 +28,8 @@ public class SellerVerificationRequestSummaryDTO {
     private Instant submittedAt;
 
 
-    public SellerVerificationRequestSummaryDTO(UUID id, String username, String firstName, String lastName , String email, Instant submittedAt ,long totalDocumentsSubmitted, long pendingDocumentsCount, boolean isApprovedAtLeastOne) {
+    public SellerVerificationRequestSummaryDTO(UUID id, String firstName, String lastName , String username, String email, Instant submittedAt ,long totalDocumentsSubmitted, long pendingDocumentsCount, boolean isApprovedAtLeastOne) {
+        this.id = id;
         this.totalDocumentsSubmitted = (int) totalDocumentsSubmitted;
         this.pendingDocumentsCount = (int) pendingDocumentsCount;
         this.verificationStatus = isApprovedAtLeastOne? SellerVerificationStatusEnum.APPROVED : SellerVerificationStatusEnum.PENDING;

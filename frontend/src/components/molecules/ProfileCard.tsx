@@ -116,7 +116,7 @@ export default function ProfileCard({
                 icon={Trash2}
                 text="Remove Profile Photo"
                 onClick={onProfilePhotoDelete}
-                className={'p-2 mr-14'}
+                className={'p-2 mr-14 ' + editBtnVisibility}
               />
               <ImageUploadPopup
                 minHeight={100}
@@ -125,6 +125,7 @@ export default function ProfileCard({
                 acceptingWidth={500}
                 shape="circle"
                 onConfirm={onProfilePhotoSet}
+                isInEditMode={isInEditMode}
               />
             </div>
           </div>

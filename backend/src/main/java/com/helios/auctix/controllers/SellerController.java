@@ -3,6 +3,7 @@ package com.helios.auctix.controllers;
 import com.azure.core.util.BinaryData;
 import com.helios.auctix.domain.user.SellerVerificationStatusEnum;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.dtos.SellerVerificationStatsDTO;
 import com.helios.auctix.dtos.VerificationStatusDTO;
 import com.helios.auctix.services.fileUpload.FileUploadResponse;
 import com.helios.auctix.services.fileUpload.FileUploadService;
@@ -84,4 +85,13 @@ public class SellerController {
                 .body(binaryFile.toBytes());
     }
 
+
+    @GetMapping("/getSellerVerificationStatusSummary")
+    public ResponseEntity<SellerVerificationStatsDTO> getSellerVerificationStatusSummary() throws AuthenticationException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+
+        SellerVerificationStatsDTO stats = sellerService.sellerVerificationStats();
+        return ResponseEntity.ok(stats);
+    }
 }

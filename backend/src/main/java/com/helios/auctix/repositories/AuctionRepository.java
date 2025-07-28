@@ -67,6 +67,10 @@ public interface AuctionRepository extends JpaRepository<Auction, UUID> {
     @Query("SELECT a FROM Auction a WHERE a.seller.id = :sellerId ORDER BY a.createdAt DESC")
     List<Auction> findBySellerId(@Param("sellerId") UUID sellerId);
 
+    @Query("SELECT a FROM Auction a WHERE a.seller.id = :sellerId")
+    Page<Auction> findBySellerIdPaged(@Param("sellerId") UUID sellerId, Pageable pageable);
+
+
 
     @Query(value = """
   SELECT * FROM auctions

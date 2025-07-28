@@ -21,6 +21,10 @@ export default function SellerProfile() {
   const [reportOpen, setReportOpen] = useState(false);
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [filter, setFilter] = useState('All');
+  const pageSize = 8; // You can adjust page size as needed
 
   // Reviews state
   const [reviews, setReviews] = useState<PaginatedReviews | null>(null);
@@ -30,24 +34,36 @@ export default function SellerProfile() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`http://localhost:8080/api/auctions/seller/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setAuctions(data);
 
-        // Extract seller info from first auction if available
-        if (data.length > 0 && data[0].seller) {
-          const seller = data[0].seller;
-          setSellerInfo(seller);
+    const fetchAuctions = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get(`/auctions/seller/${id}`, {
+          params: {
+            page: currentPage,
+            size: pageSize,
+            filter: filter.toLowerCase(),
+          },
+        });
+
+        const data = response.data;
+
+        setAuctions(data.content || []);
+        setTotalPages(data.totalPages || 0);
+
+        // Extract seller info from the first item
+        if (data.content?.length > 0 && data.content[0].seller) {
+          setSellerInfo(data.content[0].seller);
         }
-
-        setLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Error fetching auctions:', error);
+      } finally {
         setLoading(false);
-      });
-  }, [id]);
+      }
+    };
+
+    fetchAuctions();
+  }, [id, currentPage, filter]);
 
   // Fetch seller reviews
   const fetchSellerReviews = async (page: number = 0) => {
@@ -216,12 +232,21 @@ export default function SellerProfile() {
         <div className="text-xl sm:text-4xl font-semibold mt-6 sm:mt-10">
           Seller Information
         </div>
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-3 sm:mt-4">
+
+        {/* Filters */}
+        <Tabs
+          value={filter}
+          onValueChange={(val) => {
+            setFilter(val);
+            setCurrentPage(0); // reset page on filter change
+          }}
+          className="w-full mt-3 sm:mt-4"
+        >
           <TabsList>
-            {['All', 'Ongoing', 'Upcoming', 'Ended', 'Reviews'].map((filter) => (
-              <TabsTrigger key={filter} value={filter}>
-                {filter === 'All' ? 'All Auctions' : filter}
+            {['All', 'Ongoing', 'Upcoming', 'Ended'].map((f) => (
+              <TabsTrigger key={f} value={f}>
+                {f}
+
               </TabsTrigger>
             ))}
           </TabsList>
@@ -369,6 +394,30 @@ export default function SellerProfile() {
           </TabsContent>
         </Tabs>
       </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6 gap-4">
+          <Button
+            variant="outline"
+            disabled={currentPage === 0}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+          >
+            Previous
+          </Button>
+          <div className="flex items-center text-sm font-medium">
+            Page {currentPage + 1} of {totalPages}
+          </div>
+          <Button
+            variant="outline"
+            disabled={currentPage >= totalPages - 1}
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages - 1))
+            }
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       <SellerReport
         open={reportOpen}
         onClose={() => setReportOpen(false)}

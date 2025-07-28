@@ -60,6 +60,13 @@ const ManageAuctions = () => {
 
   const isDeletedOrPending = (auction: any) =>
     isPendingDeletion(auction) || auction.status?.toLowerCase() === 'deleted';
+  const isAuctionEndingSoon = (auction: any) => {
+    const endTime = new Date(auction.endTime || auction.end);
+    const now = new Date();
+    const diffInMs = endTime.getTime() - now.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    return diffInHours <= 1 && diffInHours > 0; // Within the next hour
+  };
 
   const itemsPerPage = 10;
   const axiosInstance = AxiosRequest().axiosInstance;
@@ -605,17 +612,23 @@ const ManageAuctions = () => {
                                       >
                                         Update Auction
                                       </div>
-                                      <div
-                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
-                                        onClick={() =>
-                                          handleAuctionAction(
-                                            'delete',
-                                            auction.id,
-                                          )
-                                        }
-                                      >
-                                        Delete Auction
-                                      </div>
+                                      {!isAuctionEndingSoon(auction) ? (
+                                        <div
+                                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                          onClick={() =>
+                                            handleAuctionAction(
+                                              'delete',
+                                              auction.id,
+                                            )
+                                          }
+                                        >
+                                          Delete Auction
+                                        </div>
+                                      ) : (
+                                        <div className="px-4 py-2 text-gray-400 cursor-not-allowed">
+                                          Cannot Delete (Last Hour)
+                                        </div>
+                                      )}
                                     </>
                                   )}
                                 </div>

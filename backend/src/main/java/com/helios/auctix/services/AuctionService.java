@@ -449,6 +449,18 @@ public class AuctionService {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
 
+        // Check if auction is ending within 1 hour
+        Instant now = Instant.now();
+        Instant endTime = auction.getEndTime(); // or auction.getEnd(), based on your model
+
+        if (endTime != null) {
+            long timeDifferenceMillis = endTime.toEpochMilli() - now.toEpochMilli();
+            long timeDifferenceHours = timeDifferenceMillis / (1000 * 60 * 60);
+            if (timeDifferenceMillis > 0 && timeDifferenceHours < 1) {
+                throw new IllegalStateException("Cannot delete auction within the last hour of its end time.");
+            }
+        }
+
         if (hasBids) {
             // Store deletion reason
             AuctionDeletionRequest deletionRequest = new AuctionDeletionRequest();

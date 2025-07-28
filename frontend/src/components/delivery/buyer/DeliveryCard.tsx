@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Clock,
   Star,
+  MapPin,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ interface DeliveryCardProps {
   onReviewClick?: (delivery: Delivery) => void;
   canReview?: boolean;
   hasReview?: boolean;
+  onAddAddress?: (delivery: Delivery) => void;
 }
 
 export const DeliveryCard: React.FC<DeliveryCardProps> = ({
@@ -33,9 +35,17 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   onReviewClick,
   canReview = false,
   hasReview = false,
+  onAddAddress,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
   const daysInfo = getDaysInfo(delivery.deliveryDate, delivery.status);
+
+  // Check if buyer has address
+  const hasValidAddress = delivery.deliveryAddress && 
+    delivery.deliveryAddress.trim() !== '' && 
+    !delivery.deliveryAddress.includes('Address not provided');
+  
+  const hasAnyAddress = delivery.deliveryAddress && delivery.deliveryAddress.trim() !== '';
 
   return (
     <Card key={delivery.id} className="p-5 transition-all hover:shadow-md">
@@ -118,6 +128,66 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Display current address or show missing address warning */}
+      {hasValidAddress ? (
+        <div className="mt-4 p-3 bg-green-50 text-green-800 rounded-md border border-green-200">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start">
+              <MapPin size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-sm">Delivery Address</p>
+                <p className="text-sm">{delivery.deliveryAddress}</p>
+              </div>
+            </div>
+            {onAddAddress && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onAddAddress(delivery)}
+                className="border-green-300 text-green-600 hover:bg-green-50 ml-4 flex-shrink-0"
+              >
+                Update Address
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {/* Seller message notification - only show when seller has requested address */}
+          {delivery.addressRequested && (
+            <div className="p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
+              <div className="flex items-center">
+                <User size={16} className="mr-2 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Message from Seller</p>
+                  <p className="text-sm">Seller needs address - Please provide your delivery address to proceed with shipping.</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Address action section */}
+          <div className="p-3 bg-amber-50 text-amber-800 rounded-md flex items-center justify-between text-sm border border-amber-200">
+            <div className="flex items-center">
+              <MapPin size={16} className="mr-2 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Delivery Address Required</p>
+                <p>Please provide your delivery address to proceed with shipping.</p>
+              </div>
+            </div>
+            {onAddAddress && (
+              <Button
+                size="sm"
+                onClick={() => onAddAddress(delivery)}
+                className="bg-amber-600 hover:bg-amber-700 text-white ml-4 flex-shrink-0"
+              >
+                Add Address
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Warning for overdue deliveries */}
       {daysInfo.isOverdue && (

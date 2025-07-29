@@ -143,7 +143,10 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
               <Badge
                 className={`${getStatusInfo(selectedDelivery.status).color} border`}
               >
-                {getStatusInfo(selectedDelivery.status).icon}
+                {(() => {
+                  const StatusIcon = getStatusInfo(selectedDelivery.status).iconComponent;
+                  return <StatusIcon className="w-3 h-3 mr-1" />;
+                })()}
                 {getStatusInfo(selectedDelivery.status).text}
               </Badge>
               <span className="text-sm text-gray-500 ml-2">

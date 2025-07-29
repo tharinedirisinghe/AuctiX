@@ -14,14 +14,17 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Delivery } from '@/services/deliveryService';
 import { getItemIcon } from '../shared/ItemHelper';
-import { getStatusInfo } from '../shared/StatusHelper';
+import { getStatusInfo, isStatusButtonDisabled } from '../shared/StatusHelper';
 import { getDaysInfo } from '../shared/DateHelper';
+import { StatusChangeConfirmDialog } from '../shared/StatusChangeConfirmDialog';
+import { useState } from 'react';
 
 interface DeliveryCardProps {
   delivery: Delivery;
   handleUpdateStatus: (id: string, newStatus: string) => void;
   openDatePicker: (id: string, currentDate: string) => void;
   viewDeliveryDetails: (delivery: Delivery) => void;
+  handleRequestAddress?: (id: string) => void;
   isLoading: boolean;
 }
 
@@ -30,18 +33,45 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   handleUpdateStatus,
   openDatePicker,
   viewDeliveryDetails,
+  handleRequestAddress,
   isLoading,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
   const daysInfo = getDaysInfo(delivery.deliveryDate, delivery.status);
 
-  // Use uppercase status values to match the API interface
-  const handleStatusUpdate = (id: string, status: string) => {
-    handleUpdateStatus(id, status.toUpperCase());
+  // Check if buyer has valid address
+  const hasValidAddress = delivery.deliveryAddress && 
+    delivery.deliveryAddress.trim() !== '' && 
+    !delivery.deliveryAddress.includes('Address not provided');
+
+  // State for confirmation dialog
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    newStatus: string;
+  }>({
+    isOpen: false,
+    newStatus: '',
+  });
+
+  // Handle status update with confirmation
+  const handleStatusUpdateClick = (newStatus: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      newStatus: newStatus.toLowerCase(),
+    });
   };
 
-  // Normalize status for comparison
-  const normalizedStatus = delivery.status.toLowerCase();
+  // Confirm status update
+  const confirmStatusUpdate = () => {
+    handleUpdateStatus(delivery.id, confirmDialog.newStatus.toUpperCase());
+    setConfirmDialog({ isOpen: false, newStatus: '' });
+  };
+
+  // Close confirmation dialog
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ isOpen: false, newStatus: '' });
+  };
+
 
   return (
     <Card key={delivery.id} className="p-5 transition-all hover:shadow-md">
@@ -94,7 +124,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
             <Badge
               className={`w-fit flex items-center ${statusInfo.color} border mt-2 sm:mt-0`}
             >
-              {statusInfo.icon}
+              <statusInfo.iconComponent className="w-3 h-3 mr-1" />
               {statusInfo.text}
             </Badge>
           </div>
@@ -139,6 +169,39 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         </div>
       </div>
 
+      {/* Display buyer address status */}
+      {hasValidAddress ? (
+        <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
+          <div className="flex items-start">
+            <MapPin size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-sm">Buyer's Delivery Address</p>
+              <p className="text-sm">{delivery.deliveryAddress}</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-md flex items-center justify-between text-sm border border-amber-200">
+          <div className="flex items-center">
+            <MapPin size={16} className="mr-2 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Buyer Address Required</p>
+              <p>{delivery.addressRequested ? 'Waiting for buyer to provide delivery address. The buyer has been notified.' : 'Click to request delivery address from buyer.'}</p>
+            </div>
+          </div>
+          {!delivery.addressRequested && handleRequestAddress && (
+            <Button
+              size="sm"
+              onClick={() => handleRequestAddress(delivery.id)}
+              disabled={isLoading}
+              className="bg-amber-600 hover:bg-amber-700 text-white ml-4 flex-shrink-0"
+            >
+              Request Address
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Warning for overdue deliveries */}
       {daysInfo.isOverdue && (
         <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-md flex items-center text-sm">
@@ -148,13 +211,15 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         </div>
       )}
 
-      {/* Action buttons - Updated to use uppercase for API */}
+      {/* Action buttons - Updated with status progression validation */}
       <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
         <Button
-          onClick={() => handleStatusUpdate(delivery.id, 'packing')}
-          disabled={normalizedStatus === 'packing' || isLoading}
+          onClick={() => handleStatusUpdateClick('packing')}
+          disabled={
+            isStatusButtonDisabled(delivery.status, 'packing') || isLoading
+          }
           className={`flex items-center ${
-            normalizedStatus === 'packing'
+            isStatusButtonDisabled(delivery.status, 'packing')
               ? 'bg-gray-100 text-gray-500 cursor-not-allowed hover:bg-gray-100'
               : 'bg-amber-300 hover:bg-amber-400 text-gray-900'
           }`}
@@ -165,10 +230,12 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         </Button>
 
         <Button
-          onClick={() => handleStatusUpdate(delivery.id, 'shipping')}
-          disabled={normalizedStatus === 'shipping' || isLoading}
+          onClick={() => handleStatusUpdateClick('shipping')}
+          disabled={
+            isStatusButtonDisabled(delivery.status, 'shipping') || isLoading
+          }
           className={`flex items-center ${
-            normalizedStatus === 'shipping'
+            isStatusButtonDisabled(delivery.status, 'shipping')
               ? 'bg-gray-100 text-gray-500 cursor-not-allowed hover:bg-gray-100'
               : 'bg-blue-500 hover:bg-blue-600 text-white'
           }`}
@@ -179,10 +246,12 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
         </Button>
 
         <Button
-          onClick={() => handleStatusUpdate(delivery.id, 'delivered')}
-          disabled={normalizedStatus === 'delivered' || isLoading}
+          onClick={() => handleStatusUpdateClick('delivered')}
+          disabled={
+            isStatusButtonDisabled(delivery.status, 'delivered') || isLoading
+          }
           className={`flex items-center ${
-            normalizedStatus === 'delivered'
+            isStatusButtonDisabled(delivery.status, 'delivered')
               ? 'bg-gray-100 text-gray-500 cursor-not-allowed hover:bg-gray-100'
               : 'bg-green-500 hover:bg-green-600 text-white'
           }`}
@@ -203,6 +272,18 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
           Change Date
         </Button>
       </div>
+
+      {/* Status Change Confirmation Dialog */}
+      <StatusChangeConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmStatusUpdate}
+        currentStatus={delivery.status}
+        newStatus={confirmDialog.newStatus}
+        deliveryId={delivery.id}
+        auctionTitle={delivery.auctionTitle}
+        isLoading={isLoading}
+      />
     </Card>
   );
 };

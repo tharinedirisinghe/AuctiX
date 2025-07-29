@@ -87,6 +87,7 @@ export function LoginForm({
         message={msg}
         continueBtn="Ok"
         cancelBtn={null}
+        timeoutSeconds={4}
       />
       <form
         onSubmit={(e) => handleSubmit(e)}

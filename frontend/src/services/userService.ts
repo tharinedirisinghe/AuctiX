@@ -1,6 +1,5 @@
+import { IUser } from '@/types/IUser';
 import { AxiosInstance } from 'axios';
-
-const baseURL = import.meta.env.VITE_API_URL;
 
 export interface IProfileUpdateData {
   bio: string;
@@ -8,7 +7,7 @@ export interface IProfileUpdateData {
   firstName: string;
   lastName: string;
   address: {
-    number: string;
+    addressNumber: string;
     addressLine1: string;
     addressLine2: string;
     country: string;
@@ -122,5 +121,19 @@ export const changePassword = async (
       'Content-Type': 'multipart/form-data',
     },
   });
+  return response.data;
+};
+
+export interface IUserStats {
+  totalUsers: number;
+  bidders: number;
+  sellers: number;
+  admins: number;
+}
+
+export const getUserStats = async (
+  axiosInstance: AxiosInstance,
+): Promise<IUserStats> => {
+  const response = await axiosInstance.get(`/user/userStats`);
   return response.data;
 };

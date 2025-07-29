@@ -97,10 +97,9 @@ public class ComplaintService {
     }
 
     public List<Complaint> getComplaintsByUser(String username) {
-        UserDetailsService userDetailsService = new UserDetailsService();
         User user = userDetailsService.getUserByUsername(username);
         if(user == null) {
-            new RuntimeException("User not found");
+            throw new RuntimeException("User not found");
         }
         return complaintRepository.findByReportedByOrderByDateReportedDesc(user);
     }

@@ -254,6 +254,7 @@ export function TabsDemo({
         continueBtn="Ok"
         continueAction={handleAccept}
         cancelBtn={null}
+        timeoutSeconds={3}
       />
       <Tabs
         defaultValue="Buyers"

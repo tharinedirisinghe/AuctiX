@@ -1,15 +1,27 @@
-import type React from 'react';
+'use client';
 
+import type React from 'react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FormSection } from '@/components/molecules/FormSection';
+import { ZodError, z } from 'zod';
+import { Loader2, Lock } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { FormField } from '@/components/atoms/FormField';
 import { AnimatedButton } from '@/components/atoms/AnimatedButton';
-import { Separator } from '@/components/ui/separator';
-import { ZodError, set, z } from 'zod';
-import { useToast } from '@/hooks/use-toast';
-import { changePassword, IChangePasswordData } from '@/services/userService';
-import { AxiosInstance } from 'axios';
+import {
+  changePassword,
+  type IChangePasswordData,
+} from '@/services/userService';
+import type { AxiosInstance } from 'axios';
 import AxiosRequest from '@/services/axiosInspector';
 
 const passwordUpdateSchema = z
@@ -43,7 +55,6 @@ export function PasswordUpdateForm() {
     newPassword: '',
     confirmPassword: '',
   });
-
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -70,7 +81,6 @@ export function PasswordUpdateForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -86,6 +96,12 @@ export function PasswordUpdateForm() {
           title: 'Success',
           description: 'Your password has been updated successfully.',
           variant: 'default',
+        });
+        // Reset form on success
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
         });
       })
       .catch((error) => {
@@ -108,15 +124,6 @@ export function PasswordUpdateForm() {
       .finally(() => {
         setIsLoading(false);
       });
-
-    // Reset form on success
-    setFormData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
-
-    console.log('Password updated successfully!');
   };
 
   const updateField =
@@ -129,109 +136,146 @@ export function PasswordUpdateForm() {
     };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="max-w-2xl mx-auto"
-        >
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-center mb-12"
-          >
-            <h1 className="text-3xl font-bold text-foreground mb-4">
-              Update Password
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Keep your account secure by updating your password regularly. Make
-              sure to choose a strong password.
-            </p>
-          </motion.div>
+    <div className="py-6 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          Update Password
+          {isLoading && (
+            <Badge className="bg-yellow-500 text-gray-900">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Updating...
+            </Badge>
+          )}
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Keep your account secure by updating your password regularly
+        </p>
+      </div>
 
-          {/* Form */}
+      {/* Password Update Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            Password Security
+          </CardTitle>
+          <CardDescription>
+            Update your password to keep your account secure. Make sure to
+            choose a strong password with at least 6 characters.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <motion.form
             onSubmit={handleSubmit}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
             className="space-y-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            <FormSection
-              title="Current Password"
-              description="Enter your current password to verify your identity"
-              delay={0.5}
-            >
-              <FormField
-                label="Current Password"
-                id="currentPassword"
-                type="password"
-                placeholder="Enter your current password"
-                value={formData.currentPassword}
-                onChange={updateField('currentPassword')}
-                error={errors.currentPassword}
-                delay={0.6}
-              />
-            </FormSection>
+            {/* Current Password Section */}
+            <div className="space-y-6 pt-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-500">
+                  Current Password
+                </h3>
+                <Separator className="my-4 border-gray-200 border-t-2" />
+              </div>
+              <div className="p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                  <FormField
+                    label="Current Password"
+                    id="currentPassword"
+                    type="password"
+                    placeholder="Enter your current password"
+                    value={formData.currentPassword}
+                    onChange={updateField('currentPassword')}
+                    error={errors.currentPassword}
+                    delay={0.2}
+                  />
+                  <p className="text-sm text-gray-600 mt-2">
+                    Enter your current password to verify your identity
+                  </p>
+                </motion.div>
+              </div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, scaleX: 0 }}
-              animate={{ opacity: 1, scaleX: 1 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="flex justify-center"
-            >
-              <Separator className="w-24" />
-            </motion.div>
+            {/* New Password Section */}
+            <div className="space-y-6 pt-12">
+              <div>
+                <h3 className="text-lg font-medium text-gray-500">
+                  New Password
+                </h3>
+                <Separator className="my-4 border-gray-200 border-t-2" />
+              </div>
+              <div className="p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
+                <div className="space-y-6">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <FormField
+                      label="New Password"
+                      id="newPassword"
+                      type="password"
+                      placeholder="Enter your new password"
+                      value={formData.newPassword}
+                      onChange={updateField('newPassword')}
+                      error={errors.newPassword}
+                      delay={0.4}
+                    />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                  >
+                    <FormField
+                      label="Confirm New Password"
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirm your new password"
+                      value={formData.confirmPassword}
+                      onChange={updateField('confirmPassword')}
+                      error={errors.confirmPassword}
+                      delay={0.6}
+                    />
+                  </motion.div>
+                </div>
+              </div>
+            </div>
 
-            <FormSection
-              title="New Password"
-              description="Choose a strong password with at least 8 characters, including uppercase, lowercase, and numbers"
-              delay={0.8}
-            >
-              <FormField
-                label="New Password"
-                id="newPassword"
-                type="password"
-                placeholder="Enter your new password"
-                value={formData.newPassword}
-                onChange={updateField('newPassword')}
-                error={errors.newPassword}
-                delay={0.9}
-              />
-
-              <FormField
-                label="Confirm New Password"
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your new password"
-                value={formData.confirmPassword}
-                onChange={updateField('confirmPassword')}
-                error={errors.confirmPassword}
-                delay={1.0}
-              />
-            </FormSection>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.1 }}
-              className="pt-6"
-            >
-              <AnimatedButton
-                type="submit"
-                loading={isLoading}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium"
+            {/* Submit Button */}
+            <div className="pt-6 flex justify-end">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.7 }}
               >
-                Update Password
-              </AnimatedButton>
-            </motion.div>
+                <AnimatedButton
+                  type="submit"
+                  loading={isLoading}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-medium"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    'Update Password'
+                  )}
+                </AnimatedButton>
+              </motion.div>
+            </div>
           </motion.form>
-        </motion.div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

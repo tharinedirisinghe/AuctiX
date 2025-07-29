@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import type { ImageResult } from '../molecules/ImageUploadPopup';
-import ImageUploadPopup from '../molecules/ImageUploadPopup';
+import type { ImageResult } from '../molecules/ImageUploadModal';
+import ImageUploadPopup from '../molecules/ImageUploadModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, Mail, AtSign, Shield } from 'lucide-react';
 import { TooltipBtn } from '../atoms/TooltipBtn';
@@ -73,7 +73,7 @@ export default function ProfileCard({
             <img
               src={bannerPhoto || assets.default_banner_image}
               alt="Profile Banner"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
             />
             <div className="absolute top-4 right-4 flex space-x-2">
               <ImageUploadPopup

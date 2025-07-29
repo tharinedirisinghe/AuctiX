@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import {
-  createDelivery,
   Delivery,
-  DeliveryCreateRequest,
   DeliveryUpdateRequest,
   getBuyerDeliveries,
   getDeliveryById,
@@ -89,22 +87,6 @@ export const fetchDeliveryById = createAsyncThunk<
   }
 });
 
-export const createNewDelivery = createAsyncThunk<
-  Delivery,
-  DeliveryCreateRequest,
-  { rejectValue: string }
->('delivery/createDelivery', async (deliveryData, { rejectWithValue }) => {
-  try {
-    return await createDelivery(deliveryData);
-  } catch (error: unknown) {
-    const apiError = error as ApiError;
-    return rejectWithValue(
-      apiError.response?.data ||
-        apiError.message ||
-        'Failed to create delivery',
-    );
-  }
-});
 
 export const updateDeliveryDetails = createAsyncThunk<
   Delivery,
@@ -223,22 +205,6 @@ const deliverySlice = createSlice({
       state.error = action.payload || 'Failed to fetch delivery';
     });
 
-    // Create delivery
-    builder.addCase(createNewDelivery.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(
-      createNewDelivery.fulfilled,
-      (state, action: PayloadAction<Delivery>) => {
-        state.loading = false;
-        state.sellerDeliveries.push(action.payload);
-      },
-    );
-    builder.addCase(createNewDelivery.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload || 'Failed to create delivery';
-    });
 
     // Update delivery
     builder.addCase(updateDeliveryDetails.pending, (state) => {

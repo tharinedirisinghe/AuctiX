@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -49,6 +50,52 @@ public class CoinTransactionService {
         this.userRepository = userRepository;
         this.userDetailsService = userDetailsService;
         this.notificationEventPublisher = notificationEventPublisher;
+    }
+
+    @Transactional
+    public TransactionResponseDTO createWalletForUser(UUID userId) {
+        try {
+            log.info("Creating wallet for user: " + userId);
+            
+            // Check if wallet already exists for the user
+            List<Wallet> existingWallets = walletRepository.findAllByUserId(userId);
+
+            if (!existingWallets.isEmpty()) {
+                // User already has at least one wallet
+                log.warning("User " + userId + " already has a wallet");
+                throw new RuntimeException("Wallet already exists for this user");
+            }
+
+            // Create a new wallet with an initial balance of 0
+            Wallet wallet = Wallet.builder()
+                    .id(UUID.randomUUID())
+                    .userId(userId)
+                    .amount(BigDecimal.ZERO)
+                    .freezeAmount(BigDecimal.ZERO)
+                    .transactionType("INITIAL")
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            Wallet savedWallet = walletRepository.save(wallet);
+            log.info("Wallet created successfully for user: " + userId);
+
+            return TransactionResponseDTO.builder()
+                    .id(savedWallet.getId())
+                    .walletId(savedWallet.getId())
+                    .userId(userId)
+                    .amount(savedWallet.getAmount())
+                    .freezeAmount(savedWallet.getFreezeAmount())
+                    .transactionType(savedWallet.getTransactionType())
+                    .createdAt(savedWallet.getCreatedAt())
+                    .updatedAt(savedWallet.getUpdatedAt())
+                    .build();
+        } catch (Exception e) {
+            // Log the error for debugging
+            log.severe("Error creating wallet for user " + userId + ": " + e.getMessage());
+            // Rethrow the exception
+            throw e;
+        }
     }
 
     @Transactional
@@ -231,7 +278,17 @@ public class CoinTransactionService {
         log.info("Freezing " + freezeAmount + " for user " + userId + " on auction " + auctionId);
 
         Wallet wallet = walletRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for user ID: " + userId));
+                .orElseGet(() -> {
+                    log.warning("Wallet not found for user " + userId + " - creating one automatically");
+                    try {
+                        createWalletForUser(userId);
+                        return walletRepository.findByUserId(userId)
+                                .orElseThrow(() -> new RuntimeException("Failed to create wallet for user ID: " + userId));
+                    } catch (Exception e) {
+                        log.severe("Failed to auto-create wallet for user " + userId + ": " + e.getMessage());
+                        throw new RuntimeException("Wallet not found for user ID: " + userId + " and failed to create one: " + e.getMessage());
+                    }
+                });
 
         BigDecimal freezeValue = BigDecimal.valueOf(freezeAmount);
 
@@ -523,4 +580,5 @@ public class CoinTransactionService {
                 .transactionDate(transaction.getTransactionDate())
                 .build();
     }
+
 }

@@ -8,10 +8,14 @@ import com.helios.auctix.domain.user.UserRequiredAction;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.ProfileUpdateDataDTO;
 import com.helios.auctix.dtos.UserDTO;
+import com.helios.auctix.dtos.UserStatsDTO;
+import com.helios.auctix.dtos.UserAddressDTO;
+import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
 import com.helios.auctix.repositories.*;
 import com.helios.auctix.services.notification.senders.EmailNotificationSender;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +28,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.naming.LimitExceededException;
 import java.security.InvalidParameterException;
@@ -36,22 +41,36 @@ import java.util.UUID;
 @Service
 public class UserDetailsService {
 
+private final UserRepository userRepository;
+    private final UserRequiredActionRepository userRequiredActionRepository;
+    private final UserAddressRepository userAddressRepository;
+    private final UserMapperImpl userMapperImpl;
+    private final UserRoleRepository userRoleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final PasswordResetRequestRepository passwordResetRequestRepository;
+    private final EmailNotificationSender emailNotificationSender;
+
     @Autowired
-    UserRepository userRepository;
-    @Autowired
-    UserRequiredActionRepository userRequiredActionRepository;
-    @Autowired
-    UserAddressRepository userAddressRepository;
-    @Autowired
-    private UserMapperImpl userMapperImpl;
-    @Autowired
-    private UserRoleRepository userRoleRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private PasswordResetRequestRepository passwordResetRequestRepository;
-    @Autowired
-    private EmailNotificationSender emailNotificationSender;
+    public UserDetailsService(
+            UserRepository userRepository,
+            UserRequiredActionRepository userRequiredActionRepository,
+            UserAddressRepository userAddressRepository,
+            UserMapperImpl userMapperImpl,
+            UserRoleRepository userRoleRepository,
+            PasswordEncoder passwordEncoder,
+            PasswordResetRequestRepository passwordResetRequestRepository,
+            EmailNotificationSender emailNotificationSender
+    ) {
+        this.userRepository = userRepository;
+        this.userRequiredActionRepository = userRequiredActionRepository;
+        this.userAddressRepository = userAddressRepository;
+        this.userMapperImpl = userMapperImpl;
+        this.userRoleRepository = userRoleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.passwordResetRequestRepository = passwordResetRequestRepository;
+        this.emailNotificationSender = emailNotificationSender;
+    }
+
 
     /**
      * Retrieves a user by {@link Authentication}.
@@ -173,16 +192,10 @@ public class UserDetailsService {
 
                 Pageable pageable = PageRequest.of(offset, limit, sort);
 
-                if (search != null && !search.trim().isEmpty()) {
-                    userPage = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(search, search, search, search , pageable)
-                            .map(userMapperImpl::mapTo);
-                } else {
+                Specification<User> spec = getUserSpecification(search, filterByList, filterValues);
 
-                    Specification<User> spec = UserSpecification.getFilteredSpec(filterByList, filterValues, userRoleRepository);
-                    Page<User> temp = userRepository.findAll(spec, pageable);
-                    userPage = temp.map(userMapperImpl::mapTo);
-                }
-
+                Page<User> temp = userRepository.findAll(spec, pageable);
+                userPage = temp.map(userMapperImpl::mapTo);
 
             } catch (Exception e) {
                 throw new InvalidParameterException("Invalid filterBy format: " + e.getMessage());
@@ -193,7 +206,25 @@ public class UserDetailsService {
 
     }
 
-public UserServiceResponse updateUserProfile(User user, ProfileUpdateDataDTO profileData) {
+    private Specification<User> getUserSpecification(String search, List<String> filterByList, List<List<String>> filterValues) {
+        Specification<User> spec = UserSpecification.getFilteredSpec(filterByList, filterValues, userRoleRepository);
+
+        if (search != null && !search.trim().isEmpty()) {
+            Specification<User> searchSpec = (root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("username")), "%" + search.toLowerCase() + "%"),
+                    cb.like(cb.lower(root.get("email")), "%" + search.toLowerCase() + "%"),
+                    cb.like(cb.lower(root.get("firstName")), "%" + search.toLowerCase() + "%"),
+                    cb.like(cb.lower(root.get("lastName")), "%" + search.toLowerCase() + "%")
+            );
+
+            spec = spec == null ? searchSpec : spec.and(searchSpec);
+        }
+
+        return spec;
+    }
+
+
+    public UserServiceResponse updateUserProfile(User user, ProfileUpdateDataDTO profileData) {
     log.info("Updating user profile" + profileData.getBio() + "  " + profileData.getFirstName() + " " + profileData.getLastName());
 
     user.setFirstName(profileData.getFirstName());
@@ -441,6 +472,26 @@ public UserServiceResponse updateUserProfile(User user, ProfileUpdateDataDTO pro
         log.info("Sending password reset verification code {} to email {}", pswResetReq.getCode(), pswResetReq.getEmail());
     }
 
+    public UserStatsDTO getRegisteredUserCount(@NotNull User currentUser){
+        if (currentUser.getRole().getName() != UserRoleEnum.ADMIN && currentUser.getRole().getName() != UserRoleEnum.SUPER_ADMIN) {
+            throw new PermissionDeniedException("You don't have permission to access this resource");
+        }
+
+        List<UserRepository.RoleUserCount> counts = userRepository.countUsersByRole();
+        UserStatsDTO.UserStatsDTOBuilder builder = UserStatsDTO.builder();
+        long total = 0;
+        for (UserRepository.RoleUserCount c : counts) {
+            total += c.getUserCount();
+            switch (c.getRoleName()) {
+                case "SELLER" -> builder.sellers(c.getUserCount());
+                case "BIDDER" -> builder.bidders(c.getUserCount());
+                case "ADMIN" -> builder.admins(c.getUserCount());
+            }
+        }
+        builder.totalUsers(total);
+        return builder.build();
+    }
+
     public boolean verifyPasswordResetCode(String email, String code) throws LimitExceededException {
         if (email == null || email.isEmpty()) {
             throw new InvalidParameterException("Email cannot be null or empty");
@@ -459,5 +510,49 @@ public UserServiceResponse updateUserProfile(User user, ProfileUpdateDataDTO pro
         }
         log.info("Valid reset code for email: {}", email);
         return true;
+    }
+
+    @Transactional
+    public UserAddress saveUserAddress(User user, UserAddressDTO addressDTO) {
+        log.info("Saving user address for user: " + user.getUsername());
+        
+        try {
+            // Refresh the user entity to get the latest state
+            User refreshedUser = userRepository.findById(user.getId()).orElseThrow();
+            
+            UserAddress address = userAddressRepository.findByIdWithLock(refreshedUser.getId()).orElse(null);
+            
+            if (address == null) {
+                // Create new address - don't set ID explicitly, let @MapsId handle it
+                address = new UserAddress();
+                address.setUser(refreshedUser); // This will set the ID via @MapsId
+                address.setAddressNumber(addressDTO.getAddressNumber());
+                address.setAddressLine1(addressDTO.getAddressLine1());
+                address.setAddressLine2(addressDTO.getAddressLine2());
+                address.setCity(addressDTO.getCity());
+                address.setState(addressDTO.getState());
+                address.setPostalCode(addressDTO.getPostalCode());
+                address.setCountry(addressDTO.getCountry());
+                log.info("Creating new address for user: " + refreshedUser.getUsername());
+            } else {
+                // Update existing address
+                address.setAddressNumber(addressDTO.getAddressNumber());
+                address.setAddressLine1(addressDTO.getAddressLine1());
+                address.setAddressLine2(addressDTO.getAddressLine2());
+                address.setCity(addressDTO.getCity());
+                address.setState(addressDTO.getState());
+                address.setPostalCode(addressDTO.getPostalCode());
+                address.setCountry(addressDTO.getCountry());
+                log.info("Updating existing address for user: " + refreshedUser.getUsername());
+            }
+            
+            UserAddress savedAddress = userAddressRepository.save(address);
+            log.info("Successfully saved user address for user: " + refreshedUser.getUsername());
+            
+            return savedAddress;
+        } catch (Exception e) {
+            log.error("Error saving user address for user: " + user.getUsername() + " - " + e.getMessage(), e);
+            throw e;
+        }
     }
 }

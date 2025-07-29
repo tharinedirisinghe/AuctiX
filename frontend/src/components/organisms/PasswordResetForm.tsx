@@ -1,24 +1,41 @@
-import type React from 'react';
+'use client';
 
+import type React from 'react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ProgressBar } from '@/components/molecules/ProgressBar';
+import { ZodError, z } from 'zod';
+import {
+  Loader2,
+  Mail,
+  Shield,
+  Lock,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import { FormInput } from '@/components/atoms/FormInput';
 import { SixDigitCodeInput } from '@/components/molecules/SixDigitCodeInput';
-import { ActionButton } from '@/components/atoms/ActionButton';
-import { StatusMessage } from '@/components/molecules/StatusMessage';
-import { ZodError, z } from 'zod';
 import {
   requestPasswordResetCode,
   resetPassword,
   validateVerificationCode,
 } from '@/services/passwordResetService';
-import { useToast } from '@/hooks/use-toast';
 import AxiosRequest from '@/services/axiosInspector';
-import { AxiosInstance } from 'axios';
+import type { AxiosInstance } from 'axios';
 import { getServerErrorMessage } from '@/lib/errorMsg';
-import { useNavigate } from 'react-router-dom';
 
+// Keep the existing schemas
 export const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
@@ -51,15 +68,6 @@ export type EmailFormData = z.infer<typeof emailSchema>;
 export type VerificationCodeFormData = z.infer<typeof verificationCodeSchema>;
 export type NewPasswordFormData = z.infer<typeof newPasswordSchema>;
 
-// Helper function to format code for display
-export const formatCodeForDisplay = (code: string): string => {
-  const cleaned = code.replace(/[-\s]/g, '');
-  if (cleaned.length >= 3) {
-    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}`;
-  }
-  return cleaned;
-};
-
 type Step = 'email' | 'verification' | 'createPassword' | 'success' | 'error';
 
 export function PasswordResetForm() {
@@ -77,24 +85,10 @@ export function PasswordResetForm() {
     newPassword?: string;
     confirmPassword?: string;
   }>({});
+
   const { toast } = useToast();
-  const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
   const navigate = useNavigate();
-
-  const steps = ['Email', 'Verify', 'Password'];
-
-  function getCurrentStepNumber(): number {
-    switch (currentStep) {
-      case 'email':
-        return 1;
-      case 'verification':
-        return 2;
-      case 'createPassword':
-        return 3;
-      default:
-        return 1;
-    }
-  }
+  const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
 
   const validateEmail = (): boolean => {
     try {
@@ -144,10 +138,10 @@ export function PasswordResetForm() {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateEmail()) return;
 
     setIsLoading(true);
+
     requestPasswordResetCode(email, axiosInstance)
       .then(() => {
         setCurrentStep('verification');
@@ -168,10 +162,10 @@ export function PasswordResetForm() {
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateCode()) return;
 
     setIsLoading(true);
+
     validateVerificationCode(email, verificationCode, axiosInstance)
       .then(() => {
         setCurrentStep('createPassword');
@@ -200,10 +194,10 @@ export function PasswordResetForm() {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validatePasswords()) return;
 
     setIsLoading(true);
+
     resetPassword(
       email,
       verificationCode,
@@ -261,265 +255,391 @@ export function PasswordResetForm() {
       }
     };
 
-  const renderStep = () => {
+  const getStepIcon = () => {
     switch (currentStep) {
       case 'email':
-        return (
-          <motion.div
-            key="email"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            <div className="text-center space-y-3 mb-8">
-              <h1 className="text-3xl font-bold text-foreground">
-                Reset Password
-              </h1>
-              <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
-                Enter your email address and we'll send you a verification code
-                to reset your password.
-              </p>
-            </div>
-
-            <form onSubmit={handleEmailSubmit} className="space-y-6">
-              <FormInput
-                label="Email Address"
-                id="email"
-                type="email"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={setEmail}
-                error={emailError}
-                delay={0.2}
-                disabled={isLoading}
-              />
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                <ActionButton
-                  type="submit"
-                  loading={isLoading}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                >
-                  Send Verification Code
-                </ActionButton>
-              </motion.div>
-            </form>
-          </motion.div>
-        );
-
+        return <Mail className="h-6 w-6" />;
       case 'verification':
-        return (
-          <motion.div
-            key="verification"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            <div className="text-center space-y-3 mb-8">
-              <h1 className="text-3xl font-bold text-foreground">
-                Enter Verification Code
-              </h1>
-              <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
-                Please enter the 6-digit verification code sent to your email
-                address.
-              </p>
-            </div>
-
-            <form onSubmit={handleCodeSubmit} className="space-y-6">
-              <SixDigitCodeInput
-                label="Verification Code"
-                value={verificationCode}
-                onChange={setVerificationCode}
-                error={codeError}
-                delay={0.2}
-                disabled={isLoading}
-              />
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="space-y-3"
-              >
-                <ActionButton
-                  type="submit"
-                  loading={isLoading}
-                  disabled={verificationCode.length !== 6}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                >
-                  Verify Code
-                </ActionButton>
-
-                <ActionButton
-                  onClick={() => setCurrentStep('email')}
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground"
-                  disabled={isLoading}
-                >
-                  Back
-                </ActionButton>
-              </motion.div>
-            </form>
-          </motion.div>
-        );
-
+        return <Shield className="h-6 w-6" />;
       case 'createPassword':
-        return (
-          <motion.div
-            key="createPassword"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-6"
-          >
-            <div className="text-center space-y-3 mb-8">
-              <h1 className="text-3xl font-bold text-foreground">
-                Create New Password
-              </h1>
-              <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
-                Choose a strong password for your account. Make sure it's
-                something you'll remember.
-              </p>
-            </div>
-
-            <form onSubmit={handlePasswordSubmit} className="space-y-6">
-              <FormInput
-                label="New Password"
-                id="newPassword"
-                type="password"
-                placeholder="Enter your new password"
-                value={passwordData.newPassword}
-                onChange={updatePasswordField('newPassword')}
-                error={passwordErrors.newPassword}
-                delay={0.2}
-                disabled={isLoading}
-              />
-
-              <FormInput
-                label="Confirm New Password"
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your new password"
-                value={passwordData.confirmPassword}
-                onChange={updatePasswordField('confirmPassword')}
-                error={passwordErrors.confirmPassword}
-                delay={0.4}
-                disabled={isLoading}
-              />
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-                className="space-y-3"
-              >
-                <ActionButton
-                  type="submit"
-                  loading={isLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Reset Password
-                </ActionButton>
-
-                <ActionButton
-                  onClick={() => setCurrentStep('verification')}
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground"
-                  disabled={isLoading}
-                >
-                  Back
-                </ActionButton>
-              </motion.div>
-            </form>
-          </motion.div>
-        );
-
+        return <Lock className="h-6 w-6" />;
       case 'success':
-        return (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
-          >
-            <StatusMessage
-              status="success"
-              title="Password Reset Complete!"
-              message="Your password has been successfully reset. You can now sign in with your new password."
-              buttonText="Sign In"
-              onButtonClick={() => navigate('/login')}
-            />
-          </motion.div>
-        );
-
+        return <CheckCircle2 className="h-6 w-6 text-green-600" />;
       case 'error':
-        return (
-          <motion.div
-            key="error"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-4"
-          >
-            <StatusMessage
-              status="error"
-              title="Invalid Code"
-              message="The verification code you entered is incorrect. Please check your email and try again."
-              buttonText="Try Again"
-              onButtonClick={handleTryAgain}
-            />
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <ActionButton
-                onClick={handleStartOver}
-                variant="ghost"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Start Over
-              </ActionButton>
-            </motion.div>
-          </motion.div>
-        );
-
+        return <AlertCircle className="h-6 w-6 text-red-600" />;
       default:
-        return null;
+        return <Mail className="h-6 w-6" />;
+    }
+  };
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 'email':
+        return 'Reset Your Password';
+      case 'verification':
+        return 'Verify Your Email';
+      case 'createPassword':
+        return 'Create New Password';
+      case 'success':
+        return 'Password Reset Complete';
+      case 'error':
+        return 'Verification Failed';
+      default:
+        return 'Reset Your Password';
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (currentStep) {
+      case 'email':
+        return "Enter your email address and we'll send you a verification code to reset your password.";
+      case 'verification':
+        return 'Please enter the 6-digit verification code sent to your email address.';
+      case 'createPassword':
+        return "Choose a strong password for your account. Make sure it's something you'll remember.";
+      case 'success':
+        return 'Your password has been successfully reset. You can now sign in with your new password.';
+      case 'error':
+        return 'The verification code you entered is incorrect. Please check your email and try again.';
+      default:
+        return '';
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md"
-      >
-        {/* Progress Bar - only show for main steps */}
+    <div className="min-h-screen bg-background py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            {getStepIcon()}
+            Password Reset
+            {isLoading && (
+              <Badge className="bg-yellow-500 text-gray-900">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Processing...
+              </Badge>
+            )}
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Secure password recovery for your account
+          </p>
+        </div>
+
+        {/* Progress Steps */}
         {!['success', 'error'].includes(currentStep) && (
-          <ProgressBar
-            currentStep={getCurrentStepNumber()}
-            totalSteps={3}
-            steps={steps}
-          />
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div
+                  className={`flex items-center gap-2 ${currentStep === 'email' ? 'text-yellow-600' : currentStep === 'verification' || currentStep === 'createPassword' ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'email' ? 'bg-yellow-100 text-yellow-600' : currentStep === 'verification' || currentStep === 'createPassword' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}
+                  >
+                    1
+                  </div>
+                  <span className="font-medium">Email</span>
+                </div>
+                <div
+                  className={`flex-1 h-1 mx-4 rounded ${currentStep === 'verification' || currentStep === 'createPassword' ? 'bg-green-200' : 'bg-gray-200'}`}
+                />
+                <div
+                  className={`flex items-center gap-2 ${currentStep === 'verification' ? 'text-yellow-600' : currentStep === 'createPassword' ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'verification' ? 'bg-yellow-100 text-yellow-600' : currentStep === 'createPassword' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}
+                  >
+                    2
+                  </div>
+                  <span className="font-medium">Verify</span>
+                </div>
+                <div
+                  className={`flex-1 h-1 mx-4 rounded ${currentStep === 'createPassword' ? 'bg-green-200' : 'bg-gray-200'}`}
+                />
+                <div
+                  className={`flex items-center gap-2 ${currentStep === 'createPassword' ? 'text-yellow-600' : 'text-gray-400'}`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${currentStep === 'createPassword' ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'}`}
+                  >
+                    3
+                  </div>
+                  <span className="font-medium">Password</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
-      </motion.div>
+        {/* Main Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              {getStepIcon()}
+              {getStepTitle()}
+            </CardTitle>
+            <CardDescription>{getStepDescription()}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AnimatePresence mode="wait">
+              {currentStep === 'email' && (
+                <motion.div
+                  key="email"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6 pt-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-500">
+                        Email Verification
+                      </h3>
+                      <Separator className="my-4 border-gray-200 border-t-2" />
+                    </div>
+                    <div className="p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
+                      <form onSubmit={handleEmailSubmit} className="space-y-6">
+                        <FormInput
+                          label="Email Address"
+                          id="email"
+                          type="email"
+                          placeholder="Enter your email address"
+                          value={email}
+                          onChange={setEmail}
+                          error={emailError}
+                          delay={0.2}
+                          disabled={isLoading}
+                        />
+                        <div className="flex justify-end">
+                          <Button
+                            type="submit"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                Sending Code...
+                              </>
+                            ) : (
+                              'Send Verification Code'
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {currentStep === 'verification' && (
+                <motion.div
+                  key="verification"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6 pt-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-500">
+                        Code Verification
+                      </h3>
+                      <Separator className="my-4 border-gray-200 border-t-2" />
+                    </div>
+                    <div className="p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
+                      <form onSubmit={handleCodeSubmit} className="space-y-6">
+                        <SixDigitCodeInput
+                          label="Verification Code"
+                          value={verificationCode}
+                          onChange={setVerificationCode}
+                          error={codeError}
+                          delay={0.2}
+                          disabled={isLoading}
+                        />
+                        <div className="flex justify-between">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setCurrentStep('email')}
+                            disabled={isLoading}
+                          >
+                            Back
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                            disabled={
+                              isLoading || verificationCode.length !== 6
+                            }
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                Verifying...
+                              </>
+                            ) : (
+                              'Verify Code'
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {currentStep === 'createPassword' && (
+                <motion.div
+                  key="createPassword"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6 pt-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-500">
+                        New Password
+                      </h3>
+                      <Separator className="my-4 border-gray-200 border-t-2" />
+                    </div>
+                    <div className="p-6 rounded-lg border-l-2 border-yellow-500 bg-gray-50">
+                      <form
+                        onSubmit={handlePasswordSubmit}
+                        className="space-y-6"
+                      >
+                        <FormInput
+                          label="New Password"
+                          id="newPassword"
+                          type="password"
+                          placeholder="Enter your new password"
+                          value={passwordData.newPassword}
+                          onChange={updatePasswordField('newPassword')}
+                          error={passwordErrors.newPassword}
+                          delay={0.2}
+                          disabled={isLoading}
+                        />
+                        <FormInput
+                          label="Confirm New Password"
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="Confirm your new password"
+                          value={passwordData.confirmPassword}
+                          onChange={updatePasswordField('confirmPassword')}
+                          error={passwordErrors.confirmPassword}
+                          delay={0.4}
+                          disabled={isLoading}
+                        />
+                        <div className="flex justify-between">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setCurrentStep('verification')}
+                            disabled={isLoading}
+                          >
+                            Back
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                Resetting Password...
+                              </>
+                            ) : (
+                              'Reset Password'
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {currentStep === 'success' && (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6 pt-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-green-600">
+                        Success
+                      </h3>
+                      <Separator className="my-4 border-gray-200 border-t-2" />
+                    </div>
+                    <div className="p-6 rounded-lg border-l-2 border-green-500 bg-green-50 text-center">
+                      <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-green-800 mb-2">
+                        Password Reset Complete!
+                      </h3>
+                      <p className="text-green-700 mb-6">
+                        Your password has been successfully reset. You can now
+                        sign in with your new password.
+                      </p>
+                      <Button
+                        onClick={() => navigate('/login')}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                      >
+                        Sign In
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {currentStep === 'error' && (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6 pt-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-red-600">
+                        Error
+                      </h3>
+                      <Separator className="my-4 border-gray-200 border-t-2" />
+                    </div>
+                    <div className="p-6 rounded-lg border-l-2 border-red-500 bg-red-50 text-center">
+                      <AlertCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-red-800 mb-2">
+                        Verification Failed
+                      </h3>
+                      <p className="text-red-700 mb-6">
+                        The verification code you entered is incorrect. Please
+                        check your email and try again.
+                      </p>
+                      <div className="flex justify-center gap-4">
+                        <Button
+                          onClick={handleTryAgain}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                        >
+                          Try Again
+                        </Button>
+                        <Button onClick={handleStartOver} variant="outline">
+                          Start Over
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

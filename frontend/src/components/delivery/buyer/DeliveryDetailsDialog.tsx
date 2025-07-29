@@ -7,7 +7,6 @@ import {
   Package,
   Truck,
   User,
-  X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,17 +69,8 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
       }}
     >
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogHeader>
           <DialogTitle>Delivery Details</DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={handleClose}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </Button>
         </DialogHeader>
         <div className="py-4">
           <div className="flex items-center gap-4 mb-4">
@@ -162,7 +152,10 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
               <Badge
                 className={`${getStatusInfo(selectedDelivery.status).color} border`}
               >
-                {getStatusInfo(selectedDelivery.status).icon}
+                {(() => {
+                  const StatusIcon = getStatusInfo(selectedDelivery.status).iconComponent;
+                  return <StatusIcon className="w-3 h-3 mr-1" />;
+                })()}
                 {getStatusInfo(selectedDelivery.status).text}
               </Badge>
               <span className="text-sm text-gray-500 ml-2">

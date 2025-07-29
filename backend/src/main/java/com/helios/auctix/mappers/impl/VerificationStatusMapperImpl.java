@@ -4,6 +4,7 @@ import com.google.monitoring.v3.NotificationChannel;
 import com.helios.auctix.domain.user.SellerVerificationRequest;
 import com.helios.auctix.domain.user.SellerVerificationStatusEnum;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
 import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.dtos.VerificationRequestDTO;
 import com.helios.auctix.dtos.VerificationStatusDTO;

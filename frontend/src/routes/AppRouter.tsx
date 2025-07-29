@@ -8,6 +8,8 @@ import User from '@/pages/User';
 import Register from '@/pages/Register';
 import LoginPage from '@/pages/Login';
 import Home from '@/pages/Home';
+import Feedback from '@/pages/Feedback';
+import AboutUs from '@/pages/AboutUs';
 import CreateAuction from '@/pages/CreateAuction';
 import SellerProfile from '@/pages/SellerProfile';
 import AuctionDetailsPage from '@/pages/AuctionDetails';
@@ -16,6 +18,7 @@ import ProfileSettings from '@/pages/ProfileSettings';
 import { useNotificationRegistration } from '@/hooks/use-notification-registration';
 import UserDeliveryPage from '@/pages/User_Delivery';
 import SellerDeliveryPage from '@/pages/Seller_Delivery';
+import SellerReviews from '@/pages/SellerReviews';
 import AuctionsPage from '@/pages/ExploreAuctions';
 import ManageAuctions from '@/pages/ManageAuctions';
 import AdminManagementPage from '@/pages/AdminManagementPage';
@@ -28,7 +31,13 @@ import WatchlistPage from '@/pages/WatchlistPage';
 import SellerVerificationSubmitPage from '@/pages/SellerVerificationSubmitPage';
 import SecuritySettingsPage from '@/pages/SecuritySettingsPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
+import FeedbackManagement from '@/pages/FeedbackManagement';
 import { NoticePage } from '@/pages/NoticePage';
+import SupportChat from '@/pages/UserSupportChat';
+import AdminSupportChatManager from '@/pages/AdminSupportChatManager';
+import UserSupportChat from '@/pages/UserSupportChat';
+import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
+import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -47,16 +56,15 @@ export default function AppRouter() {
           {/* <Route path="/create-auction" element={<CreateAuction />} /> */}
           <Route path="/auctions/new" element={<CreateAuction />} />
           <Route path="/auctions/update/:id" element={<CreateAuction />} />
-
           <Route path="/explore-auctions" element={<AuctionsPage />} />
-
+          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/about" element={<AboutUs />} />
           <Route path="/password-reset" element={<PasswordResetPage />} />
 
           <Route path="/notice" element={<NoticePage />} />
         </Route>
 
         {/* Routes using DashboardLayout */}
-
         <Route element={<DashboardLayout />}>
           <Route
             path="/manage-auctions"
@@ -123,6 +131,17 @@ export default function AppRouter() {
             }
           />
           <Route
+            path="/seller-verification-management"
+            element={
+              <ProtectedRoute
+                allowedUsers={['ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <SellerVerificationMngPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/settings/profile"
             element={
               <ProtectedRoute
@@ -147,6 +166,18 @@ export default function AppRouter() {
             }
           />
           <Route
+            path="/support/admin"
+            element={
+              <ProtectedRoute
+                allowedUsers={['ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <AdminSupportChatManager />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/seller-verification-submit"
             element={
               <ProtectedRoute allowedUsers={['SELLER']} redirectPath="/403">
@@ -170,9 +201,8 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
-
-          <Route path="/reports" element={<Report />} />
           <Route path="/complaints" element={<Report />} />
+          <Route path="/manage-feedback" element={<FeedbackManagement />} />
           <Route path="/wallet" element={<WalletPage />} />
           <Route path="/complaints/:id" element={<ComplaintDetail />} />
           {/*           <Route path="/watchlist" element={<WatchList />} /> */}
@@ -182,6 +212,9 @@ export default function AppRouter() {
         <Route path="/register" element={<Register />} />
         <Route path="/user-delivery" element={<UserDeliveryPage />} />
         <Route path="/seller-delivery" element={<SellerDeliveryPage />} />
+        <Route path="/seller-reviews" element={<SellerReviews />} />
+        <Route path="/support" element={<UserSupportChat />} />
+        <Route path="/support/admin" element={<AdminSupportChatManager />} />
 
         <Route path="/403" element={<h2>403 Unauthorized</h2>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />

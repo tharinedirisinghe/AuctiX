@@ -972,74 +972,90 @@ const AuctionDetailsPage = () => {
           </div>
         </div>
       </div>
-      <div className="mt-8">
-        <Tabs defaultValue="information" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="information">Information</TabsTrigger>
-            <TabsTrigger value="bid-history">Bid History</TabsTrigger>
-          </TabsList>
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Information and Bid History Section - Takes 2 columns (same width as main image) */}
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="information" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="information">Information</TabsTrigger>
+              <TabsTrigger value="bid-history">Bid History</TabsTrigger>
+            </TabsList>
 
-          <TabsContent
-            value="information"
-            className="p-4 border rounded-md mt-2"
-          >
-            <h2 className="text-lg font-semibold mb-4">About this product</h2>
-            <div className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">
-              {product.description}
+            <TabsContent
+              value="information"
+              className="p-4 border rounded-md mt-2"
+            >
+              <h2 className="text-lg font-semibold mb-4">About this product</h2>
+              <div className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">
+                {product.description}
+              </div>
+            </TabsContent>
+
+            <TabsContent
+              value="bid-history"
+              className="p-4 border rounded-md mt-2"
+            >
+              <h2 className="text-lg font-semibold mb-4">Bid History</h2>
+              {product.bidHistory.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto pr-2">
+                  {' '}
+                  {/* Add scroll container */}
+                  <ul>
+                    {product.bidHistory.map((bid, index) => (
+                      <li
+                        key={index}
+                        className="mb-2 pb-2 border-b last:border-b-0"
+                      >
+                        <div className="flex items-center">
+                          <img
+                            src={
+                              bid.bidder?.avatar !== 'NULL'
+                                ? bid.bidder?.avatar
+                                : '/default-avatar.png'
+                            }
+                            alt={bid.bidder?.name || 'Bidder'}
+                            className="w-8 h-8 rounded-full mr-2 flex-shrink-0"
+                          />
+                          <div className="flex-grow min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {bid.bidder.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              LKR {bid.amount.toLocaleString()} •{' '}
+                              {new Date(bid.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No bid history available yet.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Live Chat Section - Takes 1 column (right side) */}
+        <div>
+          <div className="border rounded-md p-4">
+            <h2 className="text-lg font-semibold mb-4">Live Chat</h2>
+            <div className="text-sm text-gray-500">
+              {auctionId ? (
+                <LiveChat
+                  auctionId={auctionId}
+                  type="AUCTION"
+                  title="Auction Chat"
+                />
+              ) : (
+                <div>Sorry chat is unavailable</div>
+              )}
             </div>
-          </TabsContent>
-
-          <TabsContent
-            value="bid-history"
-            className="p-4 border rounded-md mt-2"
-          >
-            <h2 className="text-lg font-semibold mb-4">Bid History</h2>
-            {product.bidHistory.length > 0 ? (
-              <ul>
-                {product.bidHistory.map((bid, index) => (
-                  <li key={index} className="mb-2 pb-2 border-b">
-                    <div className="flex items-center">
-                      <img
-                        src={
-                          bid.bidder?.avatar !== 'NULL'
-                            ? bid.bidder?.avatar
-                            : '/default-avatar.png'
-                        }
-                        alt={bid.bidder?.name || 'Bidder'}
-                        className="w-8 h-8 rounded-full mr-2"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">{bid.bidder.name}</p>
-                        <p className="text-xs text-gray-500">
-                          LKR {bid.amount.toLocaleString()} •{' '}
-                          {new Date(bid.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                No bid history available yet.
-              </p>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-      <div className="border rounded-md p-4 mt-6">
-        <h2 className="text-lg font-semibold mb-4">Live Chat</h2>
-        <p className="text-sm text-gray-500">
-          {auctionId ? (
-            <LiveChat
-              auctionId={auctionId}
-              type="AUCTION"
-              title="Auction Chat"
-            />
-          ) : (
-            <div>Sorry chat is unavailable</div>
-          )}
-        </p>
+          </div>
+        </div>
       </div>
       // Enhanced error display with better styling
       {error && (

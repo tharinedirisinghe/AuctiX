@@ -286,6 +286,12 @@ const SellerDeliveryPage = () => {
     setIsReviewDialogOpen(true);
   };
 
+  // Handle contact buyer (placeholder)
+  const handleContactBuyer = (delivery: Delivery) => {
+    // Placeholder - just shows it works
+    console.log('Contact buyer for delivery:', delivery.id);
+  };
+
   // Refresh deliveries
   const handleRefresh = () => {
     dispatch(clearDeliveryError());
@@ -365,6 +371,7 @@ const SellerDeliveryPage = () => {
                 viewDeliveryDetails={viewDeliveryDetails}
                 handleRequestAddress={handleRequestAddress}
                 onViewReviews={handleViewReviews}
+                onContactBuyer={handleContactBuyer}
                 isLoading={isLoading}
               />
             ))}

@@ -36,7 +36,6 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
   onClose,
   onSave,
   isLoading = false,
-  deliveryId,
 }) => {
   const [addressData, setAddressData] = useState<AddressData>({
     addressNumber: '',
@@ -69,7 +68,7 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
               country: existingAddress.country || '',
             });
           }
-        } catch (error) {
+        } catch {
           // If no address exists (404), keep empty form
           console.log('No existing address found, keeping empty form');
         } finally {
@@ -82,14 +81,14 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
   }, [isOpen]);
 
   const handleInputChange = (field: keyof AddressData, value: string) => {
-    setAddressData(prev => ({
+    setAddressData((prev) => ({
       ...prev,
       [field]: value,
     }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
         [field]: undefined,
       }));
@@ -154,7 +153,10 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
               <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-amber-800">
                 <div className="font-medium">Address Required for Delivery</div>
-                <div>Please provide your delivery address so the seller can process your order.</div>
+                <div>
+                  Please provide your delivery address so the seller can process
+                  your order.
+                </div>
               </div>
             </div>
           </DialogDescription>
@@ -163,7 +165,9 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
         <div className="grid gap-4 py-4">
           {isLoadingAddress ? (
             <div className="flex items-center justify-center py-8">
-              <div className="text-sm text-gray-500">Loading existing address...</div>
+              <div className="text-sm text-gray-500">
+                Loading existing address...
+              </div>
             </div>
           ) : (
             <>
@@ -174,114 +178,130 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                 <Input
                   id="addressNumber"
                   value={addressData.addressNumber}
-                  onChange={(e) => handleInputChange('addressNumber', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange('addressNumber', e.target.value)
+                  }
                   className="col-span-3"
                   placeholder="House/Building number"
                 />
               </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="addressLine1" className="text-right">
-              Address Line 1 *
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="addressLine1"
-                value={addressData.addressLine1}
-                onChange={(e) => handleInputChange('addressLine1', e.target.value)}
-                className={errors.addressLine1 ? 'border-red-500' : ''}
-                placeholder="Street address"
-              />
-              {errors.addressLine1 && (
-                <p className="text-sm text-red-500 mt-1">{errors.addressLine1}</p>
-              )}
-            </div>
-          </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="addressLine1" className="text-right">
+                  Address Line 1 *
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="addressLine1"
+                    value={addressData.addressLine1}
+                    onChange={(e) =>
+                      handleInputChange('addressLine1', e.target.value)
+                    }
+                    className={errors.addressLine1 ? 'border-red-500' : ''}
+                    placeholder="Street address"
+                  />
+                  {errors.addressLine1 && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.addressLine1}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="addressLine2" className="text-right">
-              Address Line 2
-            </Label>
-            <Input
-              id="addressLine2"
-              value={addressData.addressLine2}
-              onChange={(e) => handleInputChange('addressLine2', e.target.value)}
-              className="col-span-3"
-              placeholder="Apartment, suite, etc. (optional)"
-            />
-          </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="addressLine2" className="text-right">
+                  Address Line 2
+                </Label>
+                <Input
+                  id="addressLine2"
+                  value={addressData.addressLine2}
+                  onChange={(e) =>
+                    handleInputChange('addressLine2', e.target.value)
+                  }
+                  className="col-span-3"
+                  placeholder="Apartment, suite, etc. (optional)"
+                />
+              </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="city" className="text-right">
-              City *
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="city"
-                value={addressData.city}
-                onChange={(e) => handleInputChange('city', e.target.value)}
-                className={errors.city ? 'border-red-500' : ''}
-                placeholder="City"
-              />
-              {errors.city && (
-                <p className="text-sm text-red-500 mt-1">{errors.city}</p>
-              )}
-            </div>
-          </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="city" className="text-right">
+                  City *
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="city"
+                    value={addressData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    className={errors.city ? 'border-red-500' : ''}
+                    placeholder="City"
+                  />
+                  {errors.city && (
+                    <p className="text-sm text-red-500 mt-1">{errors.city}</p>
+                  )}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="state" className="text-right">
-              State *
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="state"
-                value={addressData.state}
-                onChange={(e) => handleInputChange('state', e.target.value)}
-                className={errors.state ? 'border-red-500' : ''}
-                placeholder="State/Province"
-              />
-              {errors.state && (
-                <p className="text-sm text-red-500 mt-1">{errors.state}</p>
-              )}
-            </div>
-          </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="state" className="text-right">
+                  State *
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="state"
+                    value={addressData.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    className={errors.state ? 'border-red-500' : ''}
+                    placeholder="State/Province"
+                  />
+                  {errors.state && (
+                    <p className="text-sm text-red-500 mt-1">{errors.state}</p>
+                  )}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="postalCode" className="text-right">
-              Postal Code *
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="postalCode"
-                value={addressData.postalCode}
-                onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                className={errors.postalCode ? 'border-red-500' : ''}
-                placeholder="Postal/ZIP code"
-              />
-              {errors.postalCode && (
-                <p className="text-sm text-red-500 mt-1">{errors.postalCode}</p>
-              )}
-            </div>
-          </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="postalCode" className="text-right">
+                  Postal Code *
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="postalCode"
+                    value={addressData.postalCode}
+                    onChange={(e) =>
+                      handleInputChange('postalCode', e.target.value)
+                    }
+                    className={errors.postalCode ? 'border-red-500' : ''}
+                    placeholder="Postal/ZIP code"
+                  />
+                  {errors.postalCode && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.postalCode}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="country" className="text-right">
-              Country *
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="country"
-                value={addressData.country}
-                onChange={(e) => handleInputChange('country', e.target.value)}
-                className={errors.country ? 'border-red-500' : ''}
-                placeholder="Country"
-              />
-              {errors.country && (
-                <p className="text-sm text-red-500 mt-1">{errors.country}</p>
-              )}
-            </div>
-          </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="country" className="text-right">
+                  Country *
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="country"
+                    value={addressData.country}
+                    onChange={(e) =>
+                      handleInputChange('country', e.target.value)
+                    }
+                    className={errors.country ? 'border-red-500' : ''}
+                    placeholder="Country"
+                  />
+                  {errors.country && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.country}
+                    </p>
+                  )}
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -301,7 +321,11 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
             disabled={isLoading || isLoadingAddress}
             className="bg-amber-600 hover:bg-amber-700"
           >
-            {isLoading ? 'Saving...' : isLoadingAddress ? 'Loading...' : 'Save Address'}
+            {isLoading
+              ? 'Saving...'
+              : isLoadingAddress
+                ? 'Loading...'
+                : 'Save Address'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,7 +3,6 @@ import {
   AlertCircle,
   CalendarClock,
   MapPin,
-  MessageCircle,
   Package,
   Truck,
   User,
@@ -34,7 +33,6 @@ interface DeliveryDetailsDialogProps {
 export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
   selectedDelivery,
   setSelectedDelivery,
-  handleContactSeller,
   isContactSellerModalOpen,
 }) => {
   // Create a local state to control the dialog visibility
@@ -153,7 +151,9 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
                 className={`${getStatusInfo(selectedDelivery.status).color} border`}
               >
                 {(() => {
-                  const StatusIcon = getStatusInfo(selectedDelivery.status).iconComponent;
+                  const StatusIcon = getStatusInfo(
+                    selectedDelivery.status,
+                  ).iconComponent;
                   return <StatusIcon className="w-3 h-3 mr-1" />;
                 })()}
                 {getStatusInfo(selectedDelivery.status).text}

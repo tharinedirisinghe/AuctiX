@@ -242,4 +242,29 @@ public class AdminController {
         return ResponseEntity.ok(requests);
     }
 
+    @RequestMapping(value="/approveSellerVerification" ,method={ RequestMethod.POST, RequestMethod.PUT })
+    public ResponseEntity<String> approveSellerVerification(
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("sellerUserName") String sellerUserName,
+            @RequestParam("note") String note
+    ) throws AuthenticationException {
+
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Approve seller verification request by admin " + currentUser.getUsername());
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        if (requestId == null || sellerUserName == null || note == null) {
+            return ResponseEntity.badRequest().body("All parameters are required");
+        }
+
+        sellerService.approveSellerVerification(requestId, sellerUserName, note, currentUser);
+        return ResponseEntity.ok().body("Seller verification approved successfully");
+
+    }
+
 }

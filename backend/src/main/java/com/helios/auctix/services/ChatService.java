@@ -4,6 +4,8 @@ import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.domain.chat.ChatRoomType;
+import com.helios.auctix.domain.user.Bidder;
+import com.helios.auctix.domain.user.Seller;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.repositories.AuctionRepository;
@@ -156,6 +158,32 @@ public class ChatService {
         joinChatRoom(user, newChat.getId(), ChatRoomType.SUPPORT);
         return chatRoomRepository.save(newChat);
     }
+    public ChatRoom getOrCreateWinnerSellerChat(User winner, User seller, Auction auction) {
+
+        if (!(seller.getRoleEnum().equals(UserRoleEnum.SELLER)
+                && winner.getRoleEnum().equals(UserRoleEnum.BIDDER))) {
+            throw new IllegalArgumentException("Invalid roles for winner-seller chat.");
+        }
+
+        Optional<ChatRoom> existingChat = chatRoomRepository
+                .findPrivateChatBetweenForAuction(seller.getId(), winner.getId(), auction.getId());
+
+        if (existingChat.isPresent()) {
+            return existingChat.get();
+        }
+
+        ChatRoom newChat = new ChatRoom();
+        newChat.setType(ChatRoomType.PRIVATE);
+        newChat.setAuction(auction);
+
+        chatRoomRepository.save(newChat);
+
+        joinChatRoom(seller, newChat.getId(), ChatRoomType.PRIVATE);
+        joinChatRoom(winner, newChat.getId(), ChatRoomType.PRIVATE);
+
+        return chatRoomRepository.save(newChat);
+    }
+
 
 
 

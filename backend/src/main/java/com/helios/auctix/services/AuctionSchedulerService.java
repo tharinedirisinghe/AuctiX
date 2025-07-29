@@ -42,6 +42,7 @@ public class AuctionSchedulerService {
     private final WatchListNotifyService watchListNotifyService;
     private final AuctionNotificationLogRepository auctionNotificationLogRepository;
     private final AuctionWatchListRepository watchListRepository;
+    private final ChatService chatService;
 
     private static final long SCHEDULE_FIXED_RATE_MS = 60_000;
     private static final long ONE_HOUR_MS = 60 * 60 * 1000;
@@ -93,8 +94,9 @@ public class AuctionSchedulerService {
             WalletRepository walletRepository,
             WatchListNotifyService watchListNotifyService,
             AuctionNotificationLogRepository auctionNotificationLogRepository,
-            AuctionWatchListRepository watchListRepository
-            ) {
+            AuctionWatchListRepository watchListRepository,
+            ChatService chatService
+    ) {
         this.auctionRepository = auctionRepository;
         this.bidRepository = bidRepository;
         this.bidService = bidService;
@@ -106,6 +108,7 @@ public class AuctionSchedulerService {
         this.watchListNotifyService = watchListNotifyService;
         this.auctionNotificationLogRepository = auctionNotificationLogRepository;
         this.watchListRepository = watchListRepository;
+        this.chatService = chatService;
     }
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -251,6 +254,9 @@ public class AuctionSchedulerService {
                     auction.setCompleted(true);
                     auction.setWinningBidId(winningBid.getId());
                     auctionRepository.save(auction);
+
+                    // add them to a chat
+                    chatService.getOrCreateWinnerSellerChat(bidder, seller, auction);
 
                     logger.info("Successfully completed auction: " + auctionId);
 

@@ -391,8 +391,6 @@ const SellerDeliveryPage = () => {
         {/* Search & Filter - Show only in list view */}
         {viewMode === 'list' && (
           <DeliveryFilter
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             showFilters={showFilters}

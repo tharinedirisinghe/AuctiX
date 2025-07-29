@@ -489,7 +489,7 @@ const LiveChat = (props: ChatRoomProps) => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-screen">
       <div className="flex items-center justify-between p-2 border-b">
         <h2 className="font-medium">{title ? title : 'Chat'}</h2>
         <div className="flex items-center gap-2">
@@ -508,8 +508,8 @@ const LiveChat = (props: ChatRoomProps) => {
       </div>
 
       <div
-        className={`flex-1 p-4 space-y-4 overflow-y-auto ${
-          limitUIHeight ? 'max-h-[500px]' : ''
+        className={`flex-1 overflow-y-auto p-4 space-y-4 ${
+          limitUIHeight ? 'max-h-[500px]' : 'max-h-svh'
         }`}
         ref={scrollContainerRef}
       >

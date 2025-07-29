@@ -16,6 +16,7 @@ import com.helios.auctix.repositories.chat.ChatRoomRepository;
 import com.helios.auctix.repositories.chat.ChatRoomUserUnreadStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,11 +57,17 @@ public class ChatNotificationService {
     private static final String PRIVATE_CHAT_TITLE = "New Message from %s in \"%s\"";
     private static final String PRIVATE_CHAT_MESSAGE = "You have unread messages in your private chat with %s about \"%s\".";
 
-    @Scheduled(fixedRate = 100000)
+
+//    @Value("${chat.notify.scheduler.check.rate:60000}")
+//    private String chatNotifyCheckRate;
+
+    @Value("${chat.notify.cutoff.seconds:60}")
+    private long chatNotifyCutoff;
+
+    @Scheduled(fixedRateString = "${chat.notify.scheduler.check.rate:60000}")
     public void scheduleUnreadNotification() {
-        log.info("Checking for unread messages= count in chat");
-//        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(1);
-        LocalDateTime cutoff = LocalDateTime.now().minusSeconds(5);
+        log.info("Checking for unread messages to notify ...");
+        LocalDateTime cutoff = LocalDateTime.now().minusSeconds(chatNotifyCutoff);
         sendUnreadNotifications(cutoff);
     }
 
@@ -81,7 +88,7 @@ public class ChatNotificationService {
     }
 
     public void sendUnreadNotifications(LocalDateTime cutoff) {
-        log.info("cutoff"+ cutoff.toString());
+
         List<ChatRoomUserUnreadStatus> toNotify = statusRepository.findAllForNotification(cutoff);
 
         Map<UUID, List<ChatRoomUserUnreadStatus>> groupedByChatRoom = toNotify.stream()

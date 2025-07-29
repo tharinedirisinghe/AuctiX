@@ -64,4 +64,6 @@ public interface SellerVerificationRequestRepository extends JpaRepository<Selle
     WHERE r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED
     """)
     SellerVerificationStatsDTO getSellerVerificationStats();
+
+    SellerVerificationRequest findByIdAndSellerId(UUID requestId, UUID sellerId);
 }

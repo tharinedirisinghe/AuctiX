@@ -59,6 +59,31 @@ export function SellerVerificationEvaluationPage() {
     }
   }, [username]);
 
+  const refreshVerifications = () => {
+    if (username) {
+      setIsVerificationsLoading(true);
+      getSellerVerifications(axiosInstance, username)
+        .then((data) => {
+          const verificationDocs: VerificationDocument[] = data || [];
+          setDocuments(verificationDocs);
+
+          // Update selected document if it still exists
+          if (selectedDocument) {
+            const updatedDoc = verificationDocs.find(
+              (doc) => doc.id === selectedDocument.id,
+            );
+            setSelectedDocument(updatedDoc || verificationDocs[0] || null);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching seller verifications:', error);
+        })
+        .finally(() => {
+          setIsVerificationsLoading(false);
+        });
+    }
+  };
+
   return (
     <div className="py-6 max-w-6xl mx-auto">
       {/* Page Header */}
@@ -111,13 +136,17 @@ export function SellerVerificationEvaluationPage() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <DocumentPreviewCard document={selectedDocument} />
+            <DocumentPreviewCard
+              sellerUserName={username ? username : null}
+              document={selectedDocument}
+              onRefresh={refreshVerifications}
+            />
           </div>
           <div className="lg:col-span-1">
             <VerificationSubmissionList
               documents={documents}
               isLoading={isVerificationsLoading}
-              selectedDocumentId={selectedDocument?.docId}
+              selectedDocumentId={selectedDocument?.id}
               onDocumentSelect={setSelectedDocument}
             />
           </div>

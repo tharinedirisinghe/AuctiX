@@ -9,6 +9,7 @@ import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 
 export interface VerificationDocument {
+  id: string;
   docId: string;
   docTitle: string;
   docType: string;
@@ -36,6 +37,8 @@ export function VerificationSubmissionList({
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${Math.round(bytes / (1024 * 1024))} MB`;
   };
+
+  console.log('Rendering VerificationSubmissionList');
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -86,13 +89,15 @@ export function VerificationSubmissionList({
           ) : (
             documents.map((doc) => (
               <div
-                key={doc.docId}
+                key={doc.id}
                 className={`p-4 bg-white border rounded-lg cursor-pointer transition-all hover:shadow-sm border-l-4 ${
-                  selectedDocumentId === doc.docId
+                  selectedDocumentId === doc.id
                     ? 'border-l-yellow-500 border-yellow-500 shadow-sm bg-yellow-50'
                     : 'border-l-yellow-500 hover:border-gray-300 hover:border-l-yellow-500'
                 }`}
-                onClick={() => onDocumentSelect?.(doc)}
+                onClick={() =>
+                  onDocumentSelect ? onDocumentSelect(doc) : () => {}
+                }
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0 mr-3">
@@ -109,12 +114,12 @@ export function VerificationSubmissionList({
                   <Badge
                     variant={
                       doc.status === 'PENDING'
-                        ? 'warning'
+                        ? 'secondary'
                         : doc.status === 'APPROVED'
-                          ? 'success'
+                          ? 'default'
                           : 'destructive'
                     }
-                    className="whitespace-nowrap flex-shrink-0"
+                    className="whitespace-nowrap flex-shrink-0 text-[8px] max-w-[60px] text-center"
                   >
                     {doc.status}
                   </Badge>

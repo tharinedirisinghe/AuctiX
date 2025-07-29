@@ -151,7 +151,7 @@ public class BidService {
 
         if (highestBid.isPresent()) {
             double currentHighest = highestBid.get().getAmount();
-            double minimumBid = currentHighest + calculateMinimumIncrement(currentHighest);
+            double minimumBid = currentHighest + calculateBidIncrement(currentHighest, auction.getStartingPrice());
 
             if (amount <= currentHighest) {
                 throw new IllegalArgumentException(
@@ -365,6 +365,35 @@ public class BidService {
                 })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    private double calculateBidIncrement(double currentBid, double startingPrice) {
+        double effectiveBid = Math.max(startingPrice, currentBid);
+
+        // Exact same tiered system as frontend
+        if (effectiveBid < 1000) {
+            return 50;
+        } else if (effectiveBid < 5000) {
+            return 100;
+        } else if (effectiveBid < 10000) {
+            return 250;
+        } else if (effectiveBid < 25000) {
+            return 500;
+        } else if (effectiveBid < 50000) {
+            return 1000;
+        } else if (effectiveBid < 100000) {
+            return 2500;
+        } else if (effectiveBid < 250000) {
+            return 5000;
+        } else if (effectiveBid < 500000) {
+            return 10000;
+        } else if (effectiveBid < 1000000) {
+            return 25000;
+        } else if (effectiveBid < 2500000) {
+            return 50000;
+        } else {
+            return 100000;
+        }
     }
 
     private String determineAuctionStatus(Auction auction, UUID userId, double userHighestBid, double currentHighestBid) {

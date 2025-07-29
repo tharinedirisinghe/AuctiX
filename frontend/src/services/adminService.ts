@@ -137,3 +137,63 @@ export const getSellerVerifications = async (
 
   return response.data;
 };
+
+export const approveSellerVerification = async (
+  axiosInstance: AxiosInstance,
+  sellerUserName: string,
+  requestId: string,
+  note: string,
+) => {
+  const response = await axiosInstance.put(
+    `/admin/approveSellerVerification`,
+    {},
+    {
+      params: {
+        sellerUserName,
+        requestId,
+        note,
+      },
+    },
+  );
+  return response.data;
+};
+
+export const rejectSellerVerification = async (
+  axiosInstance: AxiosInstance,
+  sellerUserName: string,
+  requestId: string,
+  note: string,
+) => {
+  const response = await axiosInstance.put(
+    `/admin/rejectSellerVerification`,
+    {},
+    {
+      params: {
+        sellerUserName,
+        requestId,
+        note,
+      },
+    },
+  );
+  return response.data;
+};
+
+export const updateSellerVerificationNote = async (
+  axiosInstance: AxiosInstance,
+  sellerUserName: string,
+  requestId: string,
+  note: string,
+) => {
+  const response = await axiosInstance.patch(
+    `/admin/updateSellerVerificationNote`,
+    {},
+    {
+      params: {
+        sellerUserName,
+        requestId,
+        note,
+      },
+    },
+  );
+  return response.data;
+};

@@ -35,16 +35,19 @@ public class WatchListNotifyService {
      * The bulk notification event is saved in bulk by NotificationManagerService,
      * and then user preferences are resolved and notifications are sent in parallel.
      *
-     * @param auction  the auction whose subscribers should be notified
-     * @param excludeUsers nullable exclude users from the watchers to get the notification
-     * @param title    the title of the notification
-     * @param message  the detailed message content to be sent
-     * @param category the notification category
-     * @param partialUrl nullable partial url eg: '/auction-details/adfasdfa3240-242341'
+     * @param auction          the auction whose subscribers should be notified
+     * @param includeOnlyUsers nullable; if provided, only users in both this list and the watchlist are notified
+     * @param excludeUsers     nullable; exclude users from the watchers to get the notification
+     * @param title            the title of the notification
+     * @param message          the detailed message content to be sent
+     * @param category         the notification category
+     * @param partialUrl       nullable partial url eg: '/auction-details/adfasdfa3240-242341'
+     * @return List<User>      List of notified users
      */
 
-    public void notifySubscribers(
+    public List<User> notifySubscribers(
             Auction auction,
+            @Nullable List<User> includeOnlyUsers,
             @Nullable List<User> excludeUsers,
             String title,
             String message,
@@ -56,6 +59,16 @@ public class WatchListNotifyService {
         }
 
         List<User> users = watchRepo.findUsersWatchingAuction(auction.getId());
+
+        if (includeOnlyUsers != null && !includeOnlyUsers.isEmpty()) {
+            Set<UUID> includeIds = includeOnlyUsers.stream()
+                    .map(User::getId)
+                    .collect(Collectors.toSet());
+
+            users = users.stream()
+                    .filter(u -> includeIds.contains(u.getId()))
+                    .toList();
+        }
 
         if (excludeUsers != null && !excludeUsers.isEmpty()) {
             Set<UUID> excludeIds = excludeUsers.stream()
@@ -70,7 +83,7 @@ public class WatchListNotifyService {
 
         if (users.isEmpty()) {
             log.info("No users to notify for auction: " + auction.getId());
-            return;
+            return users;
         }
 
         log.info("Notifying users watching auction " + auction.getId() + ": " + users.stream()
@@ -78,6 +91,8 @@ public class WatchListNotifyService {
                 .toList());
 
         bulkNotificationPublisher.publish(users, title, message, category, partialUrl);
+
+        return users;
     }
 
 

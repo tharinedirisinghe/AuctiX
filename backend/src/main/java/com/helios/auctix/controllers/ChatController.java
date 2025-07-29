@@ -120,6 +120,8 @@ public class ChatController {
         chatMessage.setChatRoom(chatRoom);
         ChatMessage savedChatMessage = chatService.saveChatMessage(chatMessage);
 
+        chatService.incrementUnreadCountForOthers(chatRoom.getId(), sender.getId());
+
         ChatMessageDTO responseDto = chatMessageDTOMapper.mapTo(savedChatMessage);
         String topicDestination = String.format("/topic/chat/%s/%s", chatType.toLowerCase(), id);
         messagingTemplate.convertAndSend(topicDestination, responseDto);

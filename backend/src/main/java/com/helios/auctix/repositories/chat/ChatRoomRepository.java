@@ -38,24 +38,6 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
         return findSupportChatByUserId(userId, ChatRoomType.SUPPORT);
     }
 
-//    @Query("""
-//        SELECT DISTINCT cr FROM ChatRoom cr
-//        JOIN cr.participants p
-//        WHERE cr.type = 'SUPPORT'
-//          AND p.role.name IN ('SELLER', 'BIDDER')
-//          AND (
-//            :search IS NULL OR :search = ''
-//            OR LOWER(p.username) LIKE LOWER(CONCAT('%', :search, '%'))
-//            OR LOWER(p.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
-//            OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
-//            OR LOWER(p.email) LIKE LOWER(CONCAT('%', :search, '%'))
-//          )
-//    """)
-//    Page<ChatRoom> findSupportChatsWithSellerOrBidder(
-//            @Param("search") String search,
-//            Pageable pageable
-//    );
-
     @Query(
         value = """
         SELECT cr.id AS chatId, u.id AS userId, u.username, u.email, u.first_name, u.last_name, ur.role_name AS role
@@ -84,6 +66,21 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
             @Param("search") String search,
             @Param("limit") int limit,
             @Param("offset") int offset
+    );
+    
+    @Query("""
+        SELECT cr FROM ChatRoom cr
+        JOIN cr.participants p1
+        JOIN cr.participants p2
+        WHERE cr.type = 'PRIVATE'
+          AND cr.auction.id = :auctionId
+          AND p1.id = :sellerId
+          AND p2.id = :winnerId
+    """)
+    Optional<ChatRoom> findPrivateChatBetweenForAuction(
+            @Param("sellerId") UUID sellerId,
+            @Param("winnerId") UUID winnerId,
+            @Param("auctionId") UUID auctionId
     );
 
 

@@ -144,6 +144,36 @@ public class ChatRestController  {
 
     }
 
+    @PutMapping("/{chatType}/{id}/last-read")
+    public ResponseEntity<Void> updateLastReadTimestamp(
+            @PathVariable String chatType,
+            @PathVariable String id) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = null;
+        try {
+            user = userDetailsService.getAuthenticatedUser(authentication);
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        ChatRoom chatRoom;
+        if (chatType.equalsIgnoreCase("auction")) {
+            chatRoom = chatRoomRepository.findChatRoomByAuctionId(UUID.fromString(id)).orElse(null);
+        } else {
+            chatRoom = chatRoomRepository.findById(UUID.fromString(id)).orElse(null);
+        }
+
+        if (chatRoom == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        chatService.markAsRead(chatRoom.getId() ,user.getId());
+
+        return ResponseEntity.noContent().build();
+    }
+
+
 
 
 

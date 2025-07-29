@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, AlertTriangle } from 'lucide-react';
+import { AxiosInstance } from 'axios';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +25,9 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { VerificationDocument } from '../organisms/VerificationSubmissionList';
+import { updateSellerVerificationNote } from '@/services/adminService';
+import { useToast } from '@/hooks/use-toast';
+import { getServerErrorMessage } from '@/lib/errorMsg';
 
 const noteFormSchema = z.object({
   notes: z
@@ -37,17 +41,22 @@ type NoteFormValues = z.infer<typeof noteFormSchema>;
 interface AddNoteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (docId: string, notes: string) => void;
+  onSuccess?: () => void;
   document: VerificationDocument | null;
+  axiosInstance: AxiosInstance;
+  sellerUserName: string;
 }
 
 export function AddNoteModal({
   isOpen,
   onClose,
-  onConfirm,
+  onSuccess,
   document,
+  axiosInstance,
+  sellerUserName,
 }: AddNoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteFormSchema),
@@ -64,11 +73,26 @@ export function AddNoteModal({
 
     setIsSubmitting(true);
     try {
-      await onConfirm(document.docId, data.notes);
+      await updateSellerVerificationNote(
+        axiosInstance,
+        sellerUserName,
+        document.id,
+        data.notes,
+      );
+      toast({
+        title: 'Success',
+        description: `Review note for "${document.docTitle}" has been updated.`,
+      });
       form.reset();
       onClose();
+      onSuccess?.();
     } catch (error) {
       console.error('Error updating note:', error);
+      toast({
+        title: 'Error',
+        description: getServerErrorMessage(error as Error),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

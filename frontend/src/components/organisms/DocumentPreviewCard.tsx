@@ -113,8 +113,12 @@ const DocumentPreviewViewer = ({
 
 export function DocumentPreviewCard({
   document,
+  sellerUserName,
+  onRefresh,
 }: {
   document: VerificationDocument | null;
+  sellerUserName: string | null;
+  onRefresh?: () => void;
 }) {
   const axiosInstance = AxiosRequest().axiosInstance;
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -126,6 +130,57 @@ export function DocumentPreviewCard({
     if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
     return `${Math.round(bytes / (1024 * 1024))} MB`;
   };
+
+  // Show skeleton loading when sellerUserName is null
+  if (sellerUserName === null) {
+    return (
+      <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
+        <CardHeader>
+          <div className="space-y-2">
+            <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 h-[calc(100%-140px)]">
+          {/* Skeleton Preview Section */}
+          <div className="border rounded-lg p-4 bg-white">
+            <div
+              className={`bg-gray-200 animate-pulse rounded ${PREVIEW_INNER_HEIGHT}`}
+            ></div>
+          </div>
+
+          {/* Skeleton Document Details */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
+              <div className="h-3 bg-gray-200 rounded animate-pulse mb-2 w-1/2"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
+              <div className="h-3 bg-gray-200 rounded animate-pulse mb-2 w-1/2"></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+            </div>
+          </div>
+
+          {/* Skeleton Notes Section */}
+          <div className="p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
+            <div className="h-3 bg-gray-200 rounded animate-pulse mb-2 w-1/3"></div>
+            <div className="space-y-1">
+              <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-4/5"></div>
+            </div>
+          </div>
+
+          {/* Skeleton Action Buttons */}
+          <div className="grid grid-cols-2 gap-2 p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!document) {
     return (
@@ -147,19 +202,10 @@ export function DocumentPreviewCard({
     );
   }
 
-  const handleApprove = async (docId: string, notes: string) => {
-    // TODO: Implement approve API call
-    console.log('Approving document:', docId, 'with notes:', notes);
-  };
-
-  const handleReject = async (docId: string, notes: string) => {
-    // TODO: Implement reject API call
-    console.log('Rejecting document:', docId, 'with notes:', notes);
-  };
-
-  const handleAddNote = async (docId: string, notes: string) => {
-    // TODO: Implement add note API call
-    console.log('Adding note to document:', docId, 'note:', notes);
+  const handleSuccess = () => {
+    console.log('Document operation completed successfully');
+    // Trigger parent component to refresh verification data
+    onRefresh?.();
   };
 
   return (
@@ -255,27 +301,37 @@ export function DocumentPreviewCard({
         </div>
       </CardContent>
 
-      {/* Modals */}
-      <ApproveDocumentModal
-        isOpen={isApproveModalOpen}
-        onClose={() => setIsApproveModalOpen(false)}
-        onConfirm={handleApprove}
-        document={document}
-      />
+      {/* Modals - only render when sellerUserName is available */}
+      {sellerUserName && (
+        <>
+          <ApproveDocumentModal
+            isOpen={isApproveModalOpen}
+            onClose={() => setIsApproveModalOpen(false)}
+            onSuccess={handleSuccess}
+            document={document}
+            axiosInstance={axiosInstance}
+            sellerUserName={sellerUserName}
+          />
 
-      <RejectDocumentModal
-        isOpen={isRejectModalOpen}
-        onClose={() => setIsRejectModalOpen(false)}
-        onConfirm={handleReject}
-        document={document}
-      />
+          <RejectDocumentModal
+            isOpen={isRejectModalOpen}
+            onClose={() => setIsRejectModalOpen(false)}
+            onSuccess={handleSuccess}
+            document={document}
+            axiosInstance={axiosInstance}
+            sellerUserName={sellerUserName}
+          />
 
-      <AddNoteModal
-        isOpen={isAddNoteModalOpen}
-        onClose={() => setIsAddNoteModalOpen(false)}
-        onConfirm={handleAddNote}
-        document={document}
-      />
+          <AddNoteModal
+            isOpen={isAddNoteModalOpen}
+            onClose={() => setIsAddNoteModalOpen(false)}
+            onSuccess={handleSuccess}
+            document={document}
+            axiosInstance={axiosInstance}
+            sellerUserName={sellerUserName}
+          />
+        </>
+      )}
     </Card>
   );
 }

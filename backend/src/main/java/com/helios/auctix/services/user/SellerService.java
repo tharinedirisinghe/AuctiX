@@ -22,11 +22,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -222,4 +225,81 @@ public class SellerService {
     }
 
 
+    @Transactional
+    public void approveSellerVerification(UUID requestId, String sellerUserName, String note, User currentUser) {
+
+        SellerVerificationRequest req = preValidateVerificationRequestsApproval(requestId, sellerUserName, note, currentUser);
+
+        if(req.getVerificationStatus().equals(SellerVerificationStatusEnum.APPROVED)){
+            throw new IllegalArgumentException("Verification request is already approved for request ID: " + requestId);
+        }
+
+        req.setVerificationStatus(SellerVerificationStatusEnum.APPROVED);
+        req.setDescription(note);
+        req.setReviewedAt(Instant.now());
+
+        sellerVerificationRequestRepository.save(req);
+
+        Seller seller = req.getSeller();
+
+        seller.setVerified(true);
+        sellerRepository.save(seller);
+
+    }
+
+    @Transactional
+    public void rejectSellerVerification(UUID requestId, String sellerUserName, String note, User currentUser) {
+
+        SellerVerificationRequest req = preValidateVerificationRequestsApproval(requestId, sellerUserName, note, currentUser);
+
+        if(req.getVerificationStatus().equals(SellerVerificationStatusEnum.REJECTED)){
+            throw new IllegalArgumentException("Verification request is already rejected for request ID: " + requestId);
+        }
+
+        req.setVerificationStatus(SellerVerificationStatusEnum.REJECTED);
+        req.setDescription(note);
+        req.setReviewedAt(Instant.now());
+        sellerVerificationRequestRepository.save(req);
+
+        Seller seller = req.getSeller();
+
+        if(seller.isVerified()){
+            boolean hasApprovedRequests = seller.getSellerVerificationRequests().stream()
+                    .anyMatch(request -> request.getVerificationStatus() == SellerVerificationStatusEnum.APPROVED);
+            if(!hasApprovedRequests){
+                seller.setVerified(false);
+                sellerRepository.save(seller);
+                log.warn("Seller {} is now marked as unverified due to rejection of all approved requests, request ID: {}", seller.getUser().getUsername(), requestId);
+            }
+        }
+    }
+
+    public void updateVerificationRequestNote(UUID requestId, String sellerUserName, String note, User currentUser) {
+        SellerVerificationRequest req = preValidateVerificationRequestsApproval(requestId, sellerUserName, note, currentUser);
+
+        req.setDescription(note);
+        req.setReviewedAt(Instant.now());
+        sellerVerificationRequestRepository.save(req);
+    }
+
+    private SellerVerificationRequest preValidateVerificationRequestsApproval(UUID requestId, String sellerUserName, String note, User currentUser) {
+        if (requestId == null || sellerUserName == null || sellerUserName.isEmpty()) {
+            throw new IllegalArgumentException("Request ID and seller username cannot be null or empty");
+        }
+
+        User sellerUser = userRepository.findByUsername(sellerUserName);
+        if (sellerUser == null ) {
+            throw new InvalidUserException("Seller user not found with username: " + sellerUserName);
+        }
+        Seller seller = sellerUser.getSeller();
+        if (seller == null) {
+            throw new InvalidUserException("User is not a seller: " + sellerUserName);
+        }
+        SellerVerificationRequest req = sellerVerificationRequestRepository.findByIdAndSellerId(requestId, seller.getId());
+        if( req == null ) {
+            throw new IllegalArgumentException("Verification request not found for request ID: " + requestId);
+        }
+
+        return req;
+    }
 }

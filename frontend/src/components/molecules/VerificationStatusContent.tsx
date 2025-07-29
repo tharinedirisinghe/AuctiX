@@ -6,6 +6,7 @@ import { IssuesList } from '@/components/molecules/IssuesList';
 import { VerificationStatus } from '../organisms/VerificationForm';
 
 export interface VerificationSubmission {
+  id: string;
   sellerUsername: string;
   status: string;
   docId: string;

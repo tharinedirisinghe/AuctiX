@@ -40,6 +40,7 @@ public class VerificationRequestMapperImpl implements Mapper<SellerVerificationR
         dto.setDescription(request.getDescription());
         dto.setCreatedAt(request.getCreatedAt());
         dto.setReviewedAt(request.getReviewedAt());
+        dto.setId(request.getId());
 
         return dto;
     }

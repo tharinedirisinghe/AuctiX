@@ -1073,6 +1073,7 @@ const AuctionDetailsPage = () => {
                   auctionId={auctionId}
                   type="AUCTION"
                   title="Auction Chat"
+                  limitUIHeight={true}
                 />
               ) : (
                 <div>Sorry chat is unavailable</div>

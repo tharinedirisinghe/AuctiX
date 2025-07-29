@@ -151,7 +151,7 @@ export function getAuctionTimerText(
   const { days, hours, minutes, seconds } = time;
 
   if (status === 'expired') {
-    return 'Expired';
+    return '';
   }
 
   const timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
@@ -635,19 +635,20 @@ const AuctionDetailsPage = () => {
   const renderBidButton = () => {
     if (!product) return null;
 
-    // console.log('DEBUG: product status', {
-    //   isDeleted: product.deleted,
-    //   // status: product.status,
-    // });
-
-    if (product.deleted) {
+    // Check if auction is deleted first - this takes priority
+    if (product.deleted || product.deletionStatus === 'DELETED') {
       return (
-        <Button
-          className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
-          disabled
-        >
-          Auction Deleted
-        </Button>
+        <div className="space-y-2">
+          <Button
+            className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
+            disabled
+          >
+            Auction Deleted - Bidding Unavailable
+          </Button>
+          <p className="text-xs text-red-500 text-center">
+            This auction has been deleted and is no longer available for bidding
+          </p>
+        </div>
       );
     }
 
@@ -657,18 +658,19 @@ const AuctionDetailsPage = () => {
           className="w-full bg-gray-300 text-gray-600 cursor-not-allowed"
           disabled
         >
-          Auction Starts {getAuctionTimerText(timeRemaining, auctionStatus)}
+          Auction Not Started Yet
         </Button>
       );
     }
 
     if (auctionStatus === 'expired') {
+      const hasWinner = product.currentBid > 0;
       return (
         <Button
           className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
           disabled
         >
-          Auction Ended
+          {hasWinner ? 'Auction Won' : 'No Bids Placed'}
         </Button>
       );
     }
@@ -681,15 +683,9 @@ const AuctionDetailsPage = () => {
 
     return (
       <div className="space-y-2">
-        {isBiddingDisabled && (
-          <p className="text-red-500 text-sm mt-2">
-            ❌ This auction is deleted. Bidding is disabled.
-          </p>
-        )}
-
         <Button
           onClick={handlePlaceBid}
-          disabled={!validation.isValid || isBiddingDisabled}
+          disabled={!validation.isValid}
           className={`w-full ${
             validation.isValid
               ? 'bg-yellow-400 hover:bg-yellow-500 text-black'
@@ -714,7 +710,6 @@ const AuctionDetailsPage = () => {
       </div>
     );
   };
-
   // Helper function to get user-friendly error titles
   const getErrorTitle = (errorCode: string): string => {
     const errorTitles: { [key: string]: string } = {
@@ -756,7 +751,7 @@ const AuctionDetailsPage = () => {
       case 'active':
         return 'Closes in';
       case 'expired':
-        return 'Ended';
+        return 'Auction Ended';
       default:
         return 'Closes in';
     }
@@ -852,37 +847,57 @@ const AuctionDetailsPage = () => {
           <div className="pb-4 border-b-4 border-yellow-400">
             <br></br>
             <p className="text-2xl">
-              <span className="text-gray-400">
-                {getTimerLabel(auctionStatus)}{' '}
-              </span>
-              <span className="">
-                {timerText === '0d 0h 0m 0s' && auctionStatus !== 'expired'
-                  ? 'Loading...'
-                  : timerText}
-              </span>
+              {product.deleted || product.deletionStatus === 'DELETED' ? (
+                <span className="text-gray-400">Auction Deleted</span>
+              ) : (
+                <>
+                  <span className="text-gray-400">
+                    {getTimerLabel(auctionStatus)}{' '}
+                  </span>
+                  <span className="">
+                    {timerText === '0d 0h 0m 0s' && auctionStatus !== 'expired'
+                      ? 'Loading...'
+                      : timerText}
+                  </span>
+                </>
+              )}
             </p>
             {/* Enhanced debug info - remove after testing */}
             {/* <p className="text-xs text-gray-500">Status: {auctionStatus}</p> */}
           </div>
 
           <div className="bg-gray-100 p-4 rounded-md mt-4">
-            <p className="text-sm text-gray-700 ">Current Highest Bid</p>
-            <p className="text-4xl font-bold mb-2">
-              LKR {product.currentBid?.toLocaleString()}
-            </p>
-            <div className="flex items-center text-sm">
-              <p>By</p>
-              <img
-                src={
-                  product.currentBidder?.avatar !== 'NULL'
-                    ? product.currentBidder?.avatar
-                    : '/defaultProfilePhoto.jpg'
-                }
-                alt={product.currentBidder?.name}
-                className="w-6 h-6 rounded-full ml-2 mr-1"
-              />
-              <p>{product.currentBidder?.name}</p>
-            </div>
+            {product.deleted || product.deletionStatus === 'DELETED' ? (
+              <div className="text-center">
+                <p className=" text-gray-500 mb-2 font-bold text-lg">
+                  This auction has been deleted
+                </p>
+
+                <p className="text-sm text-gray-600 mt-2">
+                  Bidding is no longer available
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-700 ">Current Highest Bid</p>
+                <p className="text-4xl font-bold mb-2">
+                  LKR {product.currentBid?.toLocaleString()}
+                </p>
+                <div className="flex items-center text-sm">
+                  <p>By</p>
+                  <img
+                    src={
+                      product.currentBidder?.avatar !== 'NULL'
+                        ? product.currentBidder?.avatar
+                        : '/defaultProfilePhoto.jpg'
+                    }
+                    alt={product.currentBidder?.name}
+                    className="w-6 h-6 rounded-full ml-2 mr-1"
+                  />
+                  <p>{product.currentBidder?.name}</p>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mt-4">
@@ -896,6 +911,9 @@ const AuctionDetailsPage = () => {
                 size="sm"
                 onClick={handleDecrementBid}
                 className="w-8 h-8 p-0"
+                disabled={
+                  product.deleted || product.deletionStatus === 'DELETED'
+                }
               >
                 -
               </Button>
@@ -908,12 +926,18 @@ const AuctionDetailsPage = () => {
                 max="999999999"
                 step="100"
                 readOnly
+                disabled={
+                  product.deleted || product.deletionStatus === 'DELETED'
+                }
               />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleIncrementBid}
                 className="w-8 h-8 p-0"
+                disabled={
+                  product.deleted || product.deletionStatus === 'DELETED'
+                }
               >
                 +
               </Button>

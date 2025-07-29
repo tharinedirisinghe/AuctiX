@@ -6,6 +6,7 @@ import {
   Check,
   MapPin,
   Package,
+  Star,
   Truck,
   User,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ interface DeliveryCardProps {
   openDatePicker: (id: string, currentDate: string) => void;
   viewDeliveryDetails: (delivery: Delivery) => void;
   handleRequestAddress?: (id: string) => void;
+  onViewReviews?: (delivery: Delivery) => void;
   isLoading: boolean;
 }
 
@@ -34,6 +36,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   openDatePicker,
   viewDeliveryDetails,
   handleRequestAddress,
+  onViewReviews,
   isLoading,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
@@ -260,6 +263,20 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
           <Check className="mr-1.5" size={16} />
           Mark as Delivered
         </Button>
+
+        {/* View Reviews Button - Show only for delivered items */}
+        {delivery.status === 'DELIVERED' && onViewReviews && (
+          <Button
+            onClick={() => onViewReviews(delivery)}
+            disabled={isLoading}
+            className="flex items-center border-purple-300 text-purple-600 hover:bg-purple-50"
+            variant="outline"
+            size="sm"
+          >
+            <Star className="mr-1.5" size={16} />
+            View Reviews
+          </Button>
+        )}
 
         <Button
           onClick={() => openDatePicker(delivery.id, delivery.deliveryDate)}

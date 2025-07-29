@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface DeliveryFilterProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   showFilters: boolean;
@@ -21,8 +19,6 @@ interface DeliveryFilterProps {
 }
 
 export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
-  activeTab,
-  setActiveTab,
   searchTerm,
   setSearchTerm,
   showFilters,
@@ -48,12 +44,14 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               className="pl-8 border-gray-300 focus-visible:ring-amber-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={isLoading}
             />
           </div>
           <Button
             variant="outline"
             className="flex items-center gap-1 border-amber-300 text-amber-600 hover:bg-amber-50"
             onClick={() => setShowFilters(!showFilters)}
+            disabled={isLoading}
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
@@ -71,6 +69,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+              disabled={isLoading}
             >
               <option value="all">All Categories</option>
               <option value="furniture">Furniture</option>
@@ -87,6 +86,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+              disabled={isLoading}
             >
               <option value="all">All Statuses</option>
               <option value="packing">Packing</option>
@@ -102,6 +102,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+              disabled={isLoading}
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
@@ -115,6 +116,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               onClick={resetFilters}
               variant="link"
               className="text-amber-600 hover:text-amber-700 text-sm p-0"
+              disabled={isLoading}
             >
               Reset Filters
             </Button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Star, MessageSquare, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -17,7 +17,7 @@ export const MyReviewsSection: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const { toast } = useToast();
 
-  const fetchReviews = async (page: number = 0) => {
+  const fetchReviews = useCallback(async (page: number = 0) => {
     try {
       setLoading(true);
       const [reviewsData, statsData] = await Promise.all([
@@ -36,13 +36,13 @@ export const MyReviewsSection: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (isLoggedIn) {
       fetchReviews(currentPage);
     }
-  }, [isLoggedIn, currentPage]);
+  }, [isLoggedIn, currentPage, fetchReviews]);
 
   const getRatingColor = (rating: number) => {
     if (rating >= 4) return "text-green-600";

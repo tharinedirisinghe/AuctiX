@@ -27,7 +27,7 @@ export const SellerRatingStatsComponent: React.FC<SellerRatingStatsProps> = ({
         setLoading(true);
         const ratingStats = await reviewService.getSellerRatingStats(sellerId);
         setStats(ratingStats);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching seller rating stats:', err);
         setError('Failed to load rating statistics');
       } finally {

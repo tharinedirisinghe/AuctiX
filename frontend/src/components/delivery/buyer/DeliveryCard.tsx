@@ -30,7 +30,7 @@ interface DeliveryCardProps {
 
 export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   delivery,
-  handleContactSeller,
+  handleContactSeller: _handleContactSeller,
   viewDeliveryDetails,
   onReviewClick,
   canReview = false,
@@ -41,11 +41,12 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   const daysInfo = getDaysInfo(delivery.deliveryDate, delivery.status);
 
   // Check if buyer has address
-  const hasValidAddress = delivery.deliveryAddress && 
-    delivery.deliveryAddress.trim() !== '' && 
+  const hasValidAddress =
+    delivery.deliveryAddress &&
+    delivery.deliveryAddress.trim() !== '' &&
     !delivery.deliveryAddress.includes('Address not provided');
-  
-  const hasAnyAddress = delivery.deliveryAddress && delivery.deliveryAddress.trim() !== '';
+
+  // const hasAnyAddress = delivery.deliveryAddress && delivery.deliveryAddress.trim() !== '';
 
   return (
     <Card key={delivery.id} className="p-5 transition-all hover:shadow-md">
@@ -123,13 +124,13 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
             <Button
               variant="outline"
               className="whitespace-nowrap flex items-center border-blue-300 text-blue-600 hover:bg-blue-50"
-              onClick={() => console.log('Contact seller:', delivery.sellerName)}
+              onClick={() => _handleContactSeller(delivery)}
               size="sm"
             >
               <MessageCircle className="mr-1.5 h-4 w-4" />
               Contact Seller
             </Button>
-            
+
             <Button
               variant="outline"
               className="whitespace-nowrap flex items-center border-amber-300 text-amber-600 hover:bg-amber-50"
@@ -175,19 +176,24 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
                 <User size={16} className="mr-2 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-sm">Message from Seller</p>
-                  <p className="text-sm">Seller needs address - Please provide your delivery address to proceed with shipping.</p>
+                  <p className="text-sm">
+                    Seller needs address - Please provide your delivery address
+                    to proceed with shipping.
+                  </p>
                 </div>
               </div>
             </div>
           )}
-          
+
           {/* Address action section */}
           <div className="p-3 bg-amber-50 text-amber-800 rounded-md flex items-center justify-between text-sm border border-amber-200">
             <div className="flex items-center">
               <MapPin size={16} className="mr-2 flex-shrink-0" />
               <div>
                 <p className="font-medium">Delivery Address Required</p>
-                <p>Please provide your delivery address to proceed with shipping.</p>
+                <p>
+                  Please provide your delivery address to proceed with shipping.
+                </p>
               </div>
             </div>
             {onAddAddress && (

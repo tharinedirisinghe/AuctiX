@@ -335,8 +335,6 @@ const UserDeliveryPage = () => {
 
         {/* Search & Filter */}
         <DeliveryFilter
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           showFilters={showFilters}

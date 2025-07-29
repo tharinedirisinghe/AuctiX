@@ -236,6 +236,7 @@ public class AuctionSchedulerService {
 
                                     watchListNotifyService.notifySubscribers(
                                             auction,
+                                            null,
                                             excludedFromWatchlistNotify,
                                             watcherTitle,
                                             watcherMessage,
@@ -292,6 +293,7 @@ public class AuctionSchedulerService {
                             watchListNotifyService.notifySubscribers(
                                     auction,
                                     null,
+                                    null,
                                     notificationTitle,
                                     messageWatcher,
                                     NotificationCategory.AUCTION_COMPLETED,
@@ -345,6 +347,7 @@ public class AuctionSchedulerService {
                 watchListNotifyService.notifySubscribers(
                         auction,
                         null,
+                        null,
                         title,
                         message,
                         NotificationCategory.AUCTION_END_SOON,
@@ -386,6 +389,7 @@ public class AuctionSchedulerService {
                 watchListNotifyService.notifySubscribers(
                         auction,
                         null,
+                        null,
                         title,
                         message,
                         NotificationCategory.AUCTION_START_SOON,
@@ -426,6 +430,7 @@ public class AuctionSchedulerService {
 
                 watchListNotifyService.notifySubscribers(
                         auction,
+                        null,
                         null,
                         title,
                         message,

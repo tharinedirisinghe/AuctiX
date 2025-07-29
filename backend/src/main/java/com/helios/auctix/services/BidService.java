@@ -249,6 +249,7 @@ public class BidService {
                 
                 watchListNotifyService.notifySubscribers(
                         auction,
+                        null,
                         excludedFromWatchlistNotify,
                         title,
                         message,

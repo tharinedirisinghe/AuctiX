@@ -4,6 +4,7 @@ import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
 import com.helios.auctix.domain.chat.ChatRoomType;
+import com.helios.auctix.domain.chat.ChatRoomUserUnreadStatus;
 import com.helios.auctix.domain.user.Bidder;
 import com.helios.auctix.domain.user.Seller;
 import com.helios.auctix.domain.user.User;
@@ -11,6 +12,7 @@ import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.chat.ChatMessageRepository;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
+import com.helios.auctix.repositories.chat.ChatRoomUserUnreadStatusRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.java.Log;
 import org.springframework.data.domain.PageRequest;
@@ -25,13 +27,19 @@ import java.util.*;
 @Service
 public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
-
+    private final ChatRoomUserUnreadStatusRepository statusRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final AuctionRepository auctionRepository;
 
 
-    public ChatService(ChatMessageRepository chatMessageRepository, ChatRoomRepository chatRoomRepository, AuctionRepository auctionRepository) {
+    public ChatService(
+            ChatMessageRepository chatMessageRepository,
+            ChatRoomUserUnreadStatusRepository statusRepository,
+            ChatRoomRepository chatRoomRepository,
+            AuctionRepository auctionRepository
+    ) {
         this.chatMessageRepository = chatMessageRepository;
+        this.statusRepository = statusRepository;
         this.chatRoomRepository = chatRoomRepository;
         this.auctionRepository = auctionRepository;
     }
@@ -182,6 +190,27 @@ public class ChatService {
         joinChatRoom(winner, newChat.getId(), ChatRoomType.PRIVATE);
 
         return chatRoomRepository.save(newChat);
+    }
+
+
+    @Transactional
+    public void incrementUnreadCountForOthers(UUID chatRoomId, UUID senderId) {
+        statusRepository.incrementUnreadCountForOthers(chatRoomId, senderId);
+    }
+
+    /**
+     * When a user reads messages in chatRoom to reset unread and notification sent counts.
+     */
+    @Transactional
+    public void markAsRead(UUID chatRoomId, UUID userId) {
+        ChatRoomUserUnreadStatus status = statusRepository.findByChatRoomIdAndUserId(chatRoomId, userId);
+        if (status != null) {
+            status.setUnreadCount(0);
+            status.setLastReadTimestamp(LocalDateTime.now());
+            status.setNotificationCount(0);
+            status.setLastNotifiedAt(null);
+            statusRepository.save(status);
+        }
     }
 
 

@@ -2,7 +2,6 @@
 import React from 'react';
 import {
   Calendar,
-  MessageCircle,
   Package,
   User,
   MapPin,

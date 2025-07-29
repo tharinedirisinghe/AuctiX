@@ -22,9 +22,18 @@ export default function ComplaintReports() {
     status: string;
   }
 
+  const [stats, setStats] = useState<{
+    total: number;
+    PENDING: number;
+    UNDER_REVIEW: number;
+    REJECTED: number;
+    RESOLVED: number;
+  } | null>(null);
+
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const { axiosInstance } = useAxiosRequest();
 
   useEffect(() => {
@@ -44,8 +53,17 @@ export default function ComplaintReports() {
         setIsLoading(false);
       }
     };
-
     fetchComplaints();
+
+    const fetchStats = async () => {
+      try {
+        const response = await axiosInstance.get('/complaints/stats');
+        setStats(response.data);
+      } catch (err) {
+        console.error('Error fetching complaint stats:', err);
+      }
+    };
+    fetchStats();
   }, []);
 
   return (
@@ -58,40 +76,58 @@ export default function ComplaintReports() {
       </header>
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
         <div className="grid grid-cols-4 gap-6 mb-8">
-          <Card className="p-4 border-none shadow-none bg-gray-100">
-            <div className="text-4xl font-bold">{complaints.length}</div>
-            <div className="text-sm font-semibold text-gray-500">Reports</div>
-          </Card>
-          <Card className="p-4 border-spacing-1 border-yellow-300 shadow-lg shadow-yellow-100">
-            <div className="text-4xl font-bold">
-              {
-                complaints.filter((report) => report.status === 'PENDING')
-                  .length
-              }
+          <Card
+            className={`p-4 border border-gray-100 shadow-none bg-gray-100 cursor-pointer hover:border-yellow-300 hover:shadow-lg hover:shadow-yellow-100 transition-all ${
+              selectedStatus === 'all'
+                ? 'border-2 border-yellow-300 shadow-lg shadow-yellow-100'
+                : ''
+            }`}
+            onClick={() => setSelectedStatus('all')}
+          >
+            <div className="text-4xl font-bold">{stats?.total ?? 0}</div>
+            <div className="text-sm font-semibold text-gray-500">
+              All Reports
             </div>
+          </Card>
+          <Card
+            className={`p-4 shadow-none cursor-pointer hover:border-yellow-300 hover:shadow-lg hover:shadow-yellow-100 transition-all ${
+              selectedStatus === 'PENDING'
+                ? 'border-2 border-yellow-300 shadow-lg shadow-yellow-100'
+                : ''
+            }`}
+            onClick={() => setSelectedStatus('PENDING')}
+          >
+            <div className="text-4xl font-bold">{stats?.PENDING ?? 0}</div>
             <div className="text-sm text-gray-500">Pending</div>
           </Card>
-          <Card className="p-4 shadow-none">
-            <div className="text-4xl font-bold">
-              {
-                complaints.filter((report) => report.status === 'UNDER_REVIEW')
-                  .length
-              }
-            </div>
+          <Card
+            className={`p-4 shadow-none cursor-pointer hover:border-yellow-300 hover:shadow-lg hover:shadow-yellow-100 transition-all ${
+              selectedStatus === 'UNDER_REVIEW'
+                ? 'border-2 border-yellow-300 shadow-lg shadow-yellow-100'
+                : ''
+            }`}
+            onClick={() => setSelectedStatus('UNDER_REVIEW')}
+          >
+            <div className="text-4xl font-bold">{stats?.UNDER_REVIEW ?? 0}</div>
             <div className="text-sm text-gray-500">Under Review</div>
           </Card>
-          <Card className="p-4 shadow-none">
-            <div className="text-4xl font-bold">
-              {
-                complaints.filter((report) => report.status === 'REJECTED')
-                  .length
-              }
-            </div>
+          <Card
+            className={`p-4 shadow-none cursor-pointer hover:border-yellow-300 hover:shadow-lg hover:shadow-yellow-100 transition-all ${
+              selectedStatus === 'REJECTED'
+                ? 'border-2 border-yellow-300 shadow-lg shadow-yellow-100'
+                : ''
+            }`}
+            onClick={() => setSelectedStatus('REJECTED')}
+          >
+            <div className="text-4xl font-bold">{stats?.REJECTED ?? 0}</div>
             <div className="text-sm text-gray-500">Rejected</div>
           </Card>
         </div>
 
-        <ComplaintDataTable />
+        <ComplaintDataTable
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+        />
       </div>
     </div>
   );

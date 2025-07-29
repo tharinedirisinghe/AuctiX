@@ -510,7 +510,7 @@ export default function ComplaintDetail() {
                       onChange={(e) => setComment(e.target.value)}
                     />
                     <Button
-                      className="mt-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-2 shadow"
+                      className="mt-3 bg-yellow-400 hover:bg-yellow-500 text-black"
                       onClick={handleAddComment}
                       disabled={!comment.trim() || updating}
                     >

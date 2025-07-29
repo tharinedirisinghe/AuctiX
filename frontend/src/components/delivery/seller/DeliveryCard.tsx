@@ -5,6 +5,7 @@ import {
   Calendar,
   Check,
   MapPin,
+  MessageCircle,
   Package,
   Star,
   Truck,
@@ -27,6 +28,7 @@ interface DeliveryCardProps {
   viewDeliveryDetails: (delivery: Delivery) => void;
   handleRequestAddress?: (id: string) => void;
   onViewReviews?: (delivery: Delivery) => void;
+  onContactBuyer?: (delivery: Delivery) => void;
   isLoading: boolean;
 }
 
@@ -37,6 +39,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   viewDeliveryDetails,
   handleRequestAddress,
   onViewReviews,
+  onContactBuyer,
   isLoading,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
@@ -104,17 +107,9 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
               <h2 className="font-semibold text-lg text-gray-800">
                 {delivery.auctionTitle || 'Untitled Item'}
               </h2>
-              <div className="flex flex-col sm:flex-row sm:gap-4">
-                <div className="text-gray-500 text-sm flex items-center mt-1">
-                  <User className="w-3 h-3 mr-1" />
-                  Buyer: {delivery.buyerName || 'Unknown'}
-                </div>
-                <div className="text-gray-500 text-sm flex items-center mt-1">
-                  <MapPin className="w-3 h-3 mr-1" />
-                  {delivery.buyerLocation ||
-                    delivery.deliveryAddress ||
-                    'No location'}
-                </div>
+              <div className="text-gray-500 text-sm flex items-center mt-1">
+                <User className="w-3 h-3 mr-1" />
+                Buyer: {delivery.buyerName || 'Unknown'}
               </div>
               {delivery.amount && (
                 <div className="text-amber-600 text-sm font-semibold flex items-center mt-1">
@@ -161,14 +156,30 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
             </span>
           </div>
 
-          <Button
-            variant="outline"
-            className="self-center whitespace-nowrap flex items-center border-amber-300 text-amber-600 hover:bg-amber-50"
-            onClick={() => viewDeliveryDetails(delivery)}
-          >
-            View Details
-            <ArrowRight className="ml-1 h-4 w-4" />
-          </Button>
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 self-center">
+            {onContactBuyer && (
+              <Button
+                variant="outline"
+                className="whitespace-nowrap flex items-center border-blue-300 text-blue-600 hover:bg-blue-50"
+                onClick={() => onContactBuyer(delivery)}
+                size="sm"
+              >
+                <MessageCircle className="mr-1.5 h-4 w-4" />
+                Contact Buyer
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              className="whitespace-nowrap flex items-center border-amber-300 text-amber-600 hover:bg-amber-50"
+              onClick={() => viewDeliveryDetails(delivery)}
+              size="sm"
+            >
+              View Details
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

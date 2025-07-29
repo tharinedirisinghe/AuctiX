@@ -15,4 +15,6 @@ public interface UserRequiredActionRepository extends JpaRepository<UserRequired
     boolean existsByUserIdAndActionTypeAndIsResolvedFalse(UUID userId, UserRequiredActionEnum actionType);
     List<UserRequiredAction> findByUserId(UUID userId);
     UserRequiredAction findByUserIdAndActionTypeAndIsResolvedFalse(UUID id, UserRequiredActionEnum action);
+
+    UserRequiredAction findByUserIdAndId(UUID userId, UUID id);
 }

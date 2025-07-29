@@ -52,15 +52,24 @@ export const fetchPendingRequiredActions = createAsyncThunk(
 );
 
 // TODO: Implement the markAsResolved action to handle marking actions as resolved
+export interface MarkAsResolvedPayload {
+  id?: string;
+}
+
 export const markAsResolved = createAsyncThunk(
   'requiredActions/markAsResolved',
-  async (actionId: string, { rejectWithValue, getState, dispatch }) => {
+  async (
+    payload: MarkAsResolvedPayload,
+    { rejectWithValue, getState, dispatch },
+  ) => {
     try {
       const baseURL = import.meta.env.VITE_API_URL;
       const authUser = (getState() as any).auth as IAuthUser;
       const response = await axios.post(
-        `${baseURL}/user/requiredActionResolved`,
-        { actionId },
+        `${baseURL}/user/markActionAsResolved`,
+        {
+          id: payload.id,
+        },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -79,8 +88,7 @@ export const markAsResolved = createAsyncThunk(
         dispatch(logout());
       }
       return rejectWithValue(
-        error.response?.data?.message ||
-          'Failed to fetch pending required actions',
+        error.response?.data?.message || 'Failed to mark action as resolved',
       );
     }
   },
@@ -108,7 +116,7 @@ const requiredActionsSlice = createSlice({
                 : recode.context,
             resolvedAt: recode.resolvedAt || null,
             createdAt: recode.createdAt || null,
-            resolved: recode.resolved || true,
+            resolved: recode.resolved,
           };
         });
         console.log('pending actions updated:', action.payload);
@@ -117,6 +125,15 @@ const requiredActionsSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
         console.error('Error fetching pending actions:', action.payload);
+      })
+      .addCase(markAsResolved.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        console.error(
+          'Error marking action as resolved locally handled event"):',
+          action.payload,
+        );
+        state.pendingActions = [];
       });
   },
 });

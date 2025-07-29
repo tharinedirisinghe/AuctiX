@@ -6,13 +6,15 @@ import { NoticeActions } from '@/components/molecules/NoticeActions';
 import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/hooks/hooks';
 import { IPendingAction } from '@/types/IPendingAction';
+import { useAppDispatch } from '@/store/hooks';
+import { markAsResolved } from '@/store/slices/requiredActionsSlice';
 
 interface INoticeData {
+  id: string;
   title: string;
   content: string;
   severityLevel: 'HIGH' | 'MEDIUM' | 'LOW';
   canResolve: boolean;
-  triggerUrl?: string | null;
   continueUrl?: string | null;
   [key: string]: any;
 }
@@ -24,9 +26,12 @@ export function NoticePage() {
     'LOW',
   );
   const [canResolve, setCanResolve] = useState<boolean>(false);
-  const [triggerUrl, setTriggerUrl] = useState<string | null>(null);
+  const [id, setId] = useState<string | null>(null);
   const [continueUrl, setContinueUrl] = useState<string | null>(null);
   const pendingActions = useAppSelector((state) => state.pendingActions);
+  const [allNoticeData, setAllNoticeData] = useState<INoticeData | null>(null);
+
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (pendingActions.loading) return;
@@ -43,12 +48,20 @@ export function NoticePage() {
       setContent(NoticeData.content || 'No content available.');
       setSeverityLevel(NoticeData.severityLevel || 'LOW');
       setCanResolve(NoticeData.canResolve || false);
-      setTriggerUrl(NoticeData.triggerUrl || null);
+      setId(NoticeData.id || null);
       setContinueUrl(NoticeData.continueUrl || null);
+      setAllNoticeData(NoticeData);
     } else {
       console.error('No notice data found or invalid format.');
     }
   }, [pendingActions.loading]);
+
+  useEffect(() => {
+    console.log('Required action:', id);
+    if (id) {
+      dispatch(markAsResolved({ id }));
+    }
+  }, [id, dispatch]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -69,12 +82,7 @@ export function NoticePage() {
           >
             <NoticeContent content={content} severity={severityLevel} />
 
-            <MoreInformation
-              data={{
-                triggerUrl,
-                continueUrl,
-              }}
-            />
+            <MoreInformation data={allNoticeData || {}} />
 
             <NoticeActions
               canResolve={canResolve}

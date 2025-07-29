@@ -202,7 +202,6 @@ public class AdminActionService {
                 .content("Hello "+suspendedUser.getUser().getUsername()+" We are sorry to let you know, Your account is banned for the following reason/s: " + suspendedUser.getReason() + " for "+suspendedUser.getSuspendedUntil()+". Please contact support for more information.")
                 .canResolve(false)
                 .severityLevel(UserRequiredActionSeverityLevelEnum.HIGH)
-                .triggerUrl(null)
                 .continueUrl(null)
                 .build();
 

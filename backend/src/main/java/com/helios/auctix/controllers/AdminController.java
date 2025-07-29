@@ -119,6 +119,14 @@ public class AdminController {
         UserServiceResponse res = userUploadsService.UserProfilePhotoDelete(targetUser);
         if (res.isSuccess()) {
             adminActionService.logAdminAction(currentUser,targetUser, AdminActionsEnum.USER_PROFILE_PHOTO_REMOVE, "Admin deleted profile photo for user: " + targetUser.getUsername());
+            UserRequiredActionContext context = UserRequiredActionContext.builder()
+                    .title("Warning!")
+                    .content("Your profile photo was removed by an admin, you can upload a different profile photo.\n")
+                    .continueUrl("/settings/profile")
+                    .severityLevel(UserRequiredActionSeverityLevelEnum.MEDIUM)
+                    .canResolve(true)
+                    .build();
+            userDetailsService.registerUserRequiredAction(targetUser,UserRequiredActionEnum.ANNOUNCEMENT_READ,context);
             return ResponseEntity.ok().body("Profile photo deleted successfully");
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res.getMessage());

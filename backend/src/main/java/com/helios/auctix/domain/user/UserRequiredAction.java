@@ -20,7 +20,6 @@ public class UserRequiredAction {
 
     @Id
     @GeneratedValue
-    @JsonIgnore
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

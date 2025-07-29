@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Getter
 @Builder
@@ -19,11 +20,12 @@ public class UserRequiredActionContext {
     // Remove ObjectMapper from fields, it shouldn't be part of the serialized object
     private static final ObjectMapper DEFAULT_MAPPER = new ObjectMapper();
 
+    private final UUID id;
     private final String title;
     private final String content;
     private final UserRequiredActionSeverityLevelEnum severityLevel;
     private final boolean canResolve;
-    private final String triggerUrl;
+    private final String action;
     private final String continueUrl;
 
     public String toJson() {

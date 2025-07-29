@@ -59,8 +59,7 @@ private final UserRepository userRepository;
             UserRoleRepository userRoleRepository,
             PasswordEncoder passwordEncoder,
             PasswordResetRequestRepository passwordResetRequestRepository,
-            EmailNotificationSender emailNotificationSender
-    ) {
+            EmailNotificationSender emailNotificationSender) {
         this.userRepository = userRepository;
         this.userRequiredActionRepository = userRequiredActionRepository;
         this.userAddressRepository = userAddressRepository;
@@ -320,6 +319,18 @@ private final UserRepository userRepository;
         log.info("Resolved required action {} for user: {}", action, user.getUsername());
     }
 
+    public void resolveUserRequiredAction(User user, UUID id) {
+        if(id == null) {
+            throw new InvalidParameterException("Id cannot be null");
+        }
+
+        UserRequiredAction requiredAction = userRequiredActionRepository.findByUserIdAndId(user.getId(),id);
+        if(requiredAction == null) {
+            log.info("No required action {} found for user: {}", id, user.getUsername());
+            return;
+        }
+    }
+
     public UserServiceResponse changePassword(User currentUser, String oldPassword, String newPassword) {
         if (currentUser == null) {
             return new UserServiceResponse(false, "Current user is null");
@@ -343,6 +354,9 @@ private final UserRepository userRepository;
         // update the user's password
         currentUser.setPasswordHash(encodedNewPassword);
         currentUser = userRepository.save(currentUser);
+
+        resolveUserRequiredAction(currentUser,UserRequiredActionEnum.FIRST_LOGIN_CHANGE_PASSWORD);
+
         return  new UserServiceResponse(true, "Password changed successfully", currentUser);
     }
 
@@ -555,4 +569,5 @@ private final UserRepository userRepository;
             throw e;
         }
     }
+
 }

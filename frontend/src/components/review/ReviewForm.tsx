@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { reviewService, ReviewCreateRequest } from '@/services/reviewService';
+import { reviewService, ReviewCreateRequest, Review } from '@/services/reviewService';
 import { useToast } from '@/components/ui/use-toast';
 
 interface ReviewFormProps {
   deliveryId: string;
   auctionTitle: string;
   sellerName: string;
-  onReviewSubmitted?: (review: any) => void;
+  onReviewSubmitted?: (review: Review) => void;
   onCancel?: () => void;
 }
 
@@ -80,11 +80,15 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       if (onReviewSubmitted) {
         onReviewSubmitted(createdReview);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting review:', error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: string } }).response?.data || "Failed to submit review. Please try again."
+        : "Failed to submit review. Please try again.";
+      
       toast({
         title: "Error",
-        description: error.response?.data || "Failed to submit review. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

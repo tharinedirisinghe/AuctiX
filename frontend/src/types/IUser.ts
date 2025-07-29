@@ -14,8 +14,5 @@ export interface IUser {
     country?: string;
   };
   urls?: string[];
-}
-
-export interface ISeller extends IUser {
   isVerified?: boolean;
 }

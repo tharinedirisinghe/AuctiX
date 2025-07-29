@@ -9,7 +9,7 @@ import AxiosRequest from '@/services/axiosInspector';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import AdminActionsDropDown from '../molecules/AdminActionsDropDown';
-import { Link, Links, NavLink, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 export enum SellerVerificationStatusEnum {
   PENDING = 'PENDING',

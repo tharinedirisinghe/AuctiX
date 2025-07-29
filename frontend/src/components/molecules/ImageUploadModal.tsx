@@ -42,7 +42,6 @@ interface ImageUploadPopupProps {
   acceptingWidth?: number;
   acceptingHeight?: number;
   buttonClassName?: string;
-  isInEditMode?: boolean;
 }
 
 export default function ImageUploadPopup({
@@ -53,7 +52,6 @@ export default function ImageUploadPopup({
   acceptingWidth = 200,
   acceptingHeight = 200,
   buttonClassName = '',
-  isInEditMode = false,
 }: ImageUploadPopupProps) {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [image, setImage] = useState<string | null>(null);
@@ -486,7 +484,7 @@ export default function ImageUploadPopup({
         icon={Camera}
         text="Change Photo"
         onClick={handleOpenDialog}
-        className={`${buttonClassName} ${isInEditMode ? 'visible' : 'hidden'}`}
+        className={`${buttonClassName}`}
       />
 
       <Dialog open={isOpen} onOpenChange={(e) => setIsOpen(e)}>

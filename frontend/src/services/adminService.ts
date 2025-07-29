@@ -1,5 +1,5 @@
 import { assets } from '@/config/assets';
-import { ISeller, IUser } from '@/types/IUser';
+import { IUser } from '@/types/IUser';
 import { AxiosInstance } from 'axios';
 
 const baseURL = import.meta.env.VITE_API_URL;
@@ -89,6 +89,7 @@ export const getUserDetails = async (
     banner_photo: response.data.seller?.bannerId
       ? `${baseURL}/user/getUserBannerPhoto?file_uuid=${response.data.seller.bannerId}`
       : assets.default_banner_image,
+    role: response.data?.userRole?.userRole,
   };
   delete userData.profilePicture;
 
@@ -119,7 +120,7 @@ export const getSellerDetails = async (
   };
   delete userData.profilePicture;
 
-  return userData as ISeller;
+  return userData as IUser;
 };
 
 export const getSellerVerifications = async (

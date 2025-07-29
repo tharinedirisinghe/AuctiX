@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Star, MessageSquare, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { reviewService, Review, PaginatedReviews, SellerRatingStats } from '@/services/reviewService';
 import { ReviewDisplay } from './ReviewDisplay';
 import { useToast } from '@/components/ui/use-toast';
@@ -21,7 +20,7 @@ export const SellerReviewsSection: React.FC<SellerReviewsSectionProps> = ({
   const [currentPage, setCurrentPage] = useState(0);
   const { toast } = useToast();
 
-  const fetchReviews = async (page: number = 0) => {
+  const fetchReviews = useCallback(async (page: number = 0) => {
     try {
       setLoading(true);
       const [reviewsData, statsData] = await Promise.all([
@@ -40,11 +39,11 @@ export const SellerReviewsSection: React.FC<SellerReviewsSectionProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [sellerId, toast]);
 
   useEffect(() => {
     fetchReviews(currentPage);
-  }, [sellerId, currentPage]);
+  }, [fetchReviews, currentPage]);
 
   const getRatingColor = (rating: number) => {
     if (rating >= 4) return "text-green-600";

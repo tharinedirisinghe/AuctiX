@@ -111,8 +111,17 @@ export default function AuctionCard({
           <div className="flex items-center gap-1 mt-2">
             <span>By</span>
             <Avatar className="w-5 h-5">
-              <AvatarImage src={sellerAvatar} />
-              <AvatarFallback>?</AvatarFallback>
+              <AvatarImage
+                src={sellerAvatar ? sellerAvatar : '/defaultProfilePhoto.jpg'}
+                alt={sellerName}
+              />
+              <AvatarFallback>
+                <img
+                  src="/defaultProfilePhoto.jpg"
+                  alt="Default Profile"
+                  className="w-full h-full object-cover"
+                />
+              </AvatarFallback>
             </Avatar>
             <p className="text-sm text-gray-700 font-medium">{sellerName}</p>
           </div>

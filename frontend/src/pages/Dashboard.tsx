@@ -2,6 +2,7 @@ import React from 'react';
 import { useAppSelector } from '@/hooks/hooks';
 import BidderDashboard from '@/components/organisms/BidderDashboard';
 import SellerDashboard from '@/components/organisms/SellerDashboard';
+import AdminDashboard from '@/components/organisms/AdminDashboard';
 
 export default function Dashboard() {
   const userData = useAppSelector((state) => state.user);
@@ -11,6 +12,8 @@ export default function Dashboard() {
     return <BidderDashboard />;
   } else if (userData?.role === 'SELLER') {
     return <SellerDashboard />;
+  } else if (userData?.role === 'ADMIN' || userData?.role === 'SUPER_ADMIN') {
+    return <AdminDashboard />;
   }
 
   // Default fallback or loading state

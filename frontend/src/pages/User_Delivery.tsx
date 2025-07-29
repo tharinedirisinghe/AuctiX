@@ -12,7 +12,8 @@ import {
 } from '@/store/slices/deliverySlice';
 import { Delivery } from '@/services/deliveryService';
 import { reviewService } from '@/services/reviewService';
-import { updateDeliveryAddress, AddressData } from '@/services/addressService';
+import { updateDeliveryAddress } from '@/services/addressService';
+import { AddressData } from '@/components/delivery/buyer/AddAddressDialog';
 
 // Import components
 import { DeliveryHeroBanner } from '@/components/delivery/buyer/DeliveryHeroBanner';
@@ -334,8 +335,6 @@ const UserDeliveryPage = () => {
 
         {/* Search & Filter */}
         <DeliveryFilter
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           showFilters={showFilters}

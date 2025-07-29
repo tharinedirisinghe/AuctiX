@@ -9,7 +9,11 @@ import AxiosRequest from '@/services/axiosInspector';
 import { useToast } from '@/hooks/use-toast';
 import SellerReport from '@/components/organisms/SellerReport';
 import { SellerRatingStatsComponent } from '@/components/review/SellerRatingStats';
-import { reviewService, Review, PaginatedReviews } from '@/services/reviewService';
+import {
+  reviewService,
+  Review,
+  PaginatedReviews,
+} from '@/services/reviewService';
 import { ReviewDisplay } from '@/components/review/ReviewDisplay';
 import { Pagination } from '@/components/ui/pagination';
 
@@ -34,7 +38,6 @@ export default function SellerProfile() {
 
   useEffect(() => {
     if (!id) return;
-
     const fetchAuctions = async () => {
       setLoading(true);
       try {
@@ -67,20 +70,12 @@ export default function SellerProfile() {
 
   // Fetch seller reviews
   const fetchSellerReviews = async (page: number = 0) => {
-    if (!id) {
-      console.log('No seller ID provided');
-      return;
-    }
-    
-    console.log('Fetching reviews for seller ID:', id);
-    
+    if (!id) return;
     try {
       setReviewsLoading(true);
       const reviewsData = await reviewService.getSellerReviews(id, page, 10);
-      console.log('Reviews data received:', reviewsData);
       setReviews(reviewsData);
-    } catch (error) {
-      console.error('Error fetching seller reviews:', error);
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to load reviews. Please try again.',
@@ -91,50 +86,29 @@ export default function SellerProfile() {
     }
   };
 
-  // Fetch reviews when tab changes to Reviews
   useEffect(() => {
-    console.log('Tab changed to:', activeTab, 'ID:', id);
-    if (activeTab === 'Reviews' && id) {
-      console.log('Triggering fetchSellerReviews');
-      fetchSellerReviews(currentReviewPage);
-    }
+    if (activeTab === 'Reviews' && id) fetchSellerReviews(currentReviewPage);
   }, [activeTab, id, currentReviewPage]);
 
-  // Helper function to get auction image URL
-  const getAuctionImageUrl = (auction: any) => {
-    if (auction.images && auction.images.length > 0) {
-      const imageUrl = `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.images[0]}`;
-      return imageUrl;
-    }
-    return '/api/placeholder/400/250';
-  };
+  const getAuctionImageUrl = (auction: any) =>
+    auction.images && auction.images.length > 0
+      ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.images[0]}`
+      : '/api/placeholder/400/250';
 
-  // Helper function to get seller avatar URL
-  const getSellerAvatarUrl = (auction: any) => {
-    if (
-      auction.seller &&
-      auction.seller.profilePicture &&
-      auction.seller.profilePicture.id
-    ) {
-      return `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.seller.profilePicture.id}`;
-    }
-    return '/api/placeholder/24/24';
-  };
+  const getSellerAvatarUrl = (auction: any) =>
+    auction.seller?.profilePicture?.id
+      ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.seller.profilePicture.id}`
+      : '/api/placeholder/24/24';
 
-  const getSellerProfileImage = () => {
-    if (sellerInfo?.profilePicture?.id) {
-      return `${import.meta.env.VITE_API_URL}/user/getUserProfilePhoto?file_uuid=${sellerInfo.profilePicture.id}`;
-    }
-    return '/defaultProfilePhoto.jpg';
-  };
+  const getSellerProfileImage = () =>
+    sellerInfo?.profilePicture?.id
+      ? `${import.meta.env.VITE_API_URL}/user/getUserProfilePhoto?file_uuid=${sellerInfo.profilePicture.id}`
+      : '/defaultProfilePhoto.jpg';
 
-  // Helper function to get background photo URL
-  const getBannerPhotoUrl = () => {
-    if (sellerInfo?.seller.bannerId) {
-      return `${import.meta.env.VITE_API_URL}/user/getUserBannerPhoto?file_uuid=${sellerInfo.seller.bannerId}`;
-    }
-    return assets.default_banner_image;
-  };
+  const getBannerPhotoUrl = () =>
+    sellerInfo?.seller?.bannerId
+      ? `${import.meta.env.VITE_API_URL}/user/getUserBannerPhoto?file_uuid=${sellerInfo.seller.bannerId}`
+      : assets.default_banner_image;
 
   const handleReportSubmit = async (
     itemId: string,
@@ -145,7 +119,7 @@ export default function SellerProfile() {
       await axiosInstance.post(`/complaints`, {
         targetType: 'USER',
         targetId: id,
-        reason: reason,
+        reason,
         description: complaint,
       });
       toast({
@@ -153,7 +127,7 @@ export default function SellerProfile() {
         description: `Your report for this seller has been submitted.`,
         variant: 'success',
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'Report Failed',
         description: 'Failed to submit report. Please try again.',
@@ -164,71 +138,66 @@ export default function SellerProfile() {
 
   return (
     <div>
-      <div className="min-h-screen mx-auto px-10 py-6 sm:py-8 sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl">
-        {/* Header with banner background */}
-        <div className="relative">
-          {/* Banner background */}
-          <div
-            className="h-64 rounded-lg"
-            style={{
-              backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('${getBannerPhotoUrl()}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-          ></div>
+      <section className="relative w-full mb-5">
+        {/* Banner image without padding */}
+        <div className="relative h-64 w-full">
+          <img
+            src={`${getBannerPhotoUrl()}`}
+            alt="cover-image"
+            className="w-full h-full object-cover"
+          />
+          {/* Gradient overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-          {/* Profile content */}
-          <div className="bg-white rounded-lg shadow-sm -mt-20 mx-4 px-8 py-4 relative border">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              {/* Profile Image */}
-              <div className="flex-shrink-0">
-                <img
-                  src={getSellerProfileImage()}
-                  alt="Profile"
-                  className="w-20 h-20 rounded-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = '/defaultProfilePhoto.jpg';
-                  }}
-                />
-              </div>
-
-              {/* Profile Info */}
-              <div className="flex-grow">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      {sellerInfo?.firstName && sellerInfo?.lastName
-                        ? `${sellerInfo.firstName} ${sellerInfo.lastName}`
-                        : 'Loading...'}
-                    </h1>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          sellerInfo?.verified
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-200 text-gray-600'
-                        }`}
+          {/* Profile content positioned at bottom of banner */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+            <div className="w-full max-w-7xl mx-auto">
+              <div className="flex items-end justify-between">
+                <div className="flex items-end">
+                  <img
+                    src={getSellerProfileImage()}
+                    alt="user-avatar-image"
+                    className="rounded-md w-20 h-20 object-cover"
+                  />
+                  <div className="flex flex-col items-start ml-4 md:ml-6 ">
+                    <div className="flex items-center">
+                      <h3 className="font-manrope font-bold text-2xl md:text-4xl text-white">
+                        {sellerInfo?.firstName && sellerInfo?.lastName
+                          ? `${sellerInfo.firstName} ${sellerInfo.lastName}`
+                          : 'Loading...'}
+                      </h3>
+                      <svg
+                        className="ml-3 w-5 h-5 p-0.5 rounded-full bg-white text-gray-700 font-bold"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                        viewBox="0 0 24 24"
                       >
-                        {sellerInfo?.verified
-                          ? 'Verified Seller'
-                          : 'Not Verified'}
-                      </span>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
                     </div>
+                    <p className="text-sm md:text-base text-gray-300">
+                      @{sellerInfo?.username}
+                    </p>
                   </div>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReportOpen(true)}
+                >
+                  Report Seller
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                className="mt-4 md:mt-0"
-                onClick={() => setReportOpen(true)}
-              >
-                Report
-              </Button>
             </div>
           </div>
         </div>
-
+      </section>
+      <div className="min-h-screen mx-auto  sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl">
         <div className="text-xl sm:text-4xl font-semibold mt-6 sm:mt-10">
           Seller Information
         </div>
@@ -262,62 +231,42 @@ export default function SellerProfile() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                {auctions.map((auction, index) => {
-                  const imageUrl = getAuctionImageUrl(auction);
-                  const avatarUrl = getSellerAvatarUrl(auction);
-
-                  return (
-                    <AuctionCard
-                      key={auction.id || index}
-                      imageUrl={imageUrl}
-                      productName={auction.title}
-                      category={auction.category}
-                      sellerName={
-                        auction.seller?.firstName && auction.seller?.lastName
-                          ? `${auction.seller.firstName} ${auction.seller.lastName}`
-                          : 'Unknown Seller'
-                      }
-                      sellerAvatar={avatarUrl}
-                      startingPrice={
-                        auction.startingPrice?.toLocaleString() || 'N/A'
-                      }
-                      timeRemaining={auction.endTime}
-                    />
-                  );
-                })}
+                {auctions.map((auction, index) => (
+                  <AuctionCard
+                    key={auction.id || index}
+                    imageUrl={getAuctionImageUrl(auction)}
+                    productName={auction.title}
+                    category={auction.category}
+                    sellerName={
+                      auction.seller?.firstName && auction.seller?.lastName
+                        ? `${auction.seller.firstName} ${auction.seller.lastName}`
+                        : 'Unknown Seller'
+                    }
+                    sellerAvatar={getSellerAvatarUrl(auction)}
+                    startingPrice={
+                      auction.startingPrice?.toLocaleString() || 'N/A'
+                    }
+                    startTime={auction.startTime}
+                    endTime={auction.endTime}
+                  />
+                ))}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="Ongoing" className="mt-4">
-            <h3 className="text-lg font-semibold mb-4">Ongoing Auctions</h3>
-            {/* Add filtered auctions logic here */}
-            <div className="mt-8 text-center text-muted-foreground">
-              Feature coming soon
-            </div>
-          </TabsContent>
-
-          <TabsContent value="Upcoming" className="mt-4">
-            <h3 className="text-lg font-semibold mb-4">Upcoming Auctions</h3>
-            <div className="mt-8 text-center text-muted-foreground">
-              Feature coming soon
-            </div>
-          </TabsContent>
-
-          <TabsContent value="Ended" className="mt-4">
-            <h3 className="text-lg font-semibold mb-4">Ended Auctions</h3>
-            <div className="mt-8 text-center text-muted-foreground">
-              Feature coming soon
-            </div>
-          </TabsContent>
+          {/* Placeholder for other tabs */}
+          {['Ongoing', 'Upcoming', 'Ended'].map((tab) => (
+            <TabsContent key={tab} value={tab} className="mt-4">
+              <h3 className="text-lg font-semibold mb-4">{tab} Auctions</h3>
+              <div className="mt-8 text-center text-muted-foreground">
+                Feature coming soon
+              </div>
+            </TabsContent>
+          ))}
 
           {/* Reviews Tab Content */}
           <TabsContent value="Reviews" className="mt-4">
             <div className="space-y-6">
-              <div className="text-sm text-gray-500 mb-4">
-                Debug: Seller ID = {id}, Active Tab = {activeTab}, Reviews Loading = {reviewsLoading.toString()}
-              </div>
-              
               {/* Seller Rating Statistics */}
               {id && (
                 <SellerRatingStatsComponent
@@ -333,7 +282,6 @@ export default function SellerProfile() {
               {/* Reviews List */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">All Reviews</h3>
-                
                 {reviewsLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
@@ -351,7 +299,6 @@ export default function SellerProfile() {
                         />
                       ))}
                     </div>
-                    
                     {/* Pagination */}
                     {reviews.totalPages > 1 && (
                       <div className="flex justify-center mt-6">
@@ -359,7 +306,11 @@ export default function SellerProfile() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentReviewPage(Math.max(0, currentReviewPage - 1))}
+                            onClick={() =>
+                              setCurrentReviewPage(
+                                Math.max(0, currentReviewPage - 1),
+                              )
+                            }
                             disabled={currentReviewPage === 0}
                           >
                             Previous
@@ -370,8 +321,17 @@ export default function SellerProfile() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setCurrentReviewPage(Math.min(reviews.totalPages - 1, currentReviewPage + 1))}
-                            disabled={currentReviewPage >= reviews.totalPages - 1}
+                            onClick={() =>
+                              setCurrentReviewPage(
+                                Math.min(
+                                  reviews.totalPages - 1,
+                                  currentReviewPage + 1,
+                                ),
+                              )
+                            }
+                            disabled={
+                              currentReviewPage >= reviews.totalPages - 1
+                            }
                           >
                             Next
                           </Button>
@@ -383,10 +343,9 @@ export default function SellerProfile() {
                   <div className="text-center py-8 text-gray-500">
                     <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No reviews yet</p>
-                    <p className="text-sm">This seller hasn't received any reviews.</p>
-                    <div className="text-xs mt-2 text-gray-400">
-                      Debug: Reviews = {reviews ? JSON.stringify(reviews, null, 2) : 'null'}
-                    </div>
+                    <p className="text-sm">
+                      This seller hasn't received any reviews.
+                    </p>
                   </div>
                 )}
               </div>

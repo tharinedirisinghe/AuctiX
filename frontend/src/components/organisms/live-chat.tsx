@@ -312,6 +312,8 @@ const LiveChat = (props: ChatRoomProps) => {
                   newChatMessage,
                 ]);
 
+                updateLastReadTimestamp();
+
                 if (newChatMessage.isSentByCurrentUser) {
                   lastNewMessageSource.current = 'self';
                 } else {
@@ -432,13 +434,62 @@ const LiveChat = (props: ChatRoomProps) => {
     if (!user.loading) {
       // Initial load should scroll to bottom
       isLoadingOlderMessages.current = false;
-      fetchMessages(0);
+      fetchMessages(0).then(() => {
+        updateLastReadTimestamp();
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userAuth, user.loading]);
 
+  const isChatScrolledToBottom = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return false;
+    const threshold = 100; // px from bottom
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      threshold
+    );
+  };
+
+  const isTabVisible = () => {
+    return document.visibilityState === 'visible';
+  };
+
+  const shouldUpdateLastRead = () => {
+    return isChatScrolledToBottom() && isTabVisible();
+  };
+
+  const updateLastReadTimestamp = async () => {
+    if (shouldUpdateLastRead()) {
+      try {
+        const chatId = type === 'AUCTION' ? auctionId : chatRoomId;
+        if (!chatId) return;
+
+        await axiosInstance.put(`/chat/${type}/${chatId}/last-read`);
+      } catch (error) {
+        console.error('Failed to update last read timestamp', error);
+      }
+    }
+  };
+
+  // Auto-trigger on tab focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          updateLastReadTimestamp();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-screen">
       <div className="flex items-center justify-between p-2 border-b">
         <h2 className="font-medium">{title ? title : 'Chat'}</h2>
         <div className="flex items-center gap-2">
@@ -457,8 +508,8 @@ const LiveChat = (props: ChatRoomProps) => {
       </div>
 
       <div
-        className={`flex-1 p-4 space-y-4 overflow-y-auto ${
-          limitUIHeight ? 'max-h-[500px]' : ''
+        className={`flex-1 overflow-y-auto p-4 space-y-4 ${
+          limitUIHeight ? 'max-h-[500px]' : 'max-h-svh'
         }`}
         ref={scrollContainerRef}
       >

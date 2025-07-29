@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MapPin, AlertTriangle } from 'lucide-react';
+import { getUserAddress } from '@/services/addressService';
 
 interface AddAddressDialogProps {
   isOpen: boolean;
@@ -48,6 +49,37 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
   });
 
   const [errors, setErrors] = useState<Partial<AddressData>>({});
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+
+  // Load existing address when dialog opens
+  useEffect(() => {
+    const loadExistingAddress = async () => {
+      if (isOpen) {
+        setIsLoadingAddress(true);
+        try {
+          const existingAddress = await getUserAddress();
+          if (existingAddress) {
+            setAddressData({
+              addressNumber: existingAddress.addressNumber || '',
+              addressLine1: existingAddress.addressLine1 || '',
+              addressLine2: existingAddress.addressLine2 || '',
+              city: existingAddress.city || '',
+              state: existingAddress.state || '',
+              postalCode: existingAddress.postalCode || '',
+              country: existingAddress.country || '',
+            });
+          }
+        } catch (error) {
+          // If no address exists (404), keep empty form
+          console.log('No existing address found, keeping empty form');
+        } finally {
+          setIsLoadingAddress(false);
+        }
+      }
+    };
+
+    loadExistingAddress();
+  }, [isOpen]);
 
   const handleInputChange = (field: keyof AddressData, value: string) => {
     setAddressData(prev => ({
@@ -94,6 +126,7 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
   };
 
   const handleClose = () => {
+    // Reset form data
     setAddressData({
       addressNumber: '',
       addressLine1: '',
@@ -104,6 +137,7 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
       country: '',
     });
     setErrors({});
+    setIsLoadingAddress(false);
     onClose();
   };
 
@@ -127,18 +161,24 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="addressNumber" className="text-right">
-              Number
-            </Label>
-            <Input
-              id="addressNumber"
-              value={addressData.addressNumber}
-              onChange={(e) => handleInputChange('addressNumber', e.target.value)}
-              className="col-span-3"
-              placeholder="House/Building number"
-            />
-          </div>
+          {isLoadingAddress ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-sm text-gray-500">Loading existing address...</div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="addressNumber" className="text-right">
+                  Number
+                </Label>
+                <Input
+                  id="addressNumber"
+                  value={addressData.addressNumber}
+                  onChange={(e) => handleInputChange('addressNumber', e.target.value)}
+                  className="col-span-3"
+                  placeholder="House/Building number"
+                />
+              </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="addressLine1" className="text-right">
@@ -242,6 +282,8 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
               )}
             </div>
           </div>
+            </>
+          )}
         </div>
 
         <DialogFooter>
@@ -249,17 +291,17 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
             type="button"
             variant="outline"
             onClick={handleClose}
-            disabled={isLoading}
+            disabled={isLoading || isLoadingAddress}
           >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isLoading}
+            disabled={isLoading || isLoadingAddress}
             className="bg-amber-600 hover:bg-amber-700"
           >
-            {isLoading ? 'Saving...' : 'Save Address'}
+            {isLoading ? 'Saving...' : isLoadingAddress ? 'Loading...' : 'Save Address'}
           </Button>
         </DialogFooter>
       </DialogContent>

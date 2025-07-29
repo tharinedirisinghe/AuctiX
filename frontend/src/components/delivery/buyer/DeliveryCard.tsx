@@ -118,14 +118,28 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
             </span>
           </div>
 
-          <Button
-            variant="outline"
-            className="self-center whitespace-nowrap flex items-center border-amber-300 text-amber-600 hover:bg-amber-50"
-            onClick={() => viewDeliveryDetails(delivery)}
-          >
-            View Details
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 self-center">
+            <Button
+              variant="outline"
+              className="whitespace-nowrap flex items-center border-blue-300 text-blue-600 hover:bg-blue-50"
+              onClick={() => console.log('Contact seller:', delivery.sellerName)}
+              size="sm"
+            >
+              <MessageCircle className="mr-1.5 h-4 w-4" />
+              Contact Seller
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="whitespace-nowrap flex items-center border-amber-300 text-amber-600 hover:bg-amber-50"
+              onClick={() => viewDeliveryDetails(delivery)}
+              size="sm"
+            >
+              View Details
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -199,14 +213,6 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
 
       {/* Action buttons */}
       <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-        <Button
-          className="bg-amber-300 hover:bg-amber-400 text-gray-900 flex items-center"
-          size="sm"
-          onClick={() => handleContactSeller(delivery)}
-        >
-          <MessageCircle className="mr-1.5" size={16} />
-          Contact Seller
-        </Button>
         {delivery.trackingNumber && (
           <Button
             variant="outline"

@@ -29,6 +29,7 @@ import { ErrorDisplay } from '@/components/delivery/seller/ErrorDisplay';
 import { LoadingIndicator } from '@/components/delivery/shared/LoadingIndicator';
 import { DeliverySkeletons } from '@/components/delivery/shared/DeliverySkeletons';
 import { isValidDate } from '@/components/delivery/shared/DateHelper';
+import { DeliveryReviewsDialog } from '@/components/delivery/seller/DeliveryReviewsDialog';
 import { Button } from '@/components/ui/button';
 import { Star } from 'lucide-react';
 
@@ -57,6 +58,10 @@ const SellerDeliveryPage = () => {
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
+
+  // Review dialog state
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState<boolean>(false);
+  const [reviewDelivery, setReviewDelivery] = useState<Delivery | null>(null);
 
   // Fetch deliveries on mount
   useEffect(() => {
@@ -275,6 +280,18 @@ const SellerDeliveryPage = () => {
     }
   };
 
+  // Handle view reviews
+  const handleViewReviews = (delivery: Delivery) => {
+    setReviewDelivery(delivery);
+    setIsReviewDialogOpen(true);
+  };
+
+  // Handle contact buyer (placeholder)
+  const handleContactBuyer = (delivery: Delivery) => {
+    // Placeholder - just shows it works
+    console.log('Contact buyer for delivery:', delivery.id);
+  };
+
   // Refresh deliveries
   const handleRefresh = () => {
     dispatch(clearDeliveryError());
@@ -353,6 +370,8 @@ const SellerDeliveryPage = () => {
                 openDatePicker={openDatePicker}
                 viewDeliveryDetails={viewDeliveryDetails}
                 handleRequestAddress={handleRequestAddress}
+                onViewReviews={handleViewReviews}
+                onContactBuyer={handleContactBuyer}
                 isLoading={isLoading}
               />
             ))}
@@ -393,6 +412,16 @@ const SellerDeliveryPage = () => {
         selectedDelivery={selectedDelivery}
         setSelectedDelivery={setSelectedDelivery}
         openDatePicker={openDatePicker}
+      />
+
+      {/* Delivery Reviews Dialog */}
+      <DeliveryReviewsDialog
+        isOpen={isReviewDialogOpen}
+        onClose={() => {
+          setIsReviewDialogOpen(false);
+          setReviewDelivery(null);
+        }}
+        delivery={reviewDelivery}
       />
 
     </div>

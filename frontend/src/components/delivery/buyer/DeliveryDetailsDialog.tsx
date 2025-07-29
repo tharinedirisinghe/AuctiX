@@ -214,17 +214,6 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
             </Button>
 
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-amber-300 hover:bg-amber-400 text-gray-900 flex items-center"
-                onClick={() => {
-                  handleContactSeller(selectedDelivery);
-                }}
-                type="button"
-              >
-                <MessageCircle className="mr-1.5" size={16} />
-                Contact Seller
-              </Button>
               {selectedDelivery.trackingNumber && (
                 <Button
                   size="sm"

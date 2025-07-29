@@ -16,102 +16,93 @@ export function PaginationNav({
 }: {
   handlePage: (page: number) => void;
   pages: number;
-  currentPage: number;
+  currentPage: number; // 0-based
 }) {
-  const setNonZeroBasedCurrentPage = (page: number) => {
-    handlePage(page - 1);
-    console.log('[Pagination.tsx]: handlePage');
+  // Helper to go to a page (0-based)
+  const goToPage = (page: number) => {
+    if (page >= 0 && page < pages) {
+      handlePage(page);
+    }
   };
 
   const handlePreviousClick = () => {
-    if (currentPage > 1) {
-      setNonZeroBasedCurrentPage(currentPage - 1);
-    }
+    goToPage(currentPage - 1);
   };
 
   const handleNextClick = () => {
-    if (currentPage < pages) {
-      setNonZeroBasedCurrentPage(currentPage + 1);
-    }
+    goToPage(currentPage + 1);
   };
 
   useEffect(() => {
-    console.log('PaginationNav', {
-      setNonZeroBasedCurrentPage,
-      handlePreviousClick,
-      handleNextClick,
-      pages,
-      currentPage,
-    });
-  }, [setNonZeroBasedCurrentPage, pages, currentPage]);
+    console.log('PaginationNav debug:', { currentPage, pages });
+  }, [currentPage, pages]);
 
+  // Display logic: show 1-based page numbers
   return (
     <Pagination>
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
-            onClick={() => handlePreviousClick()}
-            className={currentPage < 2 ? 'pointer-events-none opacity-70' : ''}
+            onClick={handlePreviousClick}
+            className={
+              currentPage === 0
+                ? 'pointer-events-none opacity-70 cursor-not-allowed'
+                : 'cursor-pointer'
+            }
           />
         </PaginationItem>
 
-        {currentPage > 2 && (
-          <PaginationItem>
-            <PaginationLink onClick={() => setNonZeroBasedCurrentPage(1)}>
-              1
-            </PaginationLink>
-          </PaginationItem>
-        )}
-
-        {currentPage > 2 && (
-          <PaginationItem>
-            <PaginationEllipsis />
-          </PaginationItem>
-        )}
-
         {currentPage > 1 && (
+          <>
+            <PaginationItem>
+              <PaginationLink onClick={() => goToPage(0)}>1</PaginationLink>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationEllipsis />
+            </PaginationItem>
+          </>
+        )}
+
+        {currentPage > 0 && (
           <PaginationItem>
-            <PaginationLink
-              onClick={() => setNonZeroBasedCurrentPage(currentPage - 1)}
-            >
-              {currentPage - 1}
+            <PaginationLink onClick={() => goToPage(currentPage - 1)}>
+              {currentPage}
             </PaginationLink>
           </PaginationItem>
         )}
 
         <PaginationItem>
-          <PaginationLink isActive={true}>{currentPage}</PaginationLink>
+          <PaginationLink isActive={true}>{currentPage + 1}</PaginationLink>
         </PaginationItem>
 
-        {pages > currentPage && (
+        {pages > currentPage + 1 && (
           <PaginationItem>
-            <PaginationLink
-              onClick={() => setNonZeroBasedCurrentPage(currentPage + 1)}
-            >
-              {currentPage + 1}
+            <PaginationLink onClick={() => goToPage(currentPage + 1)}>
+              {currentPage + 2}
             </PaginationLink>
           </PaginationItem>
         )}
 
-        {currentPage < pages - 1 && (
-          <PaginationItem>
-            <PaginationEllipsis />
-          </PaginationItem>
-        )}
-
-        {currentPage < pages - 1 && (
-          <PaginationItem>
-            <PaginationLink onClick={() => setNonZeroBasedCurrentPage(pages)}>
-              {pages}
-            </PaginationLink>
-          </PaginationItem>
+        {currentPage < pages - 2 && (
+          <>
+            <PaginationItem>
+              <PaginationEllipsis />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationLink onClick={() => goToPage(pages - 1)}>
+                {pages}
+              </PaginationLink>
+            </PaginationItem>
+          </>
         )}
 
         <PaginationItem>
           <PaginationNext
-            onClick={() => handleNextClick()}
+            onClick={handleNextClick}
             className={
-              currentPage > pages - 1 ? 'pointer-events-none opacity-70' : ''
+              currentPage >= pages - 1
+                ? 'pointer-events-none opacity-70 cursor-not-allowed'
+                : 'cursor-pointer'
             }
           />
         </PaginationItem>

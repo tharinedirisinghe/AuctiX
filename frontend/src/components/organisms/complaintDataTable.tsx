@@ -5,15 +5,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
 import { DataTable } from '@/components/molecules/DataTable';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@radix-ui/react-checkbox';
-import { AxiosInstance } from 'axios';
 import AxiosReqest from '@/services/axiosInspector';
 
 interface IUser {
@@ -33,62 +30,64 @@ interface IComplaint {
   status: string;
 }
 
-export default function ComplaintDataTable() {
-  const axiosInstance: AxiosInstance = AxiosReqest().axiosInstance;
+export default function ComplaintDataTable({
+  selectedStatus,
+  setSelectedStatus,
+}: {
+  selectedStatus: string;
+  setSelectedStatus: (status: string) => void;
+}) {
+  const axiosInstance = AxiosReqest().axiosInstance;
   const navigate = useNavigate();
   const [complaints, setComplaints] = useState<IComplaint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<null | string>(null);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-  const [limit, setLimit] = useState<number>(10);
-  const [offset, setOffset] = useState<number>(0);
-  const [search, setSearch] = useState<string | null>(null);
-  const [pageCount, setPageCount] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(10);
-  const [isInSearchDelay, setIsInSearchDelay] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [pageCount, setPageCount] = useState<number>(0);
+  const [searchText, setSearchText] = useState<string>('');
+  const [searchDebounced, setSearchDebounced] = useState<string>('');
+  const [statusTrigger, setStatusTrigger] = useState(0);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchDebounced(searchText);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchText]);
 
   useEffect(() => {
     setIsLoading(true);
-    if (!isInSearchDelay) {
-      axiosInstance
-        .get('/complaints', {
-          params: {
-            sortby: sortBy,
-            order: order,
-            limit: limit,
-            offset: offset,
-            search: search,
-          },
-        })
-        .then((complaintsData) => {
-          setComplaints(complaintsData?.data?.content || []);
-          setCurrentPage(complaintsData?.data?.pageable?.pageNumber);
-          setPageCount(complaintsData?.data?.totalPages);
-          setPageSize(complaintsData?.data?.size);
-          console.log('Complaints Data:', complaintsData);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
-  }, [sortBy, order, limit, offset, isInSearchDelay]);
-
-  let delay = null;
-  useEffect(() => {
-    if (!isInSearchDelay) {
-      setIsInSearchDelay(true);
-      delay = setTimeout(() => {
-        setOffset(0);
-        setCurrentPage(0);
-        setIsInSearchDelay(false);
-      }, 800);
-    }
-  }, [search]);
-
-  useEffect(() => {
-    console.log('Complaints:', complaints);
-  }, [complaints]);
+    axiosInstance
+      .get('/complaints', {
+        params: {
+          sortby: sortBy,
+          order: order,
+          size: pageSize,
+          page: currentPage,
+          search: searchDebounced,
+          ...(selectedStatus !== 'all' && { status: selectedStatus }),
+        },
+      })
+      .then((complaintsData) => {
+        setComplaints(complaintsData?.data?.content || []);
+        setPageCount(complaintsData?.data?.totalPages || 1);
+        setPageSize(complaintsData?.data?.size || pageSize);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [
+    sortBy,
+    order,
+    pageSize,
+    currentPage,
+    searchDebounced,
+    selectedStatus,
+    statusTrigger,
+  ]);
 
   const complaintsColumns: ColumnDef<IComplaint>[] = [
     {
@@ -133,20 +132,18 @@ export default function ComplaintDataTable() {
     },
     {
       accessorKey: 'dateReported',
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSortBy(column.id);
-              setOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
-            }}
-          >
-            Date Reported
-            <ArrowUpDown />
-          </Button>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setSortBy(column.id);
+            setOrder((prevOrder) => (prevOrder === 'asc' ? 'desc' : 'asc'));
+          }}
+        >
+          Date Reported
+          <ArrowUpDown />
+        </Button>
+      ),
       cell: ({ row }) => {
         const dateReported = new Date(row.getValue('dateReported'));
         const formattedDate = dateReported.toLocaleDateString('en-GB');
@@ -154,7 +151,6 @@ export default function ComplaintDataTable() {
           hour: '2-digit',
           minute: '2-digit',
         });
-
         return (
           <div>
             <div>
@@ -178,7 +174,6 @@ export default function ComplaintDataTable() {
           RESOLVED: 'bg-green-100 text-green-600',
           REJECTED: 'bg-red-100 text-red-600',
         };
-
         return (
           <span
             className={`px-2 py-1 rounded-md text-sm font-medium ${
@@ -199,25 +194,15 @@ export default function ComplaintDataTable() {
         const complaint = row.original;
         const [status, setStatus] = useState(complaint.status);
 
-        const statusStyles = {
-          PENDING: 'bg-yellow-100 text-yellow-600',
-          UNDER_REVIEW: 'bg-blue-100 text-blue-600',
-          RESOLVED: 'bg-green-100 text-green-600',
-          REJECTED: 'bg-red-100 text-red-600',
-        };
-
         const handleStatusChange = (newStatus: string) => {
           setStatus(newStatus);
-
           axiosInstance
-            .put(`/complaints/${complaint.id}/status`, {
-              status: newStatus,
-            })
+            .put(`/complaints/${complaint.id}/status`, { status: newStatus })
             .then(() => {
-              console.log('Status updated successfully');
+              // status updated
             })
-            .catch((error) => {
-              console.error('Error updating status:', error);
+            .catch(() => {
+              // error updating status
             });
         };
 
@@ -251,14 +236,14 @@ export default function ComplaintDataTable() {
     <>
       <DataTable
         columns={complaintsColumns}
-        data={complaints || []}
+        data={complaints}
         pageCount={pageCount}
         pageSize={pageSize}
         currentPage={currentPage}
-        setCurrentPage={setOffset}
+        setCurrentPage={setCurrentPage}
         setPageSize={setPageSize}
-        setSearchText={setSearch}
-        searchText={search}
+        setSearchText={setSearchText}
+        searchText={searchText}
       />
     </>
   );

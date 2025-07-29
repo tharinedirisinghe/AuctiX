@@ -49,6 +49,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { PaginationNav } from '@/components/molecules/Pagination';
 
 interface Feedback {
   id: string;
@@ -533,56 +534,18 @@ const FeedbackManagement: React.FC = () => {
                 </TableBody>
               </Table>
             </div>
-            {/* Pagination controls */}
-            <div className="flex items-center justify-between space-x-2 py-4">
+
+            <div className="flex items-center justify-end space-x-2 py-4">
               <div className="flex-1 text-sm text-muted-foreground">
                 Showing {data.length} row(s) on this page.
               </div>
-              <div className="space-x-2 flex items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPageIndex(0)}
-                  disabled={pageIndex === 0 || totalPages === 0}
-                >
-                  First
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPageIndex(pageIndex > 0 ? pageIndex - 1 : 0)
-                  }
-                  disabled={pageIndex === 0 || totalPages === 0}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm">
-                  Page {totalPages === 0 ? 0 : pageIndex + 1} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPageIndex(
-                      pageIndex + 1 < totalPages ? pageIndex + 1 : pageIndex,
-                    )
-                  }
-                  disabled={pageIndex + 1 >= totalPages || totalPages === 0}
-                >
-                  Next
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPageIndex(totalPages > 0 ? totalPages - 1 : 0)
-                  }
-                  disabled={pageIndex + 1 >= totalPages || totalPages === 0}
-                >
-                  Last
-                </Button>
-              </div>
+            </div>
+            <div className="flex items-center justify-between py-4">
+              <PaginationNav
+                currentPage={pageIndex}
+                pages={totalPages}
+                handlePage={setPageIndex}
+              />
             </div>
             <FeedbackDetailsModal
               open={modalOpen}

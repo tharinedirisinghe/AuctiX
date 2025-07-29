@@ -196,13 +196,6 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
             <div className="flex gap-2">
               <Button
                 size="sm"
-                className="bg-amber-300 hover:bg-amber-400 text-gray-900 flex items-center"
-              >
-                <MessageCircle className="mr-1.5" size={16} />
-                Contact Buyer
-              </Button>
-              <Button
-                size="sm"
                 onClick={() =>
                   openDatePicker(
                     selectedDelivery.id,

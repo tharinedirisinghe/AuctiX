@@ -72,6 +72,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               roles: ['SUPER_ADMIN', 'ADMIN'],
             },
             {
+              title: 'Feedbacks',
+              url: '/manage-feedback',
+              roles: ['ADMIN', 'SUPER_ADMIN'],
+            },
+            {
               title: 'Seller Verification',
               url: '/seller-verification-management',
               roles: ['ADMIN', 'SUPER_ADMIN'],

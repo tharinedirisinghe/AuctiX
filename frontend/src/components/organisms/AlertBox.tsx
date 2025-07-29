@@ -84,7 +84,7 @@ export const AlertBox = ({
 
         // Update progress based on remaining time
         const progressValue =
-          ((timeoutSeconds - newCountdown) / timeoutSeconds) * 100;
+          ((timeoutSeconds - newCountdown + 2) / timeoutSeconds) * 100;
         setProgress(progressValue);
 
         if (newCountdown <= 0) {
@@ -150,7 +150,7 @@ export const AlertBox = ({
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{
-                    duration: 0.6,
+                    duration: 0.5,
                     type: 'spring',
                     stiffness: 250,
                     damping: 15,
@@ -187,19 +187,7 @@ export const AlertBox = ({
                 className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-medium order-1 sm:order-2"
                 disabled={isActive && countdown <= 0}
               >
-                <span className="flex items-center gap-2">
-                  {continueBtn}
-                  {timeoutSeconds && isActive && countdown > 0 && (
-                    <motion.span
-                      key={countdown}
-                      initial={{ scale: 1.2, opacity: 0.7 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-gray-700 font-mono text-sm bg-yellow-200 px-2 py-1 rounded"
-                    >
-                      {countdown}s
-                    </motion.span>
-                  )}
-                </span>
+                <span className="flex items-center gap-2">{continueBtn}</span>
               </AlertDialogAction>
             )}
           </AlertDialogFooter>

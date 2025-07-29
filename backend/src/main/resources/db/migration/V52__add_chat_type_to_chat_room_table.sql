@@ -1,0 +1,2 @@
+ALTER TABLE chat_rooms
+ADD COLUMN chat_room_type VARCHAR(20) NOT NULL DEFAULT 'AUCTION';

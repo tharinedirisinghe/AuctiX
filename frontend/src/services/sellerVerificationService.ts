@@ -64,3 +64,40 @@ export const downloadAndOpenFile = async (
     console.error('Error downloading file:', error);
   }
 };
+
+export const downloadForPreview = async (
+  docId: string,
+  axiosInstance: AxiosInstance,
+) => {
+  try {
+    const response = await axiosInstance.post(
+      `/seller/document/${docId}`,
+      {},
+      {
+        responseType: 'blob',
+      },
+    );
+
+    const contentType = response.headers['content-type'];
+    const blob = new Blob([response.data], { type: contentType });
+    const url = window.URL.createObjectURL(blob);
+
+    return {
+      url,
+      contentType,
+      cleanup: () => window.URL.revokeObjectURL(url),
+    };
+  } catch (error) {
+    console.error('Error downloading file for preview:', error);
+    throw error;
+  }
+};
+
+export const getSellerVerificationStats = async (
+  axiosInstance: AxiosInstance,
+) => {
+  const response = await axiosInstance.get(
+    '/seller/getSellerVerificationStatusSummary',
+  );
+  return response.data;
+};

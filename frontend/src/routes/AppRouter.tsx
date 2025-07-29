@@ -33,8 +33,12 @@ import SecuritySettingsPage from '@/pages/SecuritySettingsPage';
 import PasswordResetPage from '@/pages/PasswordResetPage';
 import FeedbackManagement from '@/pages/FeedbackManagement';
 import { NoticePage } from '@/pages/NoticePage';
+import SupportChat from '@/pages/UserSupportChat';
+import AdminSupportChatManager from '@/pages/AdminSupportChatManager';
+import UserSupportChat from '@/pages/UserSupportChat';
 import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
 import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
+import { SellerVerificationEvaluationPage } from '@/pages/SellerVerificationEvaluationPage';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -139,6 +143,17 @@ export default function AppRouter() {
             }
           />
           <Route
+            path="/seller-verifications/:username"
+            element={
+              <ProtectedRoute
+                allowedUsers={['ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <SellerVerificationEvaluationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/settings/profile"
             element={
               <ProtectedRoute
@@ -162,6 +177,18 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/support/admin"
+            element={
+              <ProtectedRoute
+                allowedUsers={['ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <AdminSupportChatManager />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/seller-verification-submit"
             element={
@@ -198,6 +225,8 @@ export default function AppRouter() {
         <Route path="/user-delivery" element={<UserDeliveryPage />} />
         <Route path="/seller-delivery" element={<SellerDeliveryPage />} />
         <Route path="/seller-reviews" element={<SellerReviews />} />
+        <Route path="/support" element={<UserSupportChat />} />
+        <Route path="/support/admin" element={<AdminSupportChatManager />} />
 
         <Route path="/403" element={<h2>403 Unauthorized</h2>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />

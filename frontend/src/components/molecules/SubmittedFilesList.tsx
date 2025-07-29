@@ -77,7 +77,7 @@ export function SubmittedFilesList({ files, onBack }: SubmittedFilesListProps) {
         <AnimatePresence>
           {files.map((file, index) => (
             <motion.div
-              key={index}
+              key={file.id}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 + 0.3 }}

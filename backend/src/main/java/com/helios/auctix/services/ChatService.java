@@ -3,7 +3,9 @@ package com.helios.auctix.services;
 import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
+import com.helios.auctix.domain.chat.ChatRoomType;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.chat.ChatMessageRepository;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
@@ -37,13 +39,12 @@ public class ChatService {
     }
 
     @Transactional
-    public boolean joinChatRoom (User user, UUID auctionId) {
-
-        Optional<ChatRoom> chatRoomOpt = this.chatRoomRepository.findChatRoomByAuctionId(auctionId);
+    public boolean joinChatRoom(User user, UUID auctionId) {
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findChatRoomByAuctionId(auctionId);
         ChatRoom chatRoom;
 
         if (chatRoomOpt.isEmpty()) {
-            log.severe("There isn't a chat room for the given chatroom id, creating one");
+            log.warning("There isn't a chat room for the given auction, creating one");
             chatRoom = createChatRoomForAuction(auctionId);
         } else {
             chatRoom = chatRoomOpt.get();
@@ -52,15 +53,44 @@ public class ChatService {
         // "ON CONFLICT DO NOTHING" in the query means if the user is already in the chat room, the insert is ignored.
         chatRoomRepository.addUserToChatRoom(chatRoom.getId(), user.getId());
 
-        log.info("User" + user.getId() + " entered the chat room" + chatRoom.getId());
+        log.info("User " + user.getId() + " entered the chat room " + chatRoom.getId());
 
         return true;
     }
 
-    public ChatRoom getChatRoom(String auctionId) {
+    @Transactional
+    public boolean joinChatRoom(User user, UUID chatRoomId, ChatRoomType chatRoomType) {
+        if (chatRoomType == ChatRoomType.AUCTION) {
+            throw new IllegalArgumentException("Use joinChatRoom(User, UUID auctionId) for auction chat rooms.");
+        }
+
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findById(chatRoomId);
+        ChatRoom chatRoom;
+
+        if (chatRoomOpt.isEmpty()) {
+            log.warning("There isn't a chat room for the given ID, creating one");
+
+            chatRoom = ChatRoom.builder()
+                    .type(chatRoomType)
+                    .build();
+
+            chatRoom = chatRoomRepository.save(chatRoom);
+        } else {
+            chatRoom = chatRoomOpt.get();
+        }
+
+        chatRoomRepository.addUserToChatRoom(chatRoom.getId(), user.getId());
+
+        log.info("User " + user.getId() + " entered the chat room " + chatRoom.getId());
+
+        return true;
+    }
+
+    public ChatRoom getChatRoomByAuctionId(String auctionId) {
         try {
+            log.warning("No chat room for auction ID " + auctionId);
             return chatRoomRepository.findChatRoomByAuctionId(UUID.fromString(auctionId))
-                    .orElseThrow(() -> new IllegalStateException("No chat room for auction ID " + auctionId));
+                    .orElse(null);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid auction ID format: " + auctionId);
         }
@@ -72,25 +102,14 @@ public class ChatService {
 //        return chatMessageRepository.findByChatRoomIdOrderByTimestampAsc(chatRoomId, pageable);
 //    }
 
-    public List<ChatMessage> getMessagesBeforeTimestamp(String auctionId, LocalDateTime beforeTimestamp, int page, int size) {
+    public List<ChatMessage> getMessagesBeforeTimestamp(ChatRoom chatRoom, LocalDateTime beforeTimestamp, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("timestamp")));
 
-        UUID auctionUUID;
-        try {
-            auctionUUID = UUID.fromString(auctionId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid auctionId UUID");
+        if (chatRoom == null) {
+            throw new IllegalArgumentException("Chat Room is empty");
         }
 
-        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findChatRoomByAuctionId(auctionUUID);
-
-        if (chatRoomOpt.isEmpty()) {
-            throw new NoSuchElementException("Chat room not found for auctionId " + auctionId);
-        }
-
-        ChatRoom chatRoom = chatRoomOpt.get();
         UUID chatRoomId = chatRoom.getId();
-
         return chatMessageRepository.findByChatRoomIdAndTimestampBeforeOrderByTimestampDesc(chatRoomId, beforeTimestamp, pageable);
     }
 
@@ -105,6 +124,7 @@ public class ChatService {
         }
 
         ChatRoom chatRoom = ChatRoom.builder()
+                .type(ChatRoomType.AUCTION)
                 .auction(auction)
                 .build();
 
@@ -117,5 +137,27 @@ public class ChatService {
 
         return savedChatRoom;
     }
+
+
+    public ChatRoom getOrCreateSupportChatForUser(User user) {
+        if (user.getRoleEnum() != UserRoleEnum.SELLER && user.getRoleEnum() != UserRoleEnum.BIDDER) {
+            throw new IllegalStateException("Only sellers and bidders have support chats.");
+        }
+
+        Optional<ChatRoom> existingChat = chatRoomRepository.findSupportChatByUserId(user.getId());
+        if (existingChat.isPresent()) {
+            return existingChat.get();
+        }
+
+        ChatRoom newChat = new ChatRoom();
+        newChat.setType(ChatRoomType.SUPPORT);
+        chatRoomRepository.save(newChat);
+
+        joinChatRoom(user, newChat.getId(), ChatRoomType.SUPPORT);
+        return chatRoomRepository.save(newChat);
+    }
+
+
+
 
 }

@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception e) {
         log.error("Error occurred: {}", e.getMessage());
-        // e.printStackTrace();
+         e.printStackTrace();
         return buildErrorResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 

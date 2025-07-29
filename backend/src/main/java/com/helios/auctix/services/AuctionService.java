@@ -20,10 +20,7 @@ import com.helios.auctix.services.fileUpload.FileUploadService;
 import com.helios.auctix.services.fileUpload.FileUploadUseCaseEnum;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -328,26 +325,38 @@ public class AuctionService {
     /**
      * Get all auctions for a specific seller with filtering
      */
-    public List<SellerAuctionDTO> getSellerAuctions(UUID sellerId, String filter, String searchTerm) {
-        List<Auction> auctions = auctionRepository.findBySellerId(sellerId);
+    public Page<AuctionDetailsDTO> getDetailedSellerAuctions(UUID sellerId, String filter, String searchTerm, Pageable pageable) {
+        // 1. Fetch all auctions for the seller
+        List<Auction> allAuctions = auctionRepository.findBySellerId(sellerId);
 
-        // Apply filter
-        auctions = filterAuctionsByStatus(auctions, filter);
+// 2. Filter by status (total, active, ended, etc.)
+        List<Auction> filtered = filterAuctionsByStatus(allAuctions, filter);
 
-        // Apply search if provided
+// 3. Search term filter
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            auctions = auctions.stream()
-                    .filter(auction ->
-                            auction.getTitle().toLowerCase().contains(searchTerm.toLowerCase()) ||
-                                    auction.getId().toString().toLowerCase().contains(searchTerm.toLowerCase())
-                    )
+            String lowered = searchTerm.toLowerCase();
+            filtered = filtered.stream()
+                    .filter(auction -> auction.getTitle().toLowerCase().contains(lowered) ||
+                            auction.getId().toString().toLowerCase().contains(lowered))
                     .collect(Collectors.toList());
         }
 
-        return auctions.stream()
-                .map(this::convertToSellerAuctionDTO)
+// 4. Enrich with current bid & status
+        List<AuctionDetailsDTO> enriched = filtered.stream()
+                .map(auction -> getAuctionDetails(auction.getId()))
                 .collect(Collectors.toList());
+
+// 5. Manual pagination
+        int start = Math.toIntExact(pageable.getOffset());
+        int end = Math.min(start + pageable.getPageSize(), enriched.size());
+        List<AuctionDetailsDTO> paged = enriched.subList(start, end);
+
+        return new PageImpl<>(paged, pageable, enriched.size());
+
     }
+
+
+
 
     /**
      * Get auction statistics for a seller - Updated to match new filter logic
@@ -448,6 +457,18 @@ public class AuctionService {
     public String deleteAuction(UUID auctionId, boolean hasBids, String deletionReason, UUID sellerId) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+
+        // Check if auction is ending within 1 hour
+        Instant now = Instant.now();
+        Instant endTime = auction.getEndTime(); // or auction.getEnd(), based on your model
+
+        if (endTime != null) {
+            long timeDifferenceMillis = endTime.toEpochMilli() - now.toEpochMilli();
+            long timeDifferenceHours = timeDifferenceMillis / (1000 * 60 * 60);
+            if (timeDifferenceMillis > 0 && timeDifferenceHours < 1) {
+                throw new IllegalStateException("Cannot delete auction within the last hour of its end time.");
+            }
+        }
 
         if (hasBids) {
             // Store deletion reason

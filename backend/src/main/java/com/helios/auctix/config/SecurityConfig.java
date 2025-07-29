@@ -61,10 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws-auction/**").permitAll()
                         .requestMatchers("/api/auctions/**").permitAll()
                         .requestMatchers("/api/feedback/**").permitAll()
-
-
-
-
+                        .requestMatchers("/api/chat/**").permitAll() // checks auth user when needed by the controller
                         .requestMatchers("/api/coins/**").authenticated()
                         .anyRequest().authenticated()
                 )
@@ -79,7 +76,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);  // need for cookies/auth
 

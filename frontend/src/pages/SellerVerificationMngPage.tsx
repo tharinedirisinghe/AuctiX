@@ -1,29 +1,35 @@
-import UserDataTable from '@/components/organisms/UserDataTable';
 import { Card } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
-import useAxiosRequest from '@/services/axiosInspector';
-import { getUserStats, IUserStats } from '@/services/userService';
 import AxiosRequest from '@/services/axiosInspector';
 import { useToast } from '@/hooks/use-toast';
 import { getServerErrorMessage } from '@/lib/errorMsg';
 import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
+import { getSellerVerificationStats } from '@/services/sellerVerificationService';
+
+// Define interface for seller verification stats
+interface ISellerVerificationStats {
+  pendingVerifications: number;
+  approvedVerifications: number;
+  rejectedVerifications: number;
+  verifiedSellers: number;
+}
 
 export default function SellerVerificationMngPage() {
-  // TODO: fetch statistics from the backend
   const [isLoading, setIsLoading] = useState(true);
-  const [userStats, setUserStats] = useState<IUserStats | null>(null);
+  const [verificationStats, setVerificationStats] =
+    useState<ISellerVerificationStats | null>(null);
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
 
   useEffect(() => {
-    getUserStats(axiosInstance)
+    getSellerVerificationStats(axiosInstance)
       .then((data) => {
-        setUserStats(data);
+        setVerificationStats(data);
       })
       .catch((error) => {
-        console.error('Error fetching user stats:', error);
+        console.error('Error fetching verification stats:', error);
         toast({
-          title: 'Error fetching user stats',
+          title: 'Error fetching verification stats',
           description: getServerErrorMessage(error),
           variant: 'destructive',
         });
@@ -54,25 +60,31 @@ export default function SellerVerificationMngPage() {
               </Card>
             ))}
           </div>
-        ) : userStats ? (
+        ) : verificationStats ? (
           <div className="grid grid-cols-4 gap-4 mb-8">
             <Card className="p-4 border-none shadow-none bg-gray-100">
-              <div className="text-4xl font-bold">{userStats.totalUsers}</div>
-              <div className="text-sm font-semibold text-gray-500">
-                ALL USERS
+              <div className="text-4xl font-bold">
+                {verificationStats?.pendingVerifications}
               </div>
+              <div className="text-sm font-semibold text-gray-500">PENDING</div>
             </Card>
             <Card className="p-4 shadow-none">
-              <div className="text-4xl font-bold">{userStats.bidders}</div>
-              <div className="text-sm text-gray-500">BIDDERS</div>
+              <div className="text-4xl font-bold">
+                {verificationStats?.approvedVerifications}
+              </div>
+              <div className="text-sm text-gray-500">APPROVED</div>
             </Card>
             <Card className="p-4 shadow-none">
-              <div className="text-4xl font-bold">{userStats.sellers}</div>
-              <div className="text-sm text-gray-500">SELLERS</div>
+              <div className="text-4xl font-bold">
+                {verificationStats?.rejectedVerifications}
+              </div>
+              <div className="text-sm text-gray-500">REJECTED</div>
             </Card>
             <Card className="p-4 shadow-none">
-              <div className="text-4xl font-bold">{userStats.admins}</div>
-              <div className="text-sm text-gray-500">ADMINS</div>
+              <div className="text-4xl font-bold">
+                {verificationStats?.verifiedSellers}
+              </div>
+              <div className="text-sm text-gray-500">VERIFIED SELLERS</div>
             </Card>
           </div>
         ) : (

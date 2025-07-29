@@ -114,7 +114,7 @@ public class AuctionSchedulerService {
     /**
      * Scheduled job to check for completed auctions every second
      */
-    @Scheduled(fixedRate = 1000) // Run every 1 second
+    @Scheduled(fixedRateString = "${auction.scheduler.completed.rate:1000}")
     @Transactional
     public void processCompletedAuctions() {
         try {

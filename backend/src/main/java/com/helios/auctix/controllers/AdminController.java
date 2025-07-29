@@ -1,18 +1,23 @@
 package com.helios.auctix.controllers;
 
+import com.azure.core.util.BinaryData;
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.AdminActionDTO;
 import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
+import com.helios.auctix.dtos.VerificationRequestDTO;
 import com.helios.auctix.exception.InvalidUserException;
 import com.helios.auctix.repositories.UserRepository;
 import com.helios.auctix.services.AuctionSchedulerService;
+import com.helios.auctix.services.fileUpload.FileUploadResponse;
 import com.helios.auctix.services.user.*;
 import jakarta.validation.constraints.Null;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -219,5 +224,93 @@ public class AdminController {
         return ResponseEntity.ok(summary);
     }
 
+
+    @GetMapping("/getSellerVerifications/view")
+    public ResponseEntity<?> viewSellerVerifications(
+            @RequestParam String sellerUserName
+    ) throws AuthenticationException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        List<VerificationRequestDTO> requests = sellerService.viewSellerVerifications(sellerUserName);
+
+
+        return ResponseEntity.ok(requests);
+    }
+
+    @RequestMapping(value="/approveSellerVerification" ,method={ RequestMethod.POST, RequestMethod.PUT })
+    public ResponseEntity<String> approveSellerVerification(
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("sellerUserName") String sellerUserName,
+            @RequestParam("note") String note
+    ) throws AuthenticationException {
+
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Approve seller verification request by admin " + currentUser.getUsername());
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        if (requestId == null || sellerUserName == null || note == null) {
+            return ResponseEntity.badRequest().body("All parameters are required");
+        }
+
+        sellerService.approveSellerVerification(requestId, sellerUserName, note, currentUser);
+        return ResponseEntity.ok().body("Seller verification approved successfully");
+
+    }
+
+    @RequestMapping(value="/rejectSellerVerification" ,method={ RequestMethod.POST, RequestMethod.PUT })
+    public ResponseEntity<String> rejectSellerVerification(
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("sellerUserName") String sellerUserName,
+            @RequestParam("note") String note
+    ) throws AuthenticationException {
+
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Reject seller verification request by admin " + currentUser.getUsername());
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        if (requestId == null || sellerUserName == null || note == null) {
+            return ResponseEntity.badRequest().body("All parameters are required");
+        }
+
+        sellerService.rejectSellerVerification(requestId, sellerUserName, note, currentUser);
+        return ResponseEntity.ok().body("Seller verification rejected successfully");
+
+    }
+
+    @RequestMapping(value = "/updateSellerVerificationNote" , method = {RequestMethod.POST, RequestMethod.PATCH} )
+    public ResponseEntity<String> updateSellerVerificationNote(
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("sellerUserName") String sellerUserName,
+            @RequestParam("note") String note
+    ) throws AuthenticationException {
+
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Update seller verification note by admin " + currentUser.getUsername());
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        sellerService.updateVerificationRequestNote(requestId, sellerUserName , note, currentUser);
+        return ResponseEntity.ok().body("Seller verification note updated successfully");
+
+    }
 
 }

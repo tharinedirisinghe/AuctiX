@@ -61,7 +61,7 @@ export const STATUS_ORDER = ['PACKING', 'SHIPPING', 'DELIVERED'] as const;
 // Get the numeric value of a status for comparison
 export const getStatusOrder = (status: string): number => {
   const normalizedStatus = status?.toUpperCase();
-  const index = STATUS_ORDER.indexOf(normalizedStatus as any);
+  const index = STATUS_ORDER.indexOf(normalizedStatus as typeof STATUS_ORDER[number]);
   return index === -1 ? 0 : index;
 };
 

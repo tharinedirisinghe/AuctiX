@@ -49,10 +49,24 @@ public class FeedbackController {
     @GetMapping
     public ResponseEntity<?> getAllFeedbacks(
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(value = "rating", required = false) Integer rating,
+            @RequestParam(value = "sortBy", defaultValue = "submittedAt") String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = "desc") String sortDir
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("submittedAt").descending());
-        Page<Feedback> feedbackPage = feedbackRepository.findAll(pageable);
+        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Feedback> feedbackPage;
+        if (query != null && !query.isEmpty() && rating != null) {
+            feedbackPage = feedbackRepository.findByCommentContainingIgnoreCaseAndRating(query, rating, pageable);
+        } else if (query != null && !query.isEmpty()) {
+            feedbackPage = feedbackRepository.findByCommentContainingIgnoreCase(query, pageable);
+        } else if (rating != null) {
+            feedbackPage = feedbackRepository.findByRating(rating, pageable);
+        } else {
+            feedbackPage = feedbackRepository.findAll(pageable);
+        }
         return ResponseEntity.ok(feedbackPage);
     }
 

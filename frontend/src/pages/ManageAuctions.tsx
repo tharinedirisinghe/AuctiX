@@ -635,6 +635,9 @@ const ManageAuctions = () => {
                                 <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
                                   <div className="py-1">
                                     {isDeletedOrPending(auction) ||
+                                    auction.status?.toLowerCase() ===
+                                      'deleted' ||
+                                    auction.deleted ||
                                     isAuctionEnded(auction) ? (
                                       <div
                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer"

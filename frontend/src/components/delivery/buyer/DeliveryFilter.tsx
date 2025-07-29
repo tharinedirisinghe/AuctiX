@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface DeliveryFilterProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   showFilters: boolean;
@@ -22,8 +20,6 @@ interface DeliveryFilterProps {
 }
 
 export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
-  activeTab,
-  setActiveTab,
   searchTerm,
   setSearchTerm,
   showFilters,

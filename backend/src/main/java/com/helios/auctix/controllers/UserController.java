@@ -1,15 +1,11 @@
 package com.helios.auctix.controllers;
 
 import com.azure.core.util.BinaryData;
-import com.helios.auctix.domain.user.PasswordResetRequest;
-import com.helios.auctix.domain.user.User;
-import com.helios.auctix.domain.user.UserRequiredAction;
-import com.helios.auctix.domain.user.UserRoleEnum;
+import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.ProfileUpdateDataDTO;
 import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.dtos.UserStatsDTO;
 import com.helios.auctix.dtos.UserAddressDTO;
-import com.helios.auctix.domain.user.UserAddress;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
@@ -27,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.resource.HttpResource;
 
 import javax.naming.LimitExceededException;
 import java.io.UnsupportedEncodingException;
@@ -496,6 +493,16 @@ public class UserController {
 
         UserStatsDTO count = userDetailsService.getRegisteredUserCount(currentUser);
         return ResponseEntity.ok(count);
+    }
+
+    @PostMapping("/markActionAsResolved")
+    public ResponseEntity<?> resolveRequiredAction(
+            @RequestParam("id") UUID id
+    ) throws AuthenticationException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        userDetailsService.resolveUserRequiredAction(currentUser,id);
+        return ResponseEntity.ok("updated");
     }
 
     // User Address endpoints

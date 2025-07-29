@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class SellerVerificationStatsDTO {
-    private long pendingVerifications;
     private long approvedVerifications;
+    private long pendingVerifications;
     private long rejectedVerifications;
     private long verifiedSellers;
 }

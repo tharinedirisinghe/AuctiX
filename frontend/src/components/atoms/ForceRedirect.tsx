@@ -46,8 +46,17 @@ export default function ForceRedirect() {
     if (!pendingActions.loading && authUser.token) {
       pendingActions.pendingActions.forEach((action) => {
         if (action.resolved) return;
-
-        if (action.actionType === 'COMPLETE_PROFILE') {
+        if (action.actionType === ActionType.ANNOUNCEMENT_READ) {
+          console.log('Notice', action);
+          forceNavigate('/notice', 'You have a new important update');
+        } else if (
+          action.actionType === ActionType.FIRST_LOGIN_CHANGE_PASSWORD
+        ) {
+          forceNavigate(
+            '/settings/security',
+            'change your password to continue',
+          );
+        } else if (action.actionType === ActionType.COMPLETE_PROFILE) {
           forceNavigate(
             '/settings/profile',
             'Complete your profile to continue',
@@ -60,20 +69,10 @@ export default function ForceRedirect() {
             '/settings/seller-verification-submit',
             'Submit documents to get verified as a seller',
           );
-        } else if (
-          action.actionType === ActionType.FIRST_LOGIN_CHANGE_PASSWORD
-        ) {
-          forceNavigate(
-            '/settings/security',
-            'change your password to continue',
-          );
-        } else if (action.actionType === ActionType.ANNOUNCEMENT_READ) {
-          console.log('Notice', action);
-          forceNavigate('/notice', 'You have a new important update');
         }
       });
     }
-  }, [authUser.token, pendingActions.loading, navigate]);
+  }, [authUser.token, pendingActions.loading, navigate, location.pathname]);
 
   return <></>;
 }

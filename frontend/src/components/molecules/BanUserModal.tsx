@@ -108,6 +108,8 @@ export function BanUserModal({
     form.setValue('reason', newReason, { shouldValidate: true });
   };
 
+  console.log('User data by ban user', user);
+
   const onSubmit = async (data: BanFormValues) => {
     if (!user) {
       console.error('No user data available');
@@ -212,7 +214,7 @@ export function BanUserModal({
                           }
                           className="ml-2"
                         >
-                          {user?.role === 'SELLER' ? 'Seller' : 'Bidder'}
+                          {user?.role}
                         </Badge>
                       </DialogTitle>
                       <DialogDescription className="text-base font-medium mt-1">

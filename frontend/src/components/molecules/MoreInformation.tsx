@@ -15,10 +15,10 @@ export function MoreInformation({
     'content',
     'severityLevel',
     'canResolve',
-    'triggerUrl',
+    'id',
     'continueUrl',
   ];
-
+  console.log('processing MoreInformation component with data:', data);
   const additionalFields = Object.entries(data).filter(
     ([key, value]) =>
       !standardFields.includes(key) &&

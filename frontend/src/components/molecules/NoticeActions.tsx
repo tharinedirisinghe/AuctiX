@@ -33,7 +33,7 @@ export function NoticeActions({
         <div className="flex flex-col sm:flex-row justify-between gap-2 w-full pt-6 border-t border-gray-200 min-w-[200px]">
           {severity !== 'HIGH' && (
             <Button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/')}
               className="w-full sm:w-auto order-2 sm:order-1"
               variant="secondary"
             >

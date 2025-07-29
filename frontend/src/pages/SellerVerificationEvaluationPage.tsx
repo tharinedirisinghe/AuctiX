@@ -10,28 +10,30 @@ import {
   getSellerVerifications,
 } from '@/services/adminService';
 import AxiosRequest from '@/services/axiosInspector';
-import { ISeller } from '@/types/IUser';
+import { IUser } from '@/types/IUser';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 export function SellerVerificationEvaluationPage() {
   const [isSellerLoading, setIsSellerLoading] = useState(true);
   const [isVerificationsLoading, setIsVerificationsLoading] = useState(true);
-  const [sellerData, setSellerData] = useState<ISeller | null>(null);
+  const [sellerData, setSellerData] = useState<IUser | null>(null);
   const [documents, setDocuments] = useState<VerificationDocument[]>([]);
   const [selectedDocument, setSelectedDocument] =
     useState<VerificationDocument | null>(null);
   const { username } = useParams();
   const axiosInstance = AxiosRequest().axiosInstance;
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (username) {
       setIsSellerLoading(true);
       getSellerDetails(axiosInstance, username)
         .then((data) => {
-          setSellerData(data as ISeller);
+          setSellerData(data as IUser);
         })
         .catch((error) => {
           console.error('Error fetching seller details:', error);
@@ -86,6 +88,15 @@ export function SellerVerificationEvaluationPage() {
 
   return (
     <div className="py-6 max-w-6xl mx-auto">
+      {/* Back Button */}
+      <Button
+        variant="ghost"
+        onClick={() => navigate(-1)}
+        className="mb-4 text-sm"
+      >
+        &larr; Back
+      </Button>
+
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-2">

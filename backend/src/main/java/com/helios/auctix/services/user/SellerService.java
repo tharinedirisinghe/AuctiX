@@ -1,5 +1,8 @@
 package com.helios.auctix.services.user;
 
+import com.helios.auctix.domain.notification.Notification;
+import com.helios.auctix.domain.notification.NotificationCategory;
+import com.helios.auctix.domain.notification.NotificationCategoryGroup;
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
 import com.helios.auctix.dtos.SellerVerificationStatsDTO;
@@ -10,6 +13,7 @@ import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
 import com.helios.auctix.mappers.impl.VerificationRequestMapperImpl;
 import com.helios.auctix.mappers.impl.VerificationStatusMapperImpl;
+import com.helios.auctix.repositories.NotificationRepository;
 import com.helios.auctix.repositories.SellerRepository;
 import com.helios.auctix.repositories.SellerVerificationRequestRepository;
 import com.helios.auctix.repositories.UserRepository;
@@ -42,6 +46,8 @@ public class SellerService {
     private final VerificationStatusMapperImpl verificationStatusMapperImpl;
     private final UserRepository userRepository;
     private final VerificationRequestMapperImpl verificationRequestMapperImpl;
+    private final UserDetailsService userDetailsService;
+    private final NotificationRepository notificationRepository;
 
     public SellerVerificationStatusEnum submitSellerVerifications(User user, MultipartFile[] files) {
         if (user == null) {
@@ -245,6 +251,25 @@ public class SellerService {
         seller.setVerified(true);
         sellerRepository.save(seller);
 
+        UserRequiredActionContext context = UserRequiredActionContext.builder()
+                .title("Approved seller")
+                .content("Congratulations! Now you're a verified seller!")
+                .severityLevel(UserRequiredActionSeverityLevelEnum.LOW)
+                .continueUrl("/seller-verification-submit")
+                .canResolve(true)
+                .build();
+        userDetailsService.registerUserRequiredAction(seller.getUser(),UserRequiredActionEnum.ANNOUNCEMENT_READ, context);
+
+        Notification notification = Notification.builder()
+                .notificationCategory(NotificationCategory.DEFAULT)
+                .title("Seller account verification approved")
+                .content("Your verification submission has been approved. Your account is now verified account.")
+                .user(seller.getUser())
+                .notificationCategoryGroup(NotificationCategoryGroup.DEFAULT)
+                .build();
+
+        notificationRepository.save(notification);
+
     }
 
     @Transactional
@@ -272,6 +297,17 @@ public class SellerService {
                 log.warn("Seller {} is now marked as unverified due to rejection of all approved requests, request ID: {}", seller.getUser().getUsername(), requestId);
             }
         }
+
+        Notification notification = Notification.builder()
+                .notificationCategory(NotificationCategory.DEFAULT)
+                .title("Seller account verification rejected")
+                .content("Your verification submission has been rejected. see more details from Seller verification section.")
+                .user(seller.getUser())
+                .notificationCategoryGroup(NotificationCategoryGroup.DEFAULT)
+                .build();
+
+        notificationRepository.save(notification);
+
     }
 
     public void updateVerificationRequestNote(UUID requestId, String sellerUserName, String note, User currentUser) {
@@ -280,6 +316,17 @@ public class SellerService {
         req.setDescription(note);
         req.setReviewedAt(Instant.now());
         sellerVerificationRequestRepository.save(req);
+        User user = req.getSeller().getUser();
+
+        Notification notification = Notification.builder()
+                .notificationCategory(NotificationCategory.DEFAULT)
+                .title("Seller account verification update")
+                .content("You have a new update about your submitted document")
+                .user(user)
+                .notificationCategoryGroup(NotificationCategoryGroup.DEFAULT)
+                .build();
+
+        notificationRepository.save(notification);
     }
 
     private SellerVerificationRequest preValidateVerificationRequestsApproval(UUID requestId, String sellerUserName, String note, User currentUser) {

@@ -23,6 +23,8 @@ import {
 } from '@/services/userService';
 import type { AxiosInstance } from 'axios';
 import AxiosRequest from '@/services/axiosInspector';
+import { useAppDispatch } from '@/hooks/hooks';
+import { fetchPendingRequiredActions } from '@/store/slices/requiredActionsSlice';
 
 const passwordUpdateSchema = z
   .object({
@@ -59,6 +61,7 @@ export function PasswordUpdateForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
+  const dispatch = useAppDispatch();
 
   const validateForm = (): boolean => {
     try {
@@ -103,6 +106,7 @@ export function PasswordUpdateForm() {
           newPassword: '',
           confirmPassword: '',
         });
+        dispatch(fetchPendingRequiredActions());
       })
       .catch((error) => {
         if (error.response?.status === 500) {

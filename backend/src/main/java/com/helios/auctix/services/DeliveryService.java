@@ -429,4 +429,45 @@ public class DeliveryService {
 
         return dto;
     }
+
+//    private String getBuyerDeliveryAddress(User buyer) {
+//        UserAddress address = buyer.getUserAddress();
+//        if (address == null) {
+//            return "Address not provided";
+//        }
+//
+//        StringBuilder addressBuilder = new StringBuilder();
+//
+//        if (address.getAddressNumber() != null && !address.getAddressNumber().trim().isEmpty()) {
+//            addressBuilder.append(address.getAddressNumber()).append(" ");
+//        }
+//
+//        if (address.getAddressLine1() != null && !address.getAddressLine1().trim().isEmpty()) {
+//            addressBuilder.append(address.getAddressLine1());
+//        }
+//
+//        if (address.getAddressLine2() != null && !address.getAddressLine2().trim().isEmpty()) {
+//            addressBuilder.append(", ").append(address.getAddressLine2());
+//        }
+//
+//        if (address.getCity() != null && !address.getCity().trim().isEmpty()) {
+//            addressBuilder.append(", ").append(address.getCity());
+//        }
+//
+//        if (address.getState() != null && !address.getState().trim().isEmpty()) {
+//            addressBuilder.append(", ").append(address.getState());
+//        }
+//
+//        if (address.getPostalCode() != null && !address.getPostalCode().trim().isEmpty()) {
+//            addressBuilder.append(" ").append(address.getPostalCode());
+//        }
+//
+//        if (address.getCountry() != null && !address.getCountry().trim().isEmpty()) {
+//            addressBuilder.append(", ").append(address.getCountry());
+//        }
+//
+//        String fullAddress = addressBuilder.toString().replaceAll("^,\\s*", "").trim();
+//        return fullAddress.isEmpty() ? "Address not provided" : fullAddress;
+//    }
+
 }

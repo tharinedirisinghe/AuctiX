@@ -43,17 +43,23 @@ export default function ProfileCard({
       .join(' ');
   };
 
-  const editBtnVisibility = useMemo(() => {
-    if (isInEditMode) {
-      if (role != 'SELLER') {
+  const getEditBtnVisibility = (
+    isInEditMode: boolean,
+    image: 'Banner' | 'Profile',
+    userRole: string,
+  ): string => {
+    if (!isInEditMode) return 'hidden';
+
+    if (userRole != 'SELLER') {
+      if (image === 'Banner') {
         return 'hidden';
-      } else {
-        return 'visible';
       }
-    } else {
-      return 'hidden';
     }
-  }, [isInEditMode, role]);
+
+    return 'visible';
+  };
+
+  const editBtnVisibility = useMemo(() => getEditBtnVisibility, []);
 
   return (
     <Card className="overflow-hidden mb-6">
@@ -81,15 +87,18 @@ export default function ProfileCard({
                 minWidth={800}
                 acceptingHeight={500}
                 acceptingWidth={1500}
-                shape="square"
+                buttonClassName={editBtnVisibility(
+                  isInEditMode,
+                  'Banner',
+                  role,
+                )}
                 onConfirm={onBannerPhotoSet}
-                buttonClassName={editBtnVisibility}
               />
               <TooltipBtn
                 icon={Trash2}
-                text="Remove Banner"
+                className={editBtnVisibility(isInEditMode, 'Banner', role)}
                 onClick={onRemoveBanner}
-                className={editBtnVisibility}
+                text="Remove Banner Image"
               />
             </div>
           </motion.div>
@@ -114,9 +123,12 @@ export default function ProfileCard({
             <div className="absolute -bottom-2 -right-2 flex items-center gap-2">
               <TooltipBtn
                 icon={Trash2}
-                text="Remove Profile Photo"
+                text="Remove Profile"
+                className={
+                  'p-2 mr-14 ' +
+                  editBtnVisibility(isInEditMode, 'Profile', role)
+                }
                 onClick={onProfilePhotoDelete}
-                className={'p-2 mr-14 ' + editBtnVisibility}
               />
               <ImageUploadPopup
                 minHeight={100}
@@ -125,7 +137,11 @@ export default function ProfileCard({
                 acceptingWidth={500}
                 shape="circle"
                 onConfirm={onProfilePhotoSet}
-                isInEditMode={isInEditMode}
+                buttonClassName={editBtnVisibility(
+                  isInEditMode,
+                  'Profile',
+                  role,
+                )}
               />
             </div>
           </div>

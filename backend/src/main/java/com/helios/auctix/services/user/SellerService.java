@@ -264,13 +264,22 @@ public class SellerService {
         Seller seller = req.getSeller();
 
         if(seller.isVerified()){
-            boolean hasApprovedRequests = seller.getSellerVerificationRequests().contains(SellerVerificationStatusEnum.APPROVED);
+            boolean hasApprovedRequests = seller.getSellerVerificationRequests().stream()
+                    .anyMatch(request -> request.getVerificationStatus() == SellerVerificationStatusEnum.APPROVED);
             if(!hasApprovedRequests){
                 seller.setVerified(false);
                 sellerRepository.save(seller);
-                log.warn("Seller {} is now marked as unverified due to rejection of one and only approved request, request ID: {}", seller.getUser().getUsername(), requestId);
+                log.warn("Seller {} is now marked as unverified due to rejection of all approved requests, request ID: {}", seller.getUser().getUsername(), requestId);
             }
         }
+    }
+
+    public void updateVerificationRequestNote(UUID requestId, String sellerUserName, String note, User currentUser) {
+        SellerVerificationRequest req = preValidateVerificationRequestsApproval(requestId, sellerUserName, note, currentUser);
+
+        req.setDescription(note);
+        req.setReviewedAt(Instant.now());
+        sellerVerificationRequestRepository.save(req);
     }
 
     private SellerVerificationRequest preValidateVerificationRequestsApproval(UUID requestId, String sellerUserName, String note, User currentUser) {

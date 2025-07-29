@@ -164,11 +164,17 @@ export const rejectSellerVerification = async (
   requestId: string,
   note: string,
 ) => {
-  const response = await axiosInstance.put(`/admin/rejectSellerVerification/`, {
-    note,
-    requestId,
-    sellerUserName,
-  });
+  const response = await axiosInstance.put(
+    `/admin/rejectSellerVerification`,
+    {},
+    {
+      params: {
+        sellerUserName,
+        requestId,
+        note,
+      },
+    },
+  );
   return response.data;
 };
 
@@ -180,10 +186,13 @@ export const updateSellerVerificationNote = async (
 ) => {
   const response = await axiosInstance.patch(
     `/admin/updateSellerVerificationNote`,
+    {},
     {
-      note,
-      requestId,
-      sellerUserName,
+      params: {
+        sellerUserName,
+        requestId,
+        note,
+      },
     },
   );
   return response.data;

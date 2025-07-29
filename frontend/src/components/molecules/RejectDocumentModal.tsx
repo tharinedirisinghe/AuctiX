@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XCircle, MessageSquare } from 'lucide-react';
+import { AxiosInstance } from 'axios';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +31,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { VerificationDocument } from '../organisms/VerificationSubmissionList';
+import { rejectSellerVerification } from '@/services/adminService';
+import { useToast } from '@/hooks/use-toast';
+import { getServerErrorMessage } from '@/lib/errorMsg';
 
 // Quick message templates for rejection
 const quickMessages = [
@@ -52,17 +56,22 @@ type RejectFormValues = z.infer<typeof rejectFormSchema>;
 interface RejectDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (docId: string, notes: string) => void;
+  onSuccess?: () => void;
   document: VerificationDocument | null;
+  axiosInstance: AxiosInstance;
+  sellerUserName: string;
 }
 
 export function RejectDocumentModal({
   isOpen,
   onClose,
-  onConfirm,
+  onSuccess,
   document,
+  axiosInstance,
+  sellerUserName,
 }: RejectDocumentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<RejectFormValues>({
     resolver: zodResolver(rejectFormSchema),
@@ -82,11 +91,27 @@ export function RejectDocumentModal({
 
     setIsSubmitting(true);
     try {
-      await onConfirm(document.docId, data.notes);
+      await rejectSellerVerification(
+        axiosInstance,
+        sellerUserName,
+        document.id,
+        data.notes,
+      );
+      toast({
+        title: 'Success',
+        description: `Document "${document.docTitle}" has been rejected.`,
+        variant: 'default',
+      });
       form.reset();
       onClose();
+      onSuccess?.();
     } catch (error) {
       console.error('Error rejecting document:', error);
+      toast({
+        title: 'Error',
+        description: getServerErrorMessage(error as Error),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -267,4 +267,50 @@ public class AdminController {
 
     }
 
+    @RequestMapping(value="/rejectSellerVerification" ,method={ RequestMethod.POST, RequestMethod.PUT })
+    public ResponseEntity<String> rejectSellerVerification(
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("sellerUserName") String sellerUserName,
+            @RequestParam("note") String note
+    ) throws AuthenticationException {
+
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Reject seller verification request by admin " + currentUser.getUsername());
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        if (requestId == null || sellerUserName == null || note == null) {
+            return ResponseEntity.badRequest().body("All parameters are required");
+        }
+
+        sellerService.rejectSellerVerification(requestId, sellerUserName, note, currentUser);
+        return ResponseEntity.ok().body("Seller verification rejected successfully");
+
+    }
+
+    @RequestMapping(value = "/updateSellerVerificationNote" , method = {RequestMethod.POST, RequestMethod.PATCH} )
+    public ResponseEntity<String> updateSellerVerificationNote(
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("sellerUserName") String sellerUserName,
+            @RequestParam("note") String note
+    ) throws AuthenticationException {
+
+        // Authenticate user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+        logger.info("Update seller verification note by admin " + currentUser.getUsername());
+
+        if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
+            throw new AuthenticationException("Invalid role");
+        }
+
+        sellerService.updateVerificationRequestNote(requestId, sellerUserName , note, currentUser);
+        return ResponseEntity.ok().body("Seller verification note updated successfully");
+
+    }
+
 }

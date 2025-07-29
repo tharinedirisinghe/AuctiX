@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { openTool } from '@/store/slices/adminToolsSlice';
+import { AdminToolsEnum } from '@/components/organisms/AdminTools';
+import { useDispatch } from 'react-redux';
 
 interface User {
   username: string;
@@ -74,6 +77,7 @@ export default function ComplaintDetail() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [targetAuction, setTargetAuction] = useState<Auction | null>(null);
   const [targetUser, setTargetUser] = useState<User | null>(null);
+  const appDispatch = useDispatch();
 
   // Move fetchTargetDetails here so it's available to both effects
   const fetchTargetDetails = async () => {
@@ -638,6 +642,23 @@ export default function ComplaintDetail() {
                       <ChevronDown className="h-4 w-4 mr-2" />
                       Reject Complaint
                     </Button>
+                    {/* Ban User Button */}
+                    {targetUser && (
+                      <Button
+                        variant="destructive"
+                        className="justify-start"
+                        onClick={() =>
+                          appDispatch(
+                            openTool({
+                              user: targetUser.username,
+                              tool: AdminToolsEnum.BAN_USER,
+                            }),
+                          )
+                        }
+                      >
+                        Ban User
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

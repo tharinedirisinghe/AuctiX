@@ -38,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         },
         {
           title: 'My Bids',
-          url: '/my-bids',
+          url: '/manage-bids',
           roles: ['BIDDER'],
         },
         {

@@ -16,9 +16,9 @@ public class FeedbackService {
     @Autowired
     private FeedbackRepository feedbackRepository;
 
-    public void saveFeedback(int rating, String comment, UUID userId) {
+    public void saveFeedback(int rating, String comment, String username) {
         Feedback feedback = new Feedback();
-        feedback.setUserId(userId); // Nullable for guests
+        feedback.setUsername(username); // Nullable for guests
         feedback.setRating(rating);
         feedback.setComment(comment);
         feedback.setSubmittedAt(LocalDateTime.now());

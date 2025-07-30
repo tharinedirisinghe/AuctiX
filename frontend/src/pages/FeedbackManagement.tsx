@@ -202,7 +202,7 @@ const FeedbackManagement: React.FC = () => {
     () => [
       {
         accessorKey: 'userId',
-        header: 'User',
+        header: 'Username',
         cell: ({ row }) =>
           row.original.username || row.original.userId || 'Guest',
         enableSorting: false,

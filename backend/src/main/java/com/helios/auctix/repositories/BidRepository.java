@@ -43,4 +43,35 @@ public interface BidRepository extends JpaRepository<Bid, UUID> {
 
     List<Bid> findByBidderId(UUID bidderId);
 
+    int countByBidderId(UUID userId);
+
+    // Count active auctions where user is the highest bidder
+    @Query("""
+    SELECT COUNT(DISTINCT b.auction.id)
+    FROM Bid b
+    WHERE b.bidderId = :userId
+      AND b.auction.isPublic = true
+      AND b.auction.completed = false
+      AND b.amount = (
+          SELECT MAX(b2.amount)
+          FROM Bid b2
+          WHERE b2.auction.id = b.auction.id
+      )
+""")
+    int countActiveAuctionsWhereUserIsHighestBidder(@Param("userId") UUID userId);
+
+    // Count active auctions where user has bids but is not the highest bidder
+    @Query("""
+    SELECT COUNT(DISTINCT b.auction.id)
+    FROM Bid b
+    WHERE b.bidderId = :userId
+      AND b.auction.isPublic = true
+      AND b.auction.completed = false
+      AND b.amount < (
+          SELECT MAX(b2.amount)
+          FROM Bid b2
+          WHERE b2.auction.id = b.auction.id
+      )
+""")
+    int countActiveAuctionsWhereUserIsOutbid(@Param("userId") UUID userId);
 }

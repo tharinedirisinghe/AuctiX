@@ -65,6 +65,7 @@ export default function BidderDashboard() {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<string>('90d');
+  const [walletRange, setWalletRange] = useState<'1d' | '1w' | '1m'>('1w');
   const userData = useAppSelector((state) => state.user);
   const authData = useAppSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -84,6 +85,10 @@ export default function BidderDashboard() {
     // ...add more data as needed
   ];
 
+  const [walletHistory, setWalletHistory] = useState<
+    { date: string; available: number; frozen: number }[]
+  >([]);
+
   // Filter chart data based on selected time range
   const filteredData = React.useMemo(() => {
     if (timeRange === '7d') {
@@ -94,8 +99,164 @@ export default function BidderDashboard() {
     return chartData;
   }, [timeRange, chartData]);
 
+  // Filter walletHistory based on selected range
+  const walletChartData = React.useMemo(() => {
+    if (!walletHistory.length) return [];
+    if (walletRange === '1d') {
+      // Show intraday points: reconstruct from transactions for the last 24 hours
+      const transactions = walletHistory.__rawTransactions || [];
+      if (!transactions.length) return walletHistory.slice(-1);
+
+      // Find the latest transaction date
+      const lastTx = transactions[transactions.length - 1];
+      const lastDateTime = new Date(lastTx.transactionDate);
+      // Get all transactions within the last 24 hours
+      const startDateTime = new Date(lastDateTime);
+      startDateTime.setHours(lastDateTime.getHours() - 23, 0, 0, 0);
+
+      let available = 0;
+      let frozen = 0;
+      const intradayTxs: { date: string; available: number; frozen: number }[] =
+        [];
+
+      transactions.forEach((tx: any) => {
+        const txTime = new Date(tx.transactionDate);
+        if (txTime >= startDateTime && txTime <= lastDateTime) {
+          // Update balances
+          if (tx.status === 'CREDITED') {
+            available += tx.amount || 0;
+          } else if (tx.status === 'DEBITED') {
+            available -= tx.amount || 0;
+          } else if (tx.status === 'FREEZED') {
+            available -= tx.amount || 0;
+            frozen += tx.amount || 0;
+          } else if (tx.status === 'UNFREEZED') {
+            available += tx.amount || 0;
+            frozen -= tx.amount || 0;
+          }
+          intradayTxs.push({
+            date: tx.transactionDate.slice(0, 16).replace('T', ' '), // "YYYY-MM-DD HH:mm"
+            available: Math.max(available, 0),
+            frozen: Math.max(frozen, 0),
+          });
+        }
+      });
+      // If no transactions in last 24h, show last balance
+      return intradayTxs.length ? intradayTxs : walletHistory.slice(-1);
+    }
+    if (walletRange === '1w') {
+      return walletHistory.slice(-7);
+    }
+    if (walletRange === '1m') {
+      return walletHistory.slice(-30);
+    }
+    return walletHistory;
+  }, [walletHistory, walletRange]);
+
   useEffect(() => {
     fetchBidderData();
+
+    const fetchWalletHistory = async () => {
+      if (!token) return;
+      try {
+        const response = await axiosInstance.get('/coins/transaction-history', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // Transform transaction history into daily balances
+        const transactions = response.data;
+        // Sort by transactionDate ascending
+        transactions.sort(
+          (a: any, b: any) =>
+            new Date(a.transactionDate).getTime() -
+            new Date(b.transactionDate).getTime(),
+        );
+
+        // Build daily balances by iterating once through transactions
+        let history: { date: string; available: number; frozen: number }[] = [];
+        let available = 0;
+        let frozen = 0;
+        let lastDate = '';
+        transactions.forEach((tx: any, idx: number) => {
+          const date = tx.transactionDate.slice(0, 10);
+          // Update balances
+          if (tx.status === 'CREDITED') {
+            available += tx.amount || 0;
+          } else if (tx.status === 'DEBITED') {
+            available -= tx.amount || 0;
+          } else if (tx.status === 'FREEZED') {
+            available -= tx.amount || 0;
+            frozen += tx.amount || 0;
+          } else if (tx.status === 'UNFREEZED') {
+            available += tx.amount || 0;
+            frozen -= tx.amount || 0;
+          }
+          // If date changes or last transaction, record balance for the day
+          if (date !== lastDate) {
+            history.push({
+              date,
+              available: Math.max(available, 0),
+              frozen: Math.max(frozen, 0),
+            });
+            lastDate = date;
+          } else if (idx === transactions.length - 1) {
+            // For last transaction, ensure last date is recorded
+            history[history.length - 1] = {
+              date,
+              available: Math.max(available, 0),
+              frozen: Math.max(frozen, 0),
+            };
+          }
+        });
+
+        // Fill missing days (carry forward previous balance)
+        if (history.length > 0) {
+          // Determine how many days to fill based on selected range
+          // Always fill 30 days for "1 Month", 7 for "1 Week", 1 for "1 Day"
+          // But since walletHistory is used for all ranges, fill 30 days here
+          const filledHistory: {
+            date: string;
+            available: number;
+            frozen: number;
+          }[] = [];
+          const endDate = new Date(history[history.length - 1].date);
+          const startDate = new Date(endDate);
+          startDate.setDate(endDate.getDate() - 29); // last 30 days
+
+          let prev = { available: 0, frozen: 0 };
+          let historyIdx = 0;
+          for (let d = 0; d < 30; d++) {
+            const currDate = new Date(startDate);
+            currDate.setDate(startDate.getDate() + d);
+            const dateStr = currDate.toISOString().slice(0, 10);
+            if (
+              historyIdx < history.length &&
+              history[historyIdx].date === dateStr
+            ) {
+              prev = {
+                available: history[historyIdx].available,
+                frozen: history[historyIdx].frozen,
+              };
+              historyIdx++;
+            }
+            filledHistory.push({
+              date: dateStr,
+              available: prev.available,
+              frozen: prev.frozen,
+            });
+          }
+          history = filledHistory;
+        }
+
+        // Attach raw transactions for intraday chart
+        (history as any).__rawTransactions = transactions;
+
+        setWalletHistory(history);
+      } catch (error) {
+        console.error('Error fetching wallet history:', error);
+        setWalletHistory([]);
+      }
+    };
+    fetchWalletHistory();
   }, []);
 
   const fetchBidderData = async () => {
@@ -266,7 +427,125 @@ export default function BidderDashboard() {
             </Card>
           </div>
           {/* Placeholder for right side */}
-          <div className="hidden md:block w-3/5 bg-gray-100 rounded-lg"></div>
+          <div className="hidden md:block w-3/5 bg-gray-100 rounded-lg">
+            <div className="w-full">
+              <Card className="bg-gradient-to-br from-gray-50 to-zinc-300 text-gray-800 p-6 rounded-lg h-full shadow-sm border-none">
+                {/* ...existing wallet info... */}
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-gray-700">
+                      Balance Trend
+                    </h4>
+                    <Select
+                      value={walletRange}
+                      onValueChange={(v) =>
+                        setWalletRange(v as '1d' | '1w' | '1m')
+                      }
+                    >
+                      <SelectTrigger className="w-28 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1d">1 Day</SelectItem>
+                        <SelectItem value="1w">1 Week</SelectItem>
+                        <SelectItem value="1m">1 Month</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <AreaChart
+                      data={walletChartData}
+                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="availableColor"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#eaac26"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#eaac26"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="frozenColor"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#f87171"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#f87171"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(date) =>
+                          walletRange === '1d'
+                            ? date.slice(11, 16) // "HH:mm"
+                            : new Date(date).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                        }
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          background: '#fff',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                        }}
+                        labelFormatter={(date) =>
+                          walletRange === '1d'
+                            ? date.slice(0, 16).replace('T', ' ')
+                            : new Date(date).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                        }
+                        labelStyle={{ color: '#333' }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="available"
+                        stroke="#eaac26"
+                        fillOpacity={1}
+                        fill="url(#availableColor)"
+                        name="Available"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="frozen"
+                        stroke="#f87171"
+                        fillOpacity={1}
+                        fill="url(#frozenColor)"
+                        name="Frozen"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </div>
+          </div>
         </div>
 
         {/* Bidder Stats Cards */}

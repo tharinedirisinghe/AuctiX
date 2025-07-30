@@ -19,6 +19,7 @@ export enum SectionEnum {
   REGISTER = 'REGISTER',
   PROFILE = 'PROFILE',
   PROFILE_UPDATE = 'PROFILE_UPDATE',
+  PASSWORD_UPDATE = 'PASSWORD_UPDATE',
   DEFAULT = 'DEFAULT',
   // Add other sections as needed
 }
@@ -66,6 +67,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Unable to connect to the server. Please check your internet connection and try updating your profile again.',
     [SectionEnum.PROFILE_UPDATE]:
       'Unable to connect to the server. Please check your internet connection and try updating your profile again.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Unable to connect to the server. Please check your internet connection and try updating your password again.',
     [SectionEnum.DEFAULT]:
       'Unable to connect to the server. Please check your internet connection and try again.',
   },
@@ -74,6 +77,7 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.REGISTER]: 'Registration service not found.',
     [SectionEnum.PROFILE]: 'Profile not found.',
     [SectionEnum.PROFILE_UPDATE]: 'Profile update service not found.',
+    [SectionEnum.PASSWORD_UPDATE]: 'Password update service not found.',
     [SectionEnum.DEFAULT]: 'The requested resource was not found.',
   },
   [ErrorTypesEnum.INTERNAL_SERVER_ERROR]: {
@@ -83,6 +87,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'Profile server error. Please try again later.',
     [SectionEnum.PROFILE_UPDATE]:
       'Profile update server error. Please try again later.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Password update server error. Please try again later.',
     [SectionEnum.DEFAULT]: 'Server error. Please try again later.',
   },
   [ErrorTypesEnum.FORBIDDEN]: {
@@ -91,6 +97,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'You do not have permission to access this profile.',
     [SectionEnum.PROFILE_UPDATE]:
       'You do not have permission to update this profile.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'You do not have permission to update your password.',
     [SectionEnum.DEFAULT]:
       'Access denied. You do not have permission to perform this action.',
   },
@@ -100,6 +108,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'You are not authorized to view this profile.',
     [SectionEnum.PROFILE_UPDATE]:
       'You are not authorized to update your profile. Please log in again.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'You are not authorized to update your password. Please log in again.',
     [SectionEnum.DEFAULT]: 'You are not authorized to perform this action.',
   },
   [ErrorTypesEnum.BAD_REQUEST]: {
@@ -110,6 +120,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Invalid profile information. Please check your input.',
     [SectionEnum.PROFILE_UPDATE]:
       'Invalid profile information. Please check your input and try again.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Invalid password information. Please check your current password and try again.',
     [SectionEnum.DEFAULT]:
       'Invalid information provided. Please check your input.',
   },
@@ -120,6 +132,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'Profile server error. Please try again later.',
     [SectionEnum.PROFILE_UPDATE]:
       'Profile update server error. Please try again later.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Password update server error. Please try again later.',
     [SectionEnum.DEFAULT]: 'Internal server error. Please try again later.',
   },
   [ErrorTypesEnum.AUTH_FAILED]: {
@@ -129,6 +143,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'Authentication failed. Please log in again.',
     [SectionEnum.PROFILE_UPDATE]:
       'Authentication failed during profile update. Please log in again.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Authentication failed during password update. Please log in again.',
     [SectionEnum.DEFAULT]: 'Authentication failed. Please log in again.',
   },
   [ErrorTypesEnum.USER_NOT_FOUND]: {
@@ -136,6 +152,7 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.REGISTER]: 'User registration failed.',
     [SectionEnum.PROFILE]: 'User profile not found.',
     [SectionEnum.PROFILE_UPDATE]: 'User not found. Unable to update profile.',
+    [SectionEnum.PASSWORD_UPDATE]: 'User not found. Unable to update password.',
     [SectionEnum.DEFAULT]: 'User not found.',
   },
   [ErrorTypesEnum.ILLEGAL_ARGUMENT]: {
@@ -147,6 +164,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Invalid input provided. Please check your profile information.',
     [SectionEnum.PROFILE_UPDATE]:
       'Invalid profile data provided. Please check your information.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Invalid password data provided. Please check your current password and new password.',
     [SectionEnum.DEFAULT]:
       'Invalid input provided. Please check your information.',
   },
@@ -157,6 +176,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Too many files uploaded. Please reduce the number of files.',
     [SectionEnum.PROFILE_UPDATE]:
       'Too many files uploaded during profile update. Please reduce the number of files.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'File upload not supported for password updates.',
     [SectionEnum.DEFAULT]:
       'Too many files uploaded. Please reduce the number of files.',
   },
@@ -166,6 +187,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'File size too large. Please use smaller files.',
     [SectionEnum.PROFILE_UPDATE]:
       'File size too large during profile update. Please use smaller files.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'File upload not supported for password updates.',
     [SectionEnum.DEFAULT]: 'File size too large. Please use smaller files.',
   },
   [ErrorTypesEnum.LIMIT_EXCEEDED]: {
@@ -176,6 +199,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Profile update limit exceeded. Please try again later.',
     [SectionEnum.PROFILE_UPDATE]:
       'Profile update limit exceeded. Please try again later.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Password update limit exceeded. Please try again later.',
     [SectionEnum.DEFAULT]: 'Request limit exceeded. Please try again later.',
   },
   [ErrorTypesEnum.USER_INVALID]: {
@@ -186,6 +211,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Account is invalid or suspended. Please contact support.',
     [SectionEnum.PROFILE_UPDATE]:
       'Account is invalid or suspended. Cannot update profile. Please contact support.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'Account is invalid or suspended. Cannot update password. Please contact support.',
     [SectionEnum.DEFAULT]:
       'Account is invalid or suspended. Please contact support.',
   },
@@ -195,6 +222,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'You do not have permission to access this profile.',
     [SectionEnum.PROFILE_UPDATE]:
       'You do not have permission to update this profile.',
+    [SectionEnum.PASSWORD_UPDATE]:
+      'You do not have permission to update your password.',
     [SectionEnum.DEFAULT]:
       'Permission denied. You do not have permission to perform this action.',
   },

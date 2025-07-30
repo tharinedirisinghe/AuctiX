@@ -74,4 +74,14 @@ public interface BidRepository extends JpaRepository<Bid, UUID> {
       )
 """)
     int countActiveAuctionsWhereUserIsOutbid(@Param("userId") UUID userId);
+
+    // BidRepository.java
+    @Query("""
+    SELECT COUNT(b)
+    FROM Bid b
+    WHERE b.bidderId = :userId
+      AND b.auction.isPublic = true
+      AND b.auction.completed = false
+""")
+    int countActiveBidsByUser(@Param("userId") UUID userId);
 }

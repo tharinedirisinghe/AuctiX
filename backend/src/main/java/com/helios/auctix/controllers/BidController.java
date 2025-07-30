@@ -89,12 +89,14 @@ public class BidController {
             int wonAuctions = bidService.countWonAuctions(user.getId());
             int leadingBidAuctions = bidService.countLeadingBidAuctions(user.getId());
             int activeNonLeadingBids = bidService.countActiveOutbidAuctions(user.getId());
+            int activeBids = bidService.countActiveBids(user.getId());
 
             Map<String, Integer> stats = new HashMap<>();
             stats.put("totalBids", totalBids);
             stats.put("wonAuctions", wonAuctions);
             stats.put("leadingBidAuctions", leadingBidAuctions);
             stats.put("activeOutbidAuctions", activeNonLeadingBids);
+            stats.put("activeBids", activeBids);
 
             return ResponseEntity.ok(stats);
         } catch (AuthenticationException e) {

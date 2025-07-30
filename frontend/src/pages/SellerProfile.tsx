@@ -166,7 +166,7 @@ export default function SellerProfile() {
                           ? `${sellerInfo.firstName} ${sellerInfo.lastName}`
                           : 'Loading...'}
                       </h3>
-                      <svg
+                      {/*<svg
                         className="ml-3 w-5 h-5 p-0.5 rounded-full bg-white text-gray-700 font-bold"
                         fill="none"
                         stroke="currentColor"
@@ -178,7 +178,7 @@ export default function SellerProfile() {
                           strokeLinejoin="round"
                           d="M5 13l4 4L19 7"
                         />
-                      </svg>
+                      </svg>*/}
                     </div>
                     <p className="text-sm md:text-base text-gray-300">
                       @{sellerInfo?.username}
@@ -215,7 +215,6 @@ export default function SellerProfile() {
             {['All', 'Ongoing', 'Upcoming', 'Ended'].map((f) => (
               <TabsTrigger key={f} value={f}>
                 {f}
-
               </TabsTrigger>
             ))}
           </TabsList>

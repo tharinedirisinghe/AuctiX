@@ -20,7 +20,7 @@ type ChatRoomProps =
       limitUIHeight?: boolean;
     }
   | {
-      type: 'SUPPORT' | 'DIRECT' | 'GROUP';
+      type: 'SUPPORT' | 'PRIVATE' | 'GROUP';
       chatRoomId: string;
       title?: string;
       limitUIHeight?: boolean;
@@ -78,7 +78,7 @@ const LiveChat = (props: ChatRoomProps) => {
       case 'SUPPORT':
         topicPath = `/topic/chat/support/${chatRoomId}`;
         break;
-      case 'DIRECT':
+      case 'PRIVATE':
         topicPath = `/topic/chat/direct/${chatRoomId}`;
         break;
       case 'GROUP':

@@ -7,6 +7,7 @@ import com.helios.auctix.domain.chat.ChatRoomType;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.ChatMessageDTO;
+import com.helios.auctix.dtos.ChatRoomSearchResultDTO;
 import com.helios.auctix.dtos.SupportChatDTO;
 import com.helios.auctix.mappers.Mapper;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
@@ -119,6 +120,26 @@ public class ChatRestController  {
         ChatRoom supportChat = chatService.getOrCreateSupportChatForUser(user);
         return ResponseEntity.ok(Map.of("id", supportChat.getId()));
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ChatRoomSearchResultDTO>> searchUserChats(
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(defaultValue = "all") String chatRoomType,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "0") int offset
+    ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = null;
+        try {
+            user = userDetailsService.getAuthenticatedUser(authentication);
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        List<ChatRoomSearchResultDTO> results = chatService.searchChats(user.getId(), searchTerm, chatRoomType, limit, offset);
+        return ResponseEntity.ok(results);
+    }
+
 
     @GetMapping("/support/all")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")

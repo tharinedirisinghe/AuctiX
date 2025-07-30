@@ -87,39 +87,43 @@ export function SellerVerificationEvaluationPage() {
   };
 
   return (
-    <div className="py-6 max-w-6xl mx-auto">
+    <div className="py-4 px-4 sm:py-6 sm:px-6 lg:px-8 max-w-6xl mx-auto">
       {/* Back Button */}
       <Button
         variant="ghost"
         onClick={() => navigate(-1)}
-        className="mb-4 text-sm"
+        className="mb-4 text-sm hover:bg-gray-100"
       >
         &larr; Back
       </Button>
 
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          Seller Verification Review
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
+            Seller Verification Review
+          </h1>
           {(isSellerLoading || isVerificationsLoading) && (
-            <Badge className="bg-brandGoldYellow text-gray-900">
+            <Badge className="bg-brandGoldYellow text-gray-900 self-start sm:self-center">
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
               Loading...
             </Badge>
           )}
-        </h1>
-        <p className="text-gray-500 mt-1">
+        </div>
+        <p className="text-gray-500 mt-2 text-sm sm:text-base">
           Review and evaluate seller verification documents
         </p>
       </div>
 
       {/* Profile Section */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-500">Seller Profile</h3>
-          <Separator className="my-4 border-gray-200 border-t-2" />
+          <h3 className="text-base sm:text-lg font-medium text-gray-500">
+            Seller Profile
+          </h3>
+          <Separator className="my-3 sm:my-4 border-gray-200 border-t-2" />
         </div>
-        <div className="p-6 rounded-lg border-l-4 border-l-yellow-500 bg-gray-50">
+        <div className="p-4 sm:p-6 rounded-lg border-l-4 border-l-yellow-500 bg-gray-50">
           <ProfileCard
             isInEditMode={false}
             username={sellerData?.username || ''}
@@ -138,22 +142,22 @@ export function SellerVerificationEvaluationPage() {
       </div>
 
       {/* Document Review Section */}
-      <div className="space-y-6 pt-12">
+      <div className="space-y-4 sm:space-y-6 pt-8 sm:pt-12">
         <div>
-          <h3 className="text-lg font-medium text-gray-500">
+          <h3 className="text-base sm:text-lg font-medium text-gray-500">
             Document Review & Verification
           </h3>
-          <Separator className="my-4 border-gray-200 border-t-2" />
+          <Separator className="my-3 sm:my-4 border-gray-200 border-t-2" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+          <div className="xl:col-span-2 order-2 xl:order-1">
             <DocumentPreviewCard
               sellerUserName={username ? username : null}
               document={selectedDocument}
               onRefresh={refreshVerifications}
             />
           </div>
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1 order-1 xl:order-2">
             <VerificationSubmissionList
               documents={documents}
               isLoading={isVerificationsLoading}

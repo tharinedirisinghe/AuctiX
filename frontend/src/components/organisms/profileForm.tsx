@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, X, Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import {
@@ -37,6 +37,7 @@ import { IUser } from '@/types/IUser';
 import { fetchPendingRequiredActions } from '@/store/slices/requiredActionsSlice';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { getServerErrorMessage, SectionEnum } from '@/lib/errorMsg';
 
 const profileFormSchema = z.object({
   firstName: z
@@ -57,8 +58,8 @@ const profileFormSchema = z.object({
     }),
   bio: z
     .string()
-    .max(160, {
-      message: 'Bio must not be longer than 160 characters.',
+    .max(1600, {
+      message: 'Bio must not be longer than 1600 characters.',
     })
     .min(4, {
       message: 'Bio must be at least 4 characters.',
@@ -207,11 +208,15 @@ export function ProfileForm() {
           .finally(() => {
             setIsProfilePictureLoading(false);
           })
-          .catch(() => {
+          .catch((error) => {
+            const errorMessage = getServerErrorMessage(
+              error,
+              SectionEnum.PROFILE_UPDATE,
+            );
             toast({
               variant: 'destructive',
               title: 'Profile picture not uploaded.',
-              description: 'There was an error uploading your profile picture.',
+              description: errorMessage,
             });
           });
       }
@@ -232,10 +237,14 @@ export function ProfileForm() {
             setIsBannerLoading(false);
           })
           .catch((error) => {
+            const errorMessage = getServerErrorMessage(
+              error,
+              SectionEnum.PROFILE_UPDATE,
+            );
             toast({
               variant: 'destructive',
               title: 'Banner not uploaded.',
-              description: 'Failed to upload banner image. Please try again.',
+              description: errorMessage,
             });
             console.error('Banner image not uploaded.', error);
           });
@@ -256,10 +265,14 @@ export function ProfileForm() {
         dispatch(fetchCurrentUser());
       })
       .catch((error) => {
+        const errorMessage = getServerErrorMessage(
+          error,
+          SectionEnum.PROFILE_UPDATE,
+        );
         toast({
           variant: 'destructive',
           title: 'Banner not deleted.',
-          description: 'Failed to delete banner image. Please try again.',
+          description: errorMessage,
         });
         console.error('Banner image not deleted.', error);
       })
@@ -282,11 +295,15 @@ export function ProfileForm() {
         });
         dispatch(fetchCurrentUser());
       })
-      .catch(() => {
+      .catch((error) => {
+        const errorMessage = getServerErrorMessage(
+          error,
+          SectionEnum.PROFILE_UPDATE,
+        );
         toast({
           variant: 'destructive',
           title: 'Profile picture not deleted.',
-          description: 'There was an error deleting your profile picture.',
+          description: errorMessage,
         });
       });
   }, [axiosInstance, dispatch, toast, userData.username]);
@@ -324,10 +341,14 @@ export function ProfileForm() {
       })
       .catch((err) => {
         console.error('Error updating profile details:', err);
+        const errorMessage = getServerErrorMessage(
+          err,
+          SectionEnum.PROFILE_UPDATE,
+        );
         toast({
           variant: 'destructive',
           title: 'Profile update failed',
-          description: 'There was an error updating your profile details.',
+          description: errorMessage,
         });
       })
       .finally(() => {

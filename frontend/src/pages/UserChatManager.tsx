@@ -14,20 +14,24 @@ export default function UserChatManager() {
   const [openChats, setOpenChats] = useState<OpenChatMetaData[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const urlSelectedChatId = searchParams.get('chatId');
+  const urlSelectedChatId = searchParams.get('id');
+  const urlSelectedChatType = searchParams.get('type');
 
   const [selectedChatId, setSelectedChatId] = useState<string | null>(
     urlSelectedChatId,
   );
+  const [selectedChatType, setSelectedChatType] = useState<string | null>(
+    urlSelectedChatType,
+  );
 
-  // Keep selectedChatId in sync with URL
+  // Keep selectedChatId and selectedChatType in sync with URL
   useEffect(() => {
-    if (selectedChatId) {
-      setSearchParams({ chatId: selectedChatId });
+    if (selectedChatId && selectedChatType) {
+      setSearchParams({ id: selectedChatId, type: selectedChatType });
     } else {
       setSearchParams({});
     }
-  }, [selectedChatId, setSearchParams]);
+  }, [selectedChatId, selectedChatType, setSearchParams]);
 
   const openChat = (
     id: string,
@@ -39,13 +43,18 @@ export default function UserChatManager() {
       setOpenChats((prev) => [...prev, { id, name, type }]);
     }
     setSelectedChatId(id);
+    setSelectedChatType(type);
   };
 
   useEffect(() => {
-    if (urlSelectedChatId && urlSelectedChatId !== selectedChatId) {
+    if (
+      (urlSelectedChatId && urlSelectedChatId !== selectedChatId) ||
+      (urlSelectedChatType && urlSelectedChatType !== selectedChatType)
+    ) {
       setSelectedChatId(urlSelectedChatId);
+      setSelectedChatType(urlSelectedChatType);
     }
-  }, [urlSelectedChatId]);
+  }, [urlSelectedChatId, urlSelectedChatType]);
 
   return (
     <div className="flex h-screen max-h-screen bg-white text-gray-900">
@@ -89,6 +98,7 @@ export default function UserChatManager() {
                 auctionId={chat.id} // auctionId
                 title={chat.name}
                 limitUIHeight={false}
+                isSelected={chat.id === selectedChatId}
               />
             ) : (
               <LiveChat
@@ -96,6 +106,7 @@ export default function UserChatManager() {
                 chatRoomId={chat.id} // chatRoomId
                 title={chat.name}
                 limitUIHeight={false}
+                isSelected={chat.id === selectedChatId}
               />
             )}
           </div>

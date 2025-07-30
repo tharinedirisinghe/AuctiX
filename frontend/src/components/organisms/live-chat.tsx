@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Client, StompHeaders } from '@stomp/stompjs';
+import { useInView } from 'react-intersection-observer';
 import SockJS from 'sockjs-client';
 import { ChatMessageDTO } from '@/types/IChatMessageDTO';
 import { IAuthUser } from '@/types/IAuthUser';
@@ -28,6 +29,11 @@ type ChatRoomProps =
 
 const LiveChat = (props: ChatRoomProps) => {
   const { type, title, limitUIHeight } = props;
+
+  const { ref, inView } = useInView({
+    threshold: 0.4,
+    triggerOnce: false,
+  });
 
   const chatRoomId = type !== 'AUCTION' ? props.chatRoomId : undefined;
   const auctionId = type === 'AUCTION' ? props.auctionId : undefined;
@@ -451,12 +457,17 @@ const LiveChat = (props: ChatRoomProps) => {
     );
   };
 
-  const isTabVisible = () => {
-    return document.visibilityState === 'visible';
-  };
+  const isTabVisible = () => document.visibilityState === 'visible';
+  const isChatVisible = () => inView;
 
   const shouldUpdateLastRead = () => {
-    return isChatScrolledToBottom() && isTabVisible();
+    console.log(
+      'should update last read' +
+        isChatScrolledToBottom() +
+        isTabVisible() +
+        isChatVisible(),
+    );
+    return isChatScrolledToBottom() && isTabVisible() && isChatVisible();
   };
 
   const updateLastReadTimestamp = async () => {
@@ -472,10 +483,9 @@ const LiveChat = (props: ChatRoomProps) => {
     }
   };
 
-  // Auto-trigger on tab focus
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && isChatVisible()) {
         setTimeout(() => {
           updateLastReadTimestamp();
         }, 100);
@@ -483,14 +493,22 @@ const LiveChat = (props: ChatRoomProps) => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
+  // Trigger when inView changes
+  useEffect(() => {
+    if (inView) {
+      updateLastReadTimestamp();
+    }
+  }, [inView]);
+
   return (
     <div className="flex flex-col h-full max-h-screen">
-      <div className="flex items-center justify-between p-2 border-b">
+      <div className="flex items-center justify-between p-2 border-b" ref={ref}>
         <h2 className="font-medium">{title ? title : 'Chat'}</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm">

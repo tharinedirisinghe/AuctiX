@@ -36,8 +36,18 @@ export default function UserChatList({
   const [chatRoomType, setChatRoomType] = useState('ALL');
   const [page, setPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSupportChat, setHasSupportChat] = useState(false);
   const pageSize = 10;
   const [searchParams] = useSearchParams();
+
+  const getOrCreateSupportChat = async () => {
+    const res = await axiosInstance.get('/chat/support');
+    return res.data;
+  };
+
+  useEffect(() => {
+    setHasSupportChat(chats.some((chat) => chat.chatRoomType === 'SUPPORT'));
+  }, [chats]);
 
   const fetchChats = useCallback(
     async (query = '', type = 'ALL', page = 0) => {
@@ -220,6 +230,7 @@ export default function UserChatList({
           onChange={handleSearchChange}
           className="flex-1"
         />
+
         <Select value={chatRoomType} onValueChange={handleChatTypeChange}>
           <SelectTrigger className="w-40">Filter</SelectTrigger>
           <SelectContent>
@@ -246,6 +257,21 @@ export default function UserChatList({
           ))
         )}
       </div>
+
+      {!isLoading && !hasSupportChat && (
+        <div className="mt-4 text-center">
+          <Button
+            onClick={async () => {
+              const created = await getOrCreateSupportChat();
+              await fetchChats(search, chatRoomType, page);
+              handleSelectChat(created, onSelectChat);
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-white"
+          >
+            Create Support Chat
+          </Button>
+        </div>
+      )}
 
       <div className="flex justify-center items-center gap-2 mt-4">
         <Button

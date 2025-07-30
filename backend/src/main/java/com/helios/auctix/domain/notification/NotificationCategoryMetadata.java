@@ -12,4 +12,5 @@ public class NotificationCategoryMetadata {
     private Set<UserRoleEnum> allowedRoles;
     private Set<UserRoleEnum> cannotEditRoles;
     private Set<UserRoleEnum> alwaysHiddenRoles;
+    private Set<UserRoleEnum> bypassSettingsRoles;
 }

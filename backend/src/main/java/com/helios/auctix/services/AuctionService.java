@@ -491,6 +491,8 @@ public class AuctionService {
             auction.setUpdatedAt(Instant.now());
             auctionRepository.save(auction);
 
+
+
             return "Auction deleted successfully. All bid amounts have been unfrozen.";
         } else {
             // If no bids, soft delete immediately (no reason required)

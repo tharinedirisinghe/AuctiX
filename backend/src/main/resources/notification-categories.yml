@@ -3,6 +3,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when an auction you are watching starts"
     title: "Auction Started"
@@ -11,6 +12,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when an auction you are watching ends"
     title: "Auction Completed"
@@ -19,6 +21,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: [BIDDER, SELLER]
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified 10 minutes before an auction you are watching ends"
     title: "Auction Ends soon"
@@ -27,6 +30,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified 10 minutes before an auction you are watching starts"
     title: "Auction Start soon"
@@ -35,6 +39,7 @@ notificationCategories:
     allowedRoles: [BIDDER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when you win an auction"
     title: "You won the auction!"
@@ -43,6 +48,7 @@ notificationCategories:
     allowedRoles: [BIDDER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when details of an auction you're watching change"
     title: "Auction details updated"
@@ -51,6 +57,7 @@ notificationCategories:
     allowedRoles: [BIDDER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified if an auction you're watching is canceled by the seller or admin"
     title: "Auction canceled"
@@ -59,6 +66,7 @@ notificationCategories:
     allowedRoles: [BIDDER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when you're outbid in an auction"
     title: "You've been outbid"
@@ -67,6 +75,7 @@ notificationCategories:
     allowedRoles: [SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when your item has been sold to the highest bidder"
     title: "Item sold"
@@ -75,6 +84,7 @@ notificationCategories:
     allowedRoles: [SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when a new bid is placed on your auction"
     title: "New bid on your auction"
@@ -83,6 +93,7 @@ notificationCategories:
     allowedRoles: [BIDDER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: AUCTION
     description: "Get notified when a new bid is placed on a watched auction"
     title: "New bid on an auction you are watching"
@@ -91,6 +102,7 @@ notificationCategories:
     allowedRoles: [ADMIN, SUPER_ADMIN, BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: DEFAULT
     description: "All other notifications"
     title: "Default Notifications"
@@ -99,6 +111,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: [BIDDER, SELLER]
     cannotEditRoles: [BIDDER, SELLER]
+    bypassSettingsRoles: [BIDDER, SELLER]
     categoryGroup: SYSTEM
     description: "A welcome message when you join the platform"
     title: "Welcome to AuctiX!"
@@ -107,6 +120,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: [BIDDER, SELLER]
     cannotEditRoles: [BIDDER, SELLER]
+    bypassSettingsRoles: [BIDDER, SELLER]
     categoryGroup: SYSTEM
     description: "Your account has been suspended due to policy violations or suspicious activity"
     title: "Account suspended"
@@ -115,6 +129,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: [BIDDER, SELLER]
     cannotEditRoles: [BIDDER, SELLER]
+    bypassSettingsRoles: [BIDDER, SELLER]
     categoryGroup: SYSTEM
     description: "Your suspended account has been reinstated"
     title: "Account reinstated"
@@ -123,6 +138,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: WALLET
     description: "Get notified when your wallet recharge is successful"
     title: "Wallet recharge successful"
@@ -131,6 +147,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: WALLET
     description: "Get notified when your wallet withdraw is successful"
     title: "Wallet withdrawal successful"
@@ -139,6 +156,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: CHAT
     description: "Get notified when you have unread messages in a chat"
     title: "Unread message"
@@ -147,6 +165,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: [BIDDER, SELLER]
     cannotEditRoles: [BIDDER, SELLER]
+    bypassSettingsRoles: [BIDDER, SELLER]
     categoryGroup: CHAT
     description: "Get notified when you have unread messages in your support chat"
     title: "Support message"
@@ -155,6 +174,7 @@ notificationCategories:
     allowedRoles: [BIDDER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: CHAT
     description: "Get notified when you have a new message in an auction you are watching"
     title: "Auction chat update"
@@ -163,6 +183,7 @@ notificationCategories:
     allowedRoles: [SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: CHAT
     description: "Get notified when you have a  message in your auction chat"
     title: "New message from bidder in auction chat"
@@ -171,6 +192,7 @@ notificationCategories:
     allowedRoles: [BIDDER, SELLER]
     alwaysHiddenRoles: []
     cannotEditRoles: []
+    bypassSettingsRoles: []
     categoryGroup: PROMO
     description: "Marketing notifications about promotions, discounts"
     title: "Promotional Notifications"

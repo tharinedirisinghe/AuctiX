@@ -54,6 +54,7 @@ enum ActionType {
   VERIFICATION_DOCS_APPROVE = 'VERIFICATION_DOCS_APPROVE',
   VERIFICATION_DOCS_VIEW = 'VERIFICATION_DOCS_VIEW',
   VERIFICATION_DOCS_REJECT = 'VERIFICATION_DOCS_REJECT',
+  VERIFICATION_DOCS_UPDATE = 'VERIFICATION_DOCS_UPDATE',
 }
 
 const ACTION_TYPE_LABELS = {
@@ -64,6 +65,7 @@ const ACTION_TYPE_LABELS = {
   [ActionType.VERIFICATION_DOCS_APPROVE]: 'Verification Docs Approve',
   [ActionType.VERIFICATION_DOCS_VIEW]: 'Verification Docs View',
   [ActionType.VERIFICATION_DOCS_REJECT]: 'Verification Docs Reject',
+  [ActionType.VERIFICATION_DOCS_UPDATE]: 'Verification Docs Update',
 };
 
 export function ViewAdminActionsLog() {
@@ -140,7 +142,7 @@ export function ViewAdminActionsLog() {
   const handleScroll = useCallback(
     (event: React.UIEvent<HTMLDivElement>) => {
       const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 60;
 
       if (isNearBottom && hasMore && !isLoadingMore && !isLoading) {
         const nextPage = currentPage + 1;
@@ -186,6 +188,8 @@ export function ViewAdminActionsLog() {
         return 'bg-orange-100 text-orange-800';
       case 'USER_PROFILE_PHOTO_REMOVE':
         return 'bg-purple-100 text-purple-800';
+      case 'VERIFICATION_DOCS_UPDATE':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

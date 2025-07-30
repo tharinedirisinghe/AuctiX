@@ -171,7 +171,8 @@ public class AdminController {
     @PostMapping("/banUser")
     public ResponseEntity<String> banUser(
             @RequestParam("username") String targetUserUsername,
-            @RequestParam("reason") String reason
+            @RequestParam("reason") String reason,
+            @RequestParam("duration") SuspentionDurationEnum duration
     ) throws AuthenticationException {
         // Authenticate user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -187,7 +188,7 @@ public class AdminController {
             throw new IllegalArgumentException("Username is the same");
         }
 
-        adminActionService.banUser(targetUserUsername, currentUser, reason, SuspentionDurationEnum.ONE_MONTH); // TODO: give the control to the admin to choose the duration
+        adminActionService.banUser(targetUserUsername, currentUser, reason, duration);
         return ResponseEntity.ok().body("User banned successfully");
 
     }

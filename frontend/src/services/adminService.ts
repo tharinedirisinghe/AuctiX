@@ -44,10 +44,12 @@ export const banUser = async (
   axiosInstance: AxiosInstance,
   username: string,
   reason: string,
+  duration: string,
 ) => {
   const formData = new FormData();
   formData.append('username', username);
   formData.append('reason', reason);
+  formData.append('duration', duration);
 
   const response = await axiosInstance.post('/admin/banUser', formData, {
     headers: {

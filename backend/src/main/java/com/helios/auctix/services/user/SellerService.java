@@ -48,6 +48,7 @@ public class SellerService {
     private final VerificationRequestMapperImpl verificationRequestMapperImpl;
     private final UserDetailsService userDetailsService;
     private final NotificationRepository notificationRepository;
+    private final AdminActionService adminActionService;
 
     public SellerVerificationStatusEnum submitSellerVerifications(User user, MultipartFile[] files) {
         if (user == null) {
@@ -247,18 +248,22 @@ public class SellerService {
         sellerVerificationRequestRepository.save(req);
 
         Seller seller = req.getSeller();
+        Boolean isVerified = seller.isVerified();
 
         seller.setVerified(true);
         sellerRepository.save(seller);
 
-        UserRequiredActionContext context = UserRequiredActionContext.builder()
-                .title("Approved seller")
-                .content("Congratulations! Now you're a verified seller!")
-                .severityLevel(UserRequiredActionSeverityLevelEnum.LOW)
-                .continueUrl("/seller-verification-submit")
-                .canResolve(true)
-                .build();
+        // If the seller was not verified before, we create a user required action to notify them
+        if(!isVerified) {
+            UserRequiredActionContext context = UserRequiredActionContext.builder()
+                    .title("Approved seller")
+                    .content("Congratulations! Now you're a verified seller!")
+                    .severityLevel(UserRequiredActionSeverityLevelEnum.LOW)
+                    .continueUrl("/seller-verification-submit")
+                    .canResolve(true)
+                    .build();
         userDetailsService.registerUserRequiredAction(seller.getUser(),UserRequiredActionEnum.ANNOUNCEMENT_READ, context);
+        }
 
         Notification notification = Notification.builder()
                 .notificationCategory(NotificationCategory.DEFAULT)
@@ -270,6 +275,8 @@ public class SellerService {
 
         notificationRepository.save(notification);
 
+        adminActionService.logAdminAction(currentUser, seller.getUser(), AdminActionsEnum.VERIFICATION_DOCS_APPROVE,
+                "Seller verification request approved by : " + currentUser.getUsername() + "for :"+ sellerUserName + ", request ID: " + requestId + ", note: " + note);
     }
 
     @Transactional
@@ -308,6 +315,8 @@ public class SellerService {
 
         notificationRepository.save(notification);
 
+        adminActionService.logAdminAction(currentUser,seller.getUser(),AdminActionsEnum.VERIFICATION_DOCS_REJECT,
+                "seller :"+sellerUserName+" verification submission was rejected by admin: "+currentUser.getUsername());
     }
 
     public void updateVerificationRequestNote(UUID requestId, String sellerUserName, String note, User currentUser) {
@@ -327,6 +336,9 @@ public class SellerService {
                 .build();
 
         notificationRepository.save(notification);
+
+        adminActionService.logAdminAction(currentUser,user,AdminActionsEnum.VERIFICATION_DOCS_UPDATE,
+                "note: "+note+" was added to seller "+sellerUserName+" seller verification submission"+" by admin: "+currentUser.getUsername());
     }
 
     private SellerVerificationRequest preValidateVerificationRequestsApproval(UUID requestId, String sellerUserName, String note, User currentUser) {

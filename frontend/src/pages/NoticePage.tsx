@@ -4,10 +4,12 @@ import { NoticeContent } from '@/components/molecules/NoticeContent';
 import { MoreInformation } from '@/components/molecules/MoreInformation';
 import { NoticeActions } from '@/components/molecules/NoticeActions';
 import { useEffect, useState } from 'react';
-import { useAppSelector } from '@/hooks/hooks';
+import { useAppSelector, useAppDispatch } from '@/hooks/hooks';
 import { IPendingAction } from '@/types/IPendingAction';
-import { useAppDispatch } from '@/store/hooks';
-import { markAsResolved } from '@/store/slices/requiredActionsSlice';
+import {
+  fetchPendingRequiredActions,
+  markAsResolved,
+} from '@/store/slices/requiredActionsSlice';
 
 interface INoticeData {
   id: string;
@@ -60,6 +62,7 @@ export function NoticePage() {
     console.log('Required action:', id);
     if (id) {
       dispatch(markAsResolved({ id }));
+      dispatch(fetchPendingRequiredActions());
     }
   }, [id, dispatch]);
 

@@ -47,11 +47,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           roles: ['BIDDER'],
         },
         {
+          title: 'Chat',
+          url: '/chat',
+          roles: ['BIDDER', 'SELLER'],
+        },
+        {
           title: 'My Deliveries',
           url: '/user-delivery',
           roles: ['BIDDER'],
         },
-
         {
           title: 'Management',
           items: [

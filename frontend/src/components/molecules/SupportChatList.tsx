@@ -11,6 +11,7 @@ interface SupportChatDTO {
   email: string;
   fullName: string;
   role: string;
+  unreadCount: number;
 }
 
 export default function SupportChatList({
@@ -47,6 +48,15 @@ export default function SupportChatList({
     fetchSupportChats(value, 0);
   };
 
+  useEffect(() => {
+    fetchSupportChats(search, page);
+    const interval = setInterval(() => {
+      fetchSupportChats(search, page);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [search, page]);
+
   return (
     <div className="flex flex-col h-full px-4 py-2">
       <Input
@@ -66,7 +76,7 @@ export default function SupportChatList({
             {supportChats.map((chat) => (
               <Card
                 key={chat.chatId}
-                className="p-3 cursor-pointer hover:bg-gray-100 transition rounded-md shadow-sm"
+                className="p-3 cursor-pointer hover:bg-gray-100 transition rounded-md shadow-sm relative"
                 onClick={() =>
                   onSelectChat(
                     chat.chatId,
@@ -74,6 +84,13 @@ export default function SupportChatList({
                   )
                 }
               >
+                {/* Unread count badge */}
+                {chat.unreadCount > 0 && (
+                  <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow-sm">
+                    {chat.unreadCount} unread
+                  </div>
+                )}
+
                 <p className="font-semibold truncate" title={chat.fullName}>
                   {chat.fullName}{' '}
                   <span className="text-xs text-gray-400">({chat.role})</span>

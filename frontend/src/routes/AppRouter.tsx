@@ -39,6 +39,7 @@ import UserSupportChat from '@/pages/UserSupportChat';
 import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
 import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
 import { SellerVerificationEvaluationPage } from '@/pages/SellerVerificationEvaluationPage';
+import UserChatManager from '@/pages/UserChatManager';
 import ManageBids from '@/pages/ManageBids';
 
 export default function AppRouter() {
@@ -110,6 +111,18 @@ export default function AppRouter() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute
+                allowedUsers={['SELLER', 'BIDDER']}
+                redirectPath="/403"
+              >
+                <UserChatManager />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/notifications/"
             element={

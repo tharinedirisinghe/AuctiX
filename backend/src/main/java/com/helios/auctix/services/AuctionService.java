@@ -473,6 +473,7 @@ public class AuctionService {
         }
 
         if (hasBids) {
+
             try {
                 // Store deletion reason
                 AuctionDeletionRequest deletionRequest = new AuctionDeletionRequest();
@@ -499,6 +500,7 @@ public class AuctionService {
                 log.severe("Failed to delete auction with bids: " + e.getMessage());
                 throw new IllegalStateException("Failed to delete auction and unfreeze bid amounts: " + e.getMessage());
             }
+          
         } else {
             // If no bids, soft delete immediately (no reason required)
             auction.setDeleted(true);

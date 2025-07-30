@@ -96,7 +96,7 @@ public class ChatController {
                 break;
 
             case "SUPPORT":
-            case "DIRECT":
+            case "PRIVATE":
             case "GROUP":
                 // id is chatRoomId here
                 chatRoom = chatRoomRepository.findById(UUID.fromString(id)).orElse(null);

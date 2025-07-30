@@ -1118,7 +1118,6 @@ const AuctionDetailsPage = () => {
           </div>
         </div>
       </div>
-      // Enhanced error display with better styling
       {error && (
         <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-center">

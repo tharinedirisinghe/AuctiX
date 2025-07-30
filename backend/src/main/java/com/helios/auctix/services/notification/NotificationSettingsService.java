@@ -55,6 +55,10 @@ public class NotificationSettingsService {
             return Collections.emptySet();
         }
 
+        if (category.getBypassSettingsRoles().contains(user.getRoleEnum())) {
+            return EnumSet.allOf(NotificationType.class); // send via all types (EMAIL, PUSH)
+        }
+
         try {
 
             // Check the preferences for event categories

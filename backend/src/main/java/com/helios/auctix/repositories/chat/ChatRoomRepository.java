@@ -40,25 +40,47 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
 
     @Query(
         value = """
-        SELECT cr.id AS chatId, u.id AS userId, u.username, u.email, u.first_name, u.last_name, ur.role_name AS role
-        FROM chat_rooms cr
-        JOIN chat_room_participants crp ON cr.id = crp.chat_room_id
-        JOIN users u ON crp.user_id = u.id
-        JOIN user_roles ur ON u.role_id = ur.id
-        JOIN (
-            SELECT cm.chat_room_id, MAX(cm.timestamp) AS latest_timestamp
-            FROM chat_messages cm
-            GROUP BY cm.chat_room_id
-        ) latest ON latest.chat_room_id = cr.id
-        WHERE cr.chat_room_type = 'SUPPORT'
-        AND (ur.role_name = 'SELLER' OR ur.role_name = 'BIDDER')
-        AND (
-            LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :search, '%'))
-        )
-        ORDER BY latest.latest_timestamp DESC
-        LIMIT :limit OFFSET :offset
+            SELECT
+              cr.id AS chatId,
+              u.id AS userId,
+              u.username,
+              u.email,
+              u.first_name,
+              u.last_name,
+              ur.role_name AS role,
+              COALESCE(admin_unread.max_unread_count, 0) AS unreadCount
+            FROM chat_rooms cr
+            JOIN chat_room_participants crp ON cr.id = crp.chat_room_id
+            JOIN users u ON crp.user_id = u.id
+            JOIN user_roles ur ON u.role_id = ur.id
+            JOIN (
+                SELECT cm.chat_room_id, MAX(cm.timestamp) AS latest_timestamp
+                FROM chat_messages cm
+                GROUP BY cm.chat_room_id
+            ) latest ON latest.chat_room_id = cr.id
+            
+            -- Subquery for max unread count among admins in the chat room
+            LEFT JOIN (
+                SELECT
+                    cru.chat_room_id,
+                    MAX(cru.unread_count) AS max_unread_count
+                FROM chat_room_user_unread_status cru
+                JOIN users usr ON cru.user_id = usr.id
+                JOIN user_roles ur ON usr.role_id = ur.id
+                WHERE ur.role_name IN ('ADMIN', 'SUPERADMIN')
+                GROUP BY cru.chat_room_id
+            ) admin_unread ON admin_unread.chat_room_id = cr.id
+            
+            WHERE cr.chat_room_type = 'SUPPORT'
+              AND (ur.role_name = 'SELLER' OR ur.role_name = 'BIDDER')
+              AND (
+                  LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%'))
+                  OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :search, '%'))
+                  OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+            ORDER BY latest.latest_timestamp DESC
+            LIMIT :limit OFFSET :offset
+
         """,
         nativeQuery = true
     )
@@ -82,6 +104,81 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
             @Param("winnerId") UUID winnerId,
             @Param("auctionId") UUID auctionId
     );
+
+
+
+    @Query(value = """
+        SELECT
+            cr.id AS chat_room_id,
+            cr.chat_room_type,
+            cr.auction_id,
+            cr.created_at,
+            cr.updated_at,
+            COALESCE(s.unread_count, 0) AS unread_count,
+            COALESCE(s.notification_count, 0) AS notification_count,
+            a.title AS auction_title,
+            CASE
+                WHEN cr.chat_room_type = 'PRIVATE' THEN u.username
+                ELSE NULL
+            END AS username,
+            u.first_name,
+            u.last_name,
+            ur.role_name AS role,
+            latest.latest_timestamp
+        FROM chat_rooms cr
+        JOIN chat_room_participants p ON cr.id = p.chat_room_id
+        LEFT JOIN chat_room_user_unread_status s ON cr.id = s.chat_room_id AND s.user_id = :userId
+        LEFT JOIN auctions a ON cr.auction_id = a.id
+        LEFT JOIN users u ON u.id = (
+            SELECT p2.user_id
+            FROM chat_room_participants p2
+            WHERE p2.chat_room_id = cr.id AND p2.user_id != :userId
+            LIMIT 1
+        )
+        LEFT JOIN user_roles ur ON u.role_id = ur.id
+        LEFT JOIN (
+            SELECT
+                cm.chat_room_id,
+                MAX(cm.timestamp) AS latest_timestamp
+            FROM chat_messages cm
+            GROUP BY cm.chat_room_id
+        ) latest ON latest.chat_room_id = cr.id
+        WHERE p.user_id = :userId
+          AND (:chatRoomType IS NULL OR cr.chat_room_type = :chatRoomType)
+          AND (
+            :tsQuery IS NULL OR (
+                (cr.chat_room_type IN ('PRIVATE', 'SUPPORT') AND (
+                    LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                    OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                    OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                ))
+                OR
+                (cr.chat_room_type = 'AUCTION' AND a.search_vector @@ to_tsquery('english', :tsQuery))
+            )
+          )
+        GROUP BY
+            cr.id,
+            s.unread_count,
+            s.notification_count,
+            a.title,
+            u.username,
+            u.first_name,
+            u.last_name,
+            ur.role_name,
+            latest.latest_timestamp,
+            cr.chat_room_type
+        ORDER BY latest.latest_timestamp DESC NULLS LAST
+        LIMIT :limit OFFSET :offset
+    """, nativeQuery = true)
+    List<Object[]> searchUserChatRooms(
+            @Param("userId") UUID userId,
+            @Param("searchTerm") String searchTerm,
+            @Param("tsQuery") String tsQuery,
+            @Param("chatRoomType") String chatRoomType,
+            @Param("limit") int limit,
+            @Param("offset") int offset
+    );
+
 
 
 

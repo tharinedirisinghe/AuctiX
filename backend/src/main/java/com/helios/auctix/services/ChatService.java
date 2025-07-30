@@ -9,6 +9,7 @@ import com.helios.auctix.domain.user.Bidder;
 import com.helios.auctix.domain.user.Seller;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.domain.user.UserRoleEnum;
+import com.helios.auctix.dtos.ChatRoomSearchResultDTO;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.chat.ChatMessageRepository;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
@@ -20,8 +21,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Log
 @Service
@@ -212,6 +215,47 @@ public class ChatService {
             statusRepository.save(status);
         }
     }
+
+
+    public List<ChatRoomSearchResultDTO> searchChats(UUID userId, String searchTerm, String chatRoomType, int limit, int offset) {
+        String tsQuery = buildTsQuery(searchTerm);
+
+        if (chatRoomType == null || chatRoomType.isBlank() || "all".equalsIgnoreCase(chatRoomType)) {
+            chatRoomType = null;
+        }
+
+        List<Object[]> rawResults = chatRoomRepository.searchUserChatRooms(userId, searchTerm,  tsQuery, chatRoomType, limit, offset);
+
+        return rawResults.stream().map(row -> {
+            ChatRoomSearchResultDTO dto = new ChatRoomSearchResultDTO();
+            dto.setChatRoomId((UUID) row[0]);
+            dto.setChatRoomType((String) row[1]);
+            dto.setAuctionId((UUID) row[2]);
+            dto.setCreatedAt((Timestamp) row[3]);
+            dto.setUpdatedAt((Timestamp) row[4]);
+            dto.setUnreadCount((Integer) row[5]);
+            dto.setNotificationCount((Integer) row[6]);
+            dto.setAuctionTitle((String) row[7]);
+            dto.setUsername((String) row[8]);
+            dto.setFirstName((String) row[9]);
+            dto.setLastName((String) row[10]);
+            dto.setRole((String) row[11]);
+            return dto;
+        }).toList();
+    }
+
+    private String buildTsQuery(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) {
+            return null;
+        }
+
+        String sanitized = searchTerm.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}\\s]", "");
+        return Arrays.stream(sanitized.trim().split("\\s+"))
+                .filter(word -> !word.isBlank())
+                .map(word -> word + ":*")
+                .collect(Collectors.joining(" & "));
+    }
+
 
 
 

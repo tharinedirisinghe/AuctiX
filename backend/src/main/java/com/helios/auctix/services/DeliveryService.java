@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -444,10 +445,20 @@ public class DeliveryService {
             List<AuctionImagePath> imagePaths = auctionImagePathsRepository.findById_AuctionId(delivery.getAuction().getId());
             logger.info("Found " + imagePaths.size() + " image paths from repository");
             if (!imagePaths.isEmpty()) {
-                UUID firstImageId = imagePaths.get(0).getImageId();
-                String imageUrl = backendUrl + "/auctions/getAuctionImages?file_uuid=" + firstImageId.toString();
-                logger.info("Setting auction image URL: " + imageUrl);
-                dto.setAuctionImage(imageUrl);
+                // Create list of all image URLs
+                List<String> allImageUrls = new ArrayList<>();
+                for (AuctionImagePath imagePath : imagePaths) {
+                    String imageUrl = backendUrl + "/auctions/getAuctionImages?file_uuid=" + imagePath.getImageId().toString();
+                    allImageUrls.add(imageUrl);
+                }
+                
+                // Set all images
+                dto.setAuctionImages(allImageUrls);
+                
+                // Set first image for backward compatibility
+                dto.setAuctionImage(allImageUrls.get(0));
+                
+                logger.info("Setting " + allImageUrls.size() + " auction image URLs. First image: " + allImageUrls.get(0));
             } else {
                 logger.info("No image paths found for auction: " + delivery.getAuction().getId());
             }

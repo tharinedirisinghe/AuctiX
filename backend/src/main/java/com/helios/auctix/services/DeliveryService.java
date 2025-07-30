@@ -428,13 +428,13 @@ public class DeliveryService {
             // Set buyer location
             dto.setBuyerLocation(buyerAddress.getCity() + ", " + buyerAddress.getCountry());
             
-            // If delivery doesn't have address or has placeholder text, use buyer's actual address
-            if (delivery.getDeliveryAddress() == null || 
-                delivery.getDeliveryAddress().contains("Address not provided") ||
-                delivery.getDeliveryAddress().trim().isEmpty()) {
-                
-                String fullAddress = getBuyerDeliveryAddress(delivery.getBuyer());
-                dto.setDeliveryAddress(fullAddress);
+            // Always use the buyer's current address to ensure delivery cards stay updated
+            String currentFullAddress = getBuyerDeliveryAddress(delivery.getBuyer());
+            dto.setDeliveryAddress(currentFullAddress);
+        } else {
+            // If no buyer address exists, use the stored delivery address or default message
+            if (delivery.getDeliveryAddress() == null || delivery.getDeliveryAddress().trim().isEmpty()) {
+                dto.setDeliveryAddress("Address not provided - Please contact buyer for delivery details");
             }
         }
 

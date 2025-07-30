@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
 import AxiosRequest from '@/services/axiosInspector';
 import { useToast } from '@/hooks/use-toast';
-import { getServerErrorMessage } from '@/lib/errorMsg';
+import { getServerErrorMessage, SectionEnum } from '@/lib/errorMsg';
 import SellerVerificationRequestsTable from '@/components/organisms/SellerVerificationDataTable';
 import { getSellerVerificationStats } from '@/services/sellerVerificationService';
 
@@ -30,7 +30,10 @@ export default function SellerVerificationMngPage() {
         console.error('Error fetching verification stats:', error);
         toast({
           title: 'Error fetching verification stats',
-          description: getServerErrorMessage(error),
+          description: getServerErrorMessage(
+            error,
+            SectionEnum.SELLER_VERIFICATION,
+          ),
           variant: 'destructive',
         });
       })

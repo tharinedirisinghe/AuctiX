@@ -20,6 +20,7 @@ export enum SectionEnum {
   PROFILE = 'PROFILE',
   PROFILE_UPDATE = 'PROFILE_UPDATE',
   PASSWORD_UPDATE = 'PASSWORD_UPDATE',
+  SELLER_VERIFICATION = 'SELLER_VERIFICATION',
   DEFAULT = 'DEFAULT',
   // Add other sections as needed
 }
@@ -69,6 +70,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Unable to connect to the server. Please check your internet connection and try updating your profile again.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Unable to connect to the server. Please check your internet connection and try updating your password again.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Unable to connect to the server. Please check your internet connection and try again.',
     [SectionEnum.DEFAULT]:
       'Unable to connect to the server. Please check your internet connection and try again.',
   },
@@ -78,6 +81,7 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'Profile not found.',
     [SectionEnum.PROFILE_UPDATE]: 'Profile update service not found.',
     [SectionEnum.PASSWORD_UPDATE]: 'Password update service not found.',
+    [SectionEnum.SELLER_VERIFICATION]: 'Seller verification service not found.',
     [SectionEnum.DEFAULT]: 'The requested resource was not found.',
   },
   [ErrorTypesEnum.INTERNAL_SERVER_ERROR]: {
@@ -89,6 +93,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Profile update server error. Please try again later.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Password update server error. Please try again later.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Seller verification server error. Please try again later.',
     [SectionEnum.DEFAULT]: 'Server error. Please try again later.',
   },
   [ErrorTypesEnum.FORBIDDEN]: {
@@ -99,6 +105,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'You do not have permission to update this profile.',
     [SectionEnum.PASSWORD_UPDATE]:
       'You do not have permission to update your password.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'You do not have permission to access seller verification data.',
     [SectionEnum.DEFAULT]:
       'Access denied. You do not have permission to perform this action.',
   },
@@ -110,6 +118,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'You are not authorized to update your profile. Please log in again.',
     [SectionEnum.PASSWORD_UPDATE]:
       'You are not authorized to update your password. Please log in again.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'You are not authorized to access seller verification data. Please log in again.',
     [SectionEnum.DEFAULT]: 'You are not authorized to perform this action.',
   },
   [ErrorTypesEnum.BAD_REQUEST]: {
@@ -122,6 +132,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Invalid profile information. Please check your input and try again.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Invalid password information. Please check your current password and try again.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Invalid request data. Please check your input and try again.',
     [SectionEnum.DEFAULT]:
       'Invalid information provided. Please check your input.',
   },
@@ -134,6 +146,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Profile update server error. Please try again later.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Password update server error. Please try again later.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Seller verification server error. Please try again later.',
     [SectionEnum.DEFAULT]: 'Internal server error. Please try again later.',
   },
   [ErrorTypesEnum.AUTH_FAILED]: {
@@ -145,6 +159,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Authentication failed during profile update. Please log in again.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Authentication failed during password update. Please log in again.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Authentication failed while accessing seller verification data. Please log in again.',
     [SectionEnum.DEFAULT]: 'Authentication failed. Please log in again.',
   },
   [ErrorTypesEnum.USER_NOT_FOUND]: {
@@ -153,6 +169,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
     [SectionEnum.PROFILE]: 'User profile not found.',
     [SectionEnum.PROFILE_UPDATE]: 'User not found. Unable to update profile.',
     [SectionEnum.PASSWORD_UPDATE]: 'User not found. Unable to update password.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'User not found. Unable to access seller verification data.',
     [SectionEnum.DEFAULT]: 'User not found.',
   },
   [ErrorTypesEnum.ILLEGAL_ARGUMENT]: {
@@ -166,6 +184,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Invalid profile data provided. Please check your information.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Invalid password data provided. Please check your current password and new password.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Invalid seller verification data provided. Please check your information.',
     [SectionEnum.DEFAULT]:
       'Invalid input provided. Please check your information.',
   },
@@ -178,6 +198,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Too many files uploaded during profile update. Please reduce the number of files.',
     [SectionEnum.PASSWORD_UPDATE]:
       'File upload not supported for password updates.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Too many files uploaded for seller verification. Please reduce the number of files.',
     [SectionEnum.DEFAULT]:
       'Too many files uploaded. Please reduce the number of files.',
   },
@@ -189,6 +211,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'File size too large during profile update. Please use smaller files.',
     [SectionEnum.PASSWORD_UPDATE]:
       'File upload not supported for password updates.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'File size too large for seller verification. Please use smaller files.',
     [SectionEnum.DEFAULT]: 'File size too large. Please use smaller files.',
   },
   [ErrorTypesEnum.LIMIT_EXCEEDED]: {
@@ -201,6 +225,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Profile update limit exceeded. Please try again later.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Password update limit exceeded. Please try again later.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Seller verification request limit exceeded. Please try again later.',
     [SectionEnum.DEFAULT]: 'Request limit exceeded. Please try again later.',
   },
   [ErrorTypesEnum.USER_INVALID]: {
@@ -213,6 +239,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'Account is invalid or suspended. Cannot update profile. Please contact support.',
     [SectionEnum.PASSWORD_UPDATE]:
       'Account is invalid or suspended. Cannot update password. Please contact support.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'Account is invalid or suspended. Cannot access seller verification data. Please contact support.',
     [SectionEnum.DEFAULT]:
       'Account is invalid or suspended. Please contact support.',
   },
@@ -224,6 +252,8 @@ const errorMapper: Record<ErrorTypesEnum, Record<SectionEnum, string>> = {
       'You do not have permission to update this profile.',
     [SectionEnum.PASSWORD_UPDATE]:
       'You do not have permission to update your password.',
+    [SectionEnum.SELLER_VERIFICATION]:
+      'You do not have permission to access seller verification data.',
     [SectionEnum.DEFAULT]:
       'Permission denied. You do not have permission to perform this action.',
   },

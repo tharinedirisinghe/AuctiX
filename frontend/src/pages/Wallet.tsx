@@ -168,7 +168,7 @@ const WalletPage: React.FC = () => {
           // Handle possible null or undefined transaction status
           if (!transaction.status) return false;
 
-          // Simplified status filtering - works directly with the raw status
+          // Simplified status filtering - works directly with the raw staus value
           const filterValue = statusFilter.toLowerCase().trim();
 
           if (filterValue === 'success') {
@@ -487,256 +487,268 @@ const WalletPage: React.FC = () => {
               <div>
                 {/* Transactions Section */}
                 <div className="border-b border-gray-200 p-4">
-                  <h2 className="text-lg font-medium text-gray-800">Transactions</h2>
+                  <h2 className="text-lg font-medium text-gray-800">
+                    Transactions
+                  </h2>
                 </div>
 
-          {/* Search and Filters */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="relative w-full sm:w-64">
-                <input
-                  type="text"
-                  placeholder="Search transactions"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="border border-gray-200 rounded pl-9 pr-3 py-1.5 text-sm w-full focus:outline-none focus:border-amber-500"
-                />
-                <Search className="absolute left-3 top-2 text-gray-400 w-4 h-4" />
-              </div>
+                {/* Search and Filters */}
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <div className="relative w-full sm:w-64">
+                      <input
+                        type="text"
+                        placeholder="Search transactions"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="border border-gray-200 rounded pl-9 pr-3 py-1.5 text-sm w-full focus:outline-none focus:border-amber-500"
+                      />
+                      <Search className="absolute left-3 top-2 text-gray-400 w-4 h-4" />
+                    </div>
 
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <Filter className="w-3.5 h-3.5" />
-                Filters
-              </button>
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                      Filters
+                    </button>
 
-              <div className="flex-grow"></div>
+                    <div className="flex-grow"></div>
 
-              <select
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
-              >
-                <option value={5}>5 per page</option>
-                <option value={10}>10 per page</option>
-                <option value={20}>20 per page</option>
-                <option value={50}>50 per page</option>
-              </select>
-            </div>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                      className="border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+                    >
+                      <option value={5}>5 per page</option>
+                      <option value={10}>10 per page</option>
+                      <option value={20}>20 per page</option>
+                      <option value={50}>50 per page</option>
+                    </select>
+                  </div>
 
-            {/* Filter options */}
-            {showFilters && (
-              <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Transaction Type
-                  </label>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="credit">Credit</option>
-                    <option value="debit">Debit</option>
-                    <option value="frozen">Frozen</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="success">Success</option>
-                    <option value="failed">Failed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Date
-                  </label>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="last7days">Last 7 Days</option>
-                    <option value="last30days">Last 30 Days</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-3">
-                  <button
-                    onClick={resetFilters}
-                    className="text-amber-600 hover:text-amber-700 text-sm"
-                  >
-                    Reset Filters
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Transaction Table */}
-          {isLoading ? (
-            <div className="p-8 flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-600"></div>
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No transactions found
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-fixed">
-                <thead>
-                  <tr className="text-xs text-gray-600 text-left bg-gray-50 border-b border-gray-200">
-                    <th className="w-20 sm:w-32 p-3 pl-4 font-medium">ID</th>
-                    <th className="w-20 sm:w-24 p-3 font-medium">Date</th>
-                    <th className="w-16 sm:w-20 p-3 font-medium">Type</th>
-                    <th className="w-16 sm:w-24 p-3 font-medium">Status</th>
-                    <th className="w-24 sm:w-40 p-3 font-medium">
-                      Description
-                    </th>
-                    <th className="w-20 sm:w-24 p-3 font-medium text-right">
-                      Amount
-                    </th>
-                    <th className="w-16 p-3 font-medium text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs divide-y divide-gray-200">
-                  {currentTransactions.map((transaction, index) => {
-                    const type = getTransactionType(transaction.status);
-                    const status = getStatusDisplay(transaction.status);
-
-                    // Determine the color for the transaction type
-                    let typeClassName = '';
-                    if (
-                      transaction.status === 'CREDITED' ||
-                      transaction.status === 'UNFREEZED'
-                    ) {
-                      typeClassName = 'text-green-600 font-medium';
-                    } else if (transaction.status === 'FREEZED') {
-                      typeClassName = 'text-amber-600 font-medium';
-                    } else if (
-                      transaction.status === 'DEBITED' ||
-                      transaction.status === 'COMPLETED'
-                    ) {
-                      typeClassName = 'text-red-600 font-medium';
-                    } else {
-                      typeClassName = 'text-gray-600 font-medium';
-                    }
-
-                    return (
-                      <tr
-                        key={index}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <td
-                          className="p-3 pl-4 font-mono text-xs truncate"
-                          title={transaction.id}
+                  {/* Filter options */}
+                  {showFilters && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Transaction Type
+                        </label>
+                        <select
+                          value={typeFilter}
+                          onChange={(e) => setTypeFilter(e.target.value)}
+                          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
                         >
-                          {transaction.id.substring(0, 8)}...
-                        </td>
-                        <td className="p-3">
-                          {transaction.transactionDate
-                            ? new Date(
-                                transaction.transactionDate,
-                              ).toLocaleDateString()
-                            : '-'}
-                        </td>
-                        <td className="p-3">
-                          <span className={typeClassName}>{type}</span>
-                        </td>
-                        <td className="p-3">
-                          <span
-                            className={`px-2 py-0.5 rounded-full ${status.className} text-xs`}
-                          >
-                            {status.text}
-                          </span>
-                        </td>
-                        <td
-                          className="p-3 truncate"
-                          title={transaction.description || '-'}
+                          <option value="all">All Types</option>
+                          <option value="credit">Credit</option>
+                          <option value="debit">Debit</option>
+                          <option value="frozen">Frozen</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Status
+                        </label>
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
                         >
-                          {transaction.description
-                            ? transaction.description.length > 20
-                              ? transaction.description.substring(0, 20) + '...'
-                              : transaction.description
-                            : '-'}
-                        </td>
-                        <td className="p-3 text-right font-medium">
-                          {Number(transaction.amount).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                          })}
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const type = getTransactionType(
-                                transaction.status,
-                              );
-                              setSelectedTransaction({
-                                ...transaction,
-                                type,
-                              });
-                              setShowTransactionDetails(true);
-                            }}
-                            className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
-                            title="View transaction details"
-                          >
-                            <Eye className="w-3 h-3 mr-1" />
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                          <option value="all">All Statuses</option>
+                          <option value="success">Success</option>
+                          <option value="failed">Failed</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Date
+                        </label>
+                        <select
+                          value={dateFilter}
+                          onChange={(e) => setDateFilter(e.target.value)}
+                          className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+                        >
+                          <option value="all">All Time</option>
+                          <option value="today">Today</option>
+                          <option value="yesterday">Yesterday</option>
+                          <option value="last7days">Last 7 Days</option>
+                          <option value="last30days">Last 30 Days</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-3">
+                        <button
+                          onClick={resetFilters}
+                          className="text-amber-600 hover:text-amber-700 text-sm"
+                        >
+                          Reset Filters
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-          {/* Pagination controls - Simplified */}
-          <div className="p-3 border-t border-gray-200 flex flex-wrap justify-between items-center gap-2 text-xs text-gray-600">
-            <div className="text-gray-500">
-              Showing {currentTransactions.length} of{' '}
-              {filteredTransactions.length} transaction(s)
-            </div>
+                {/* Transaction Table */}
+                {isLoading ? (
+                  <div className="p-8 flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-600"></div>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    No transactions found
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full table-fixed">
+                      <thead>
+                        <tr className="text-xs text-gray-600 text-left bg-gray-50 border-b border-gray-200">
+                          <th className="w-20 sm:w-32 p-3 pl-4 font-medium">
+                            ID
+                          </th>
+                          <th className="w-20 sm:w-24 p-3 font-medium">Date</th>
+                          <th className="w-16 sm:w-20 p-3 font-medium">Type</th>
+                          <th className="w-16 sm:w-24 p-3 font-medium">
+                            Status
+                          </th>
+                          <th className="w-24 sm:w-40 p-3 font-medium">
+                            Description
+                          </th>
+                          <th className="w-20 sm:w-24 p-3 font-medium text-right">
+                            Amount
+                          </th>
+                          <th className="w-16 p-3 font-medium text-center">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-xs divide-y divide-gray-200">
+                        {currentTransactions.map((transaction, index) => {
+                          const type = getTransactionType(transaction.status);
+                          const status = getStatusDisplay(transaction.status);
 
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={goToPreviousPage}
-                disabled={currentPage === 1}
-                className={`flex items-center justify-center w-7 h-7 rounded border border-gray-200 ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
+                          // Determine the color for the transaction type
+                          let typeClassName = '';
+                          if (
+                            transaction.status === 'CREDITED' ||
+                            transaction.status === 'UNFREEZED'
+                          ) {
+                            typeClassName = 'text-green-600 font-medium';
+                          } else if (transaction.status === 'FREEZED') {
+                            typeClassName = 'text-amber-600 font-medium';
+                          } else if (
+                            transaction.status === 'DEBITED' ||
+                            transaction.status === 'COMPLETED'
+                          ) {
+                            typeClassName = 'text-red-600 font-medium';
+                          } else {
+                            typeClassName = 'text-gray-600 font-medium';
+                          }
 
-              <span className="px-2">
-                Page {currentPage} of {totalPages || 1}
-              </span>
+                          return (
+                            <tr
+                              key={index}
+                              className="hover:bg-gray-50 transition-colors"
+                            >
+                              <td
+                                className="p-3 pl-4 font-mono text-xs truncate"
+                                title={transaction.id}
+                              >
+                                {transaction.id.substring(0, 8)}...
+                              </td>
+                              <td className="p-3">
+                                {transaction.transactionDate
+                                  ? new Date(
+                                      transaction.transactionDate,
+                                    ).toLocaleDateString()
+                                  : '-'}
+                              </td>
+                              <td className="p-3">
+                                <span className={typeClassName}>{type}</span>
+                              </td>
+                              <td className="p-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded-full ${status.className} text-xs`}
+                                >
+                                  {status.text}
+                                </span>
+                              </td>
+                              <td
+                                className="p-3 truncate"
+                                title={transaction.description || '-'}
+                              >
+                                {transaction.description
+                                  ? transaction.description.length > 20
+                                    ? transaction.description.substring(0, 20) +
+                                      '...'
+                                    : transaction.description
+                                  : '-'}
+                              </td>
+                              <td className="p-3 text-right font-medium">
+                                {Number(transaction.amount).toLocaleString(
+                                  'en-US',
+                                  {
+                                    minimumFractionDigits: 2,
+                                  },
+                                )}
+                              </td>
+                              <td className="p-3 text-center">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const type = getTransactionType(
+                                      transaction.status,
+                                    );
+                                    setSelectedTransaction({
+                                      ...transaction,
+                                      type,
+                                    });
+                                    setShowTransactionDetails(true);
+                                  }}
+                                  className="inline-flex items-center px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                                  title="View transaction details"
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-              <button
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className={`flex items-center justify-center w-7 h-7 rounded border border-gray-200 ${currentPage === totalPages || totalPages === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-50'}`}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+                {/* Pagination controls - Simplified */}
+                <div className="p-3 border-t border-gray-200 flex flex-wrap justify-between items-center gap-2 text-xs text-gray-600">
+                  <div className="text-gray-500">
+                    Showing {currentTransactions.length} of{' '}
+                    {filteredTransactions.length} transaction(s)
+                  </div>
+
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={goToPreviousPage}
+                      disabled={currentPage === 1}
+                      className={`flex items-center justify-center w-7 h-7 rounded border border-gray-200 ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <span className="px-2">
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className={`flex items-center justify-center w-7 h-7 rounded border border-gray-200 ${currentPage === totalPages || totalPages === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

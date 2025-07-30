@@ -329,6 +329,8 @@ private final UserRepository userRepository;
             log.info("No required action {} found for user: {}", id, user.getUsername());
             return;
         }
+        requiredAction.setResolved(true);
+        userRequiredActionRepository.save(requiredAction);
     }
 
     public UserServiceResponse changePassword(User currentUser, String oldPassword, String newPassword) {

@@ -20,18 +20,19 @@ export default function AdminTools() {
   const { toast } = useToast();
   const adminTools = useAppSelector((state) => state.adminTools);
 
-  const banUserHandler = (reason: string) => {
+  const banUserHandler = (reason: string, duration: string) => {
     console.log(
       'Banning user:',
       adminTools?.selectedUsername,
       'Reason:',
       reason,
+      duration,
     );
     if (!adminTools?.selectedUsername) {
       console.error('No user selected for banning');
       return;
     }
-    banUser(axiosInstance, adminTools.selectedUsername, reason)
+    banUser(axiosInstance, adminTools.selectedUsername, reason, duration)
       .then((response) => {
         console.log('User banned successfully:', response);
         toast({

@@ -65,23 +65,23 @@ export const markAsResolved = createAsyncThunk(
     try {
       const baseURL = import.meta.env.VITE_API_URL;
       const authUser = (getState() as any).auth as IAuthUser;
-      const response = await axios.post(
-        `${baseURL}/user/markActionAsResolved`,
-        {
-          id: payload.id,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authUser?.token}`,
+      const response = await axios
+        .post(
+          `${baseURL}/user/markActionAsResolved?id=${payload.id}`,
+          {},
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authUser?.token}`,
+            },
           },
-        },
-      );
-      console.log('Announcement marked as resolved:', response.data);
-      if (!response.data) {
-        return rejectWithValue('Failed to mark announcement as resolved');
-      }
-      return response.data;
+        )
+        .then((res) => res.data)
+        .catch((err) => {
+          console.error('Error marking action as resolved:', err);
+          return rejectWithValue('Failed to mark announcement as resolved');
+        });
+      return response;
     } catch (error: any) {
       if (error.response?.status === 401) {
         console.error('Unauthorized! logging out...');
@@ -112,8 +112,8 @@ const requiredActionsSlice = createSlice({
             actionType: recode.actionType || null,
             context:
               typeof recode.context === 'string'
-                ? JSON.parse(recode.context)
-                : recode.context,
+                ? { ...JSON.parse(recode.context), id: recode.id }
+                : { ...recode.context, id: recode.id },
             resolvedAt: recode.resolvedAt || null,
             createdAt: recode.createdAt || null,
             resolved: recode.resolved,

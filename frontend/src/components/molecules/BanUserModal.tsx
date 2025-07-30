@@ -23,6 +23,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -51,12 +58,26 @@ const quickMessages = [
   },
 ];
 
+// Ban duration options
+const banDurations = [
+  { label: '1 Day', value: 'ONE_DAY' },
+  { label: '3 Days', value: 'THREE_DAYS' },
+  { label: '1 Week', value: 'ONE_WEEK' },
+  { label: '2 Weeks', value: 'TWO_WEEKS' },
+  { label: '1 Month', value: 'ONE_MONTH' },
+  { label: '3 Months', value: 'THREE_MONTHS' },
+  { label: '6 Months', value: 'SIX_MONTHS' },
+  { label: '1 Year', value: 'ONE_YEAR' },
+  { label: 'Permanent', value: 'PERMANENT' },
+];
+
 // Zod schema for form validation
 const banFormSchema = z.object({
   reason: z
     .string()
     .min(10, { message: 'Ban reason must be at least 10 characters' })
     .max(500, { message: 'Ban reason cannot exceed 500 characters' }),
+  duration: z.string().min(1, { message: 'Please select a ban duration' }),
 });
 
 type BanFormValues = z.infer<typeof banFormSchema>;
@@ -64,7 +85,7 @@ type BanFormValues = z.infer<typeof banFormSchema>;
 interface BanUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (userId: string, reason: string) => void;
+  onConfirm: (reason: string, duration: string) => void;
   username: string;
 }
 
@@ -83,6 +104,7 @@ export function BanUserModal({
     resolver: zodResolver(banFormSchema),
     defaultValues: {
       reason: '',
+      duration: '',
     },
   });
 
@@ -120,7 +142,7 @@ export function BanUserModal({
     }
     setIsSubmitting(true);
     try {
-      await onConfirm(user.username, data.reason);
+      await onConfirm(data.reason, data.duration);
       form.reset();
       onClose();
     } catch (error) {
@@ -238,6 +260,37 @@ export function BanUserModal({
                         onSubmit={form.handleSubmit(onSubmit)}
                         className="space-y-4"
                       >
+                        <FormField
+                          control={form.control}
+                          name="duration"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ban Duration</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select ban duration" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {banDurations.map((duration) => (
+                                    <SelectItem
+                                      key={duration.value}
+                                      value={duration.value}
+                                    >
+                                      {duration.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
                         <FormField
                           control={form.control}
                           name="reason"

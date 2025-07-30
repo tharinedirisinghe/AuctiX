@@ -183,6 +183,24 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
+    error: (title: string, description?: string) =>
+      toast({
+        title,
+        description,
+        variant: 'destructive',
+      }),
+    warning: (title: string, description?: string) =>
+      toast({
+        title,
+        description,
+        variant: 'warning',
+      }),
+    info: (title: string, description?: string) =>
+      toast({
+        title,
+        description,
+        variant: 'default',
+      }),
   };
 }
 

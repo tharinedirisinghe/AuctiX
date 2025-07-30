@@ -6,7 +6,9 @@ import com.helios.auctix.dtos.AdminDTO;
 import com.helios.auctix.dtos.UploadDTO;
 import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.dtos.UserRoleDTO;
+import com.helios.auctix.dtos.UserSocialMediaLinkDTO;
 import com.helios.auctix.mappers.Mapper;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
@@ -22,6 +24,7 @@ public class UserMapperImpl implements Mapper<User, UserDTO> {
     private final UserRoleMapperImpl userRoleMapper;
     private final UploadMapperImpl uploadMapper;
     private final UserAddresseMapperImpl userAddressMapper;
+    private final UserSocialMediaLinkMapperImpl userSocialMediaLinkMapper;
 
 
     @Override
@@ -79,6 +82,13 @@ public class UserMapperImpl implements Mapper<User, UserDTO> {
         } else {
             userDTO.setUserAddress(null);
         }
+        userDTO.setBio(user.getBio());
+        userDTO.setEmailVerified(user.isEmailVerified());
+        if(user.getSocialMediaLinks() != null) {
+            userDTO.setSocialMediaLinks(user.getSocialMediaLinks().stream().map(userSocialMediaLinkMapper::mapTo).collect(Collectors.toList()));
+        } else {
+            userDTO.setSocialMediaLinks(null);
+        }
 
         return userDTO;
     }
@@ -98,7 +108,9 @@ public class UserMapperImpl implements Mapper<User, UserDTO> {
                 .email(userDTO.getEmail())
                 .firstName(userDTO.getFirstName())
                 .lastName(userDTO.getLastName())
-//                .isProfileComplete(userDTO.isProfileComplete())
+                .bio(userDTO.getBio())
+                .emailVerified(userDTO.isEmailVerified())
+                // Social media links mapping from DTO to entity is not handled here (requires user context)
                 .role(userRole)
                 .admin(admin)
                 .bidder(bidder)

@@ -94,4 +94,18 @@ public class User {
 
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private NotificationGlobalPreference notificationGlobalPreference;
+
+    @Column(name = "bio")
+    private String bio;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<UserSocialMediaLink> socialMediaLinks;
 }

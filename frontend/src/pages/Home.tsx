@@ -9,8 +9,23 @@ import {
 import { Link } from 'react-router-dom';
 import { Textarea } from '@/components/ui/textarea';
 import { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import AuctionCard from '@/components/molecules/auctionCard';
 
 export default function Home(): ReactNode {
+  const [latestAuctions, setLatestAuctions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/auctions/all?limit=8')
+      .then((res) => res.json())
+      .then((data) => {
+        setLatestAuctions(data.content || data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
   return (
     <div>
       <div>
@@ -65,6 +80,40 @@ export default function Home(): ReactNode {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="max-w-5xl mx-auto px-5 py-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold text-gray-900">
+              Latest Auctions
+            </h2>
+            <Link to="/explore-auctions">
+              <Button className="px-6">View All</Button>
+            </Link>
+          </div>
+          {loading ? (
+            <div className="text-center py-10 text-gray-500">
+              Loading auctions...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {latestAuctions.map((auction) => (
+                <AuctionCard
+                  key={auction.id}
+                  imageUrl={auction.imageUrl}
+                  productName={auction.productName || auction.title}
+                  category={auction.category}
+                  sellerName={auction.sellerName || 'Unknown'}
+                  sellerAvatar={auction.sellerAvatar || ''}
+                  startingPrice={
+                    auction.startingPrice || auction.currentPrice || '0'
+                  }
+                  startTime={auction.startTime}
+                  endTime={auction.endTime}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <div className="max-w-4xl mx-auto text-center px-5 py-20 pt-36">

@@ -234,5 +234,12 @@ public interface AuctionRepository extends JpaRepository<Auction, UUID> {
     );
 
 
+    @Query(value = """
+    SELECT COUNT(*)
+    FROM auctions a
+    JOIN bids b ON a.winning_bid_id = b.id
+    WHERE b.bidder_id = CAST(:userId AS UUID)
+""", nativeQuery = true)
+    int countAuctionsWonByUser(@Param("userId") UUID userId);
 
 }

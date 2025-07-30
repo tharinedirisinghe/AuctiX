@@ -21,8 +21,8 @@ public class Feedback {
     private UUID id;
 
     // Nullable for guests
-    @Column(name = "user_id", nullable = true)
-    private UUID userId;
+    @Column(name = "username", nullable = true)
+    private String username;
 
     @Column(name = "rating", nullable = false)
     @NotNull

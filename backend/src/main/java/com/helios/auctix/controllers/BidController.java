@@ -79,6 +79,32 @@ public class BidController {
         }
     }
 
+    @GetMapping("/my-stats")
+    public ResponseEntity<Map<String, Integer>> getMyBidStats() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = userDetailsService.getAuthenticatedUser(authentication);
+
+            int totalBids = bidService.countTotalBids(user.getId());
+            int wonAuctions = bidService.countWonAuctions(user.getId());
+            int leadingBidAuctions = bidService.countLeadingBidAuctions(user.getId());
+            int activeNonLeadingBids = bidService.countActiveOutbidAuctions(user.getId());
+
+            Map<String, Integer> stats = new HashMap<>();
+            stats.put("totalBids", totalBids);
+            stats.put("wonAuctions", wonAuctions);
+            stats.put("leadingBidAuctions", leadingBidAuctions);
+            stats.put("activeOutbidAuctions", activeNonLeadingBids);
+
+            return ResponseEntity.ok(stats);
+        } catch (AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (Exception e) {
+            log.warning("Error fetching bid stats: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
 
     //to place new bids
     @PostMapping("/place")

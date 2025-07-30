@@ -72,7 +72,7 @@ public class BidService {
                 .amount(bid.getAmount())
                 .bidTime(bid.getBidTime())
                 .createdAt(bid.getCreatedAt())
-                .bidder(bidderDto) // ✅ include full bidder
+                .bidder(bidderDto)
                 .build();
     }
 
@@ -282,6 +282,26 @@ public class BidService {
 
         return bidDTO;
 
+    }
+
+    public int countTotalBids(UUID userId) {
+
+        return bidRepository.countByBidderId(userId);
+    }
+
+    public int countWonAuctions(UUID userId) {
+
+        return auctionRepository.countAuctionsWonByUser(userId);
+    }
+
+    public int countLeadingBidAuctions(UUID userId) {
+
+        return bidRepository.countActiveAuctionsWhereUserIsHighestBidder(userId);
+    }
+
+    public int countActiveOutbidAuctions(UUID userId) {
+
+        return bidRepository.countActiveAuctionsWhereUserIsOutbid(userId);
     }
 
     // Helper method to calculate minimum increment

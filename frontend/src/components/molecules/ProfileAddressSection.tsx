@@ -26,9 +26,22 @@ import {
 } from '@/components/ui/popover';
 import { useState } from 'react';
 
-// Define the interface directly without using z
+// Define the address form data interface
+export interface AddressFormData {
+  address: {
+    addressNumber?: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+}
+
+// Define the interface for the component props
 interface AddressSectionProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<AddressFormData>;
 }
 
 // List of countries for the combobox
@@ -257,7 +270,105 @@ export function AddressSection({ form }: AddressSectionProps) {
             <FormItem className="flex flex-col">
               <FormLabel>House/Building Number</FormLabel>
               <FormControl>
-                <Input placeholder="123" {...field} />
+                <Input 
+                  placeholder="123" 
+                  maxLength={20}
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="address.addressLine1"
+          render={({ field }) => (
+            <FormItem className="col-span-1 md:col-span-2">
+              <FormLabel>Address Line 1 <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Street address" 
+                  minLength={3}
+                  maxLength={100}
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="address.addressLine2"
+          render={({ field }) => (
+            <FormItem className="col-span-1 md:col-span-2">
+              <FormLabel>Address Line 2 (Optional)</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Apartment, suite, unit, etc." 
+                  maxLength={100}
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="address.city"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>City <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="City" 
+                  minLength={2}
+                  maxLength={50}
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="address.state"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>State/Province <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="State or Province" 
+                  minLength={2}
+                  maxLength={50}
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="address.postalCode"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Postal Code <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Postal/ZIP code" 
+                  minLength={3}
+                  maxLength={20}
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -269,7 +380,7 @@ export function AddressSection({ form }: AddressSectionProps) {
           name="address.country"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Country</FormLabel>
+              <FormLabel>Country <span className="text-red-500">*</span></FormLabel>
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -322,34 +433,6 @@ export function AddressSection({ form }: AddressSectionProps) {
                   </Command>
                 </PopoverContent>
               </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="address.addressLine1"
-          render={({ field }) => (
-            <FormItem className="col-span-1 md:col-span-2">
-              <FormLabel>Address Line 1</FormLabel>
-              <FormControl>
-                <Input placeholder="Street address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="address.addressLine2"
-          render={({ field }) => (
-            <FormItem className="col-span-1 md:col-span-2">
-              <FormLabel>Address Line 2 (Optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="Apartment, suite, unit, etc." {...field} />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}

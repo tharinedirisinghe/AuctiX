@@ -172,7 +172,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
 
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row gap-2 self-center">
-            {onContactBuyer && (
+            {/* {onContactBuyer && (
               <Button
                 variant="outline"
                 className="whitespace-nowrap flex items-center border-blue-300 text-blue-600 hover:bg-blue-50"
@@ -182,7 +182,7 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
                 <MessageCircle className="mr-1.5 h-4 w-4" />
                 Contact Buyer
               </Button>
-            )}
+            )} */}
             
             <Button
               variant="outline"

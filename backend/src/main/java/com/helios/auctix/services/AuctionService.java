@@ -22,6 +22,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
@@ -454,6 +455,7 @@ public class AuctionService {
     /**
      * Delete an auction with bid restrictions
      */
+    @Transactional
     public String deleteAuction(UUID auctionId, boolean hasBids, String deletionReason, UUID sellerId) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
@@ -471,27 +473,32 @@ public class AuctionService {
         }
 
         if (hasBids) {
-            // Store deletion reason
-            AuctionDeletionRequest deletionRequest = new AuctionDeletionRequest();
-            deletionRequest.setAuctionId(auctionId);
-            deletionRequest.setSellerId(sellerId);
-            deletionRequest.setDeletionReason(deletionReason);
-            deletionRequest.setStatus("PROCESSED"); // Mark as processed since we're deleting immediately
-            deletionRequest.setProcessedAt(Instant.now());
-            deletionRequestRepository.save(deletionRequest);
+            try {
+                // Store deletion reason
+                AuctionDeletionRequest deletionRequest = new AuctionDeletionRequest();
+                deletionRequest.setAuctionId(auctionId);
+                deletionRequest.setSellerId(sellerId);
+                deletionRequest.setDeletionReason(deletionReason);
+                deletionRequest.setStatus("PROCESSED"); // Mark as processed since we're deleting immediately
+                deletionRequest.setProcessedAt(Instant.now());
+                deletionRequestRepository.save(deletionRequest);
 
-            // Unfreeze all bid amounts for this auction
-//            bidService.unfreezeAllBidsForAuction(auctionId);
+                // Unfreeze all bid amounts for this auction - critical operation
+                bidService.unfreezeAllBidsForAuction(auctionId);
 
-            // Delete the auction immediately
-            auction.setDeleted(true);
-            auction.setDeletedAt(Instant.now());
-            auction.setDeletionStatus("DELETED");
-            auction.setIsPublic(false);
-            auction.setUpdatedAt(Instant.now());
-            auctionRepository.save(auction);
+                // Delete the auction immediately - only after successful fund unfreezing
+                auction.setDeleted(true);
+                auction.setDeletedAt(Instant.now());
+                auction.setDeletionStatus("DELETED");
+                auction.setIsPublic(false);
+                auction.setUpdatedAt(Instant.now());
+                auctionRepository.save(auction);
 
-            return "Auction deleted successfully. All bid amounts have been unfrozen.";
+                return "Auction deleted successfully. All bid amounts have been unfrozen.";
+            } catch (Exception e) {
+                log.severe("Failed to delete auction with bids: " + e.getMessage());
+                throw new IllegalStateException("Failed to delete auction and unfreeze bid amounts: " + e.getMessage());
+            }
         } else {
             // If no bids, soft delete immediately (no reason required)
             auction.setDeleted(true);

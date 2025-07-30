@@ -75,7 +75,7 @@ export default function UserChatList({
   useEffect(() => {
     const interval = setInterval(() => {
       fetchChats(search, chatRoomType, page);
-    }, 1000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [fetchChats, search, chatRoomType, page]);
@@ -171,12 +171,26 @@ export default function UserChatList({
   }) => {
     return (
       <Card
-        className="p-4 cursor-pointer transition-shadow rounded-lg shadow-sm border border-transparent hover:border-yellow-300"
+        className={`relative p-4 mt-2 cursor-pointer transition-shadow rounded-lg shadow-sm border ${
+          chat.chatRoomType === 'SUPPORT'
+            ? 'border-yellow-400 bg-yellow-50'
+            : 'border-gray-100 hover:bg-gray-50 hover:border-gray-300'
+        }`}
         onClick={() => handleSelectChat(chat, onSelectChat)}
       >
+        {/* Floating unread count badge */}
+        {chat.unreadCount > 0 && (
+          <span
+            className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-white bg-red-600 rounded-full select-none"
+            title={`${chat.unreadCount} unread messages`}
+          >
+            {chat.unreadCount} unread
+          </span>
+        )}
+
         <div className="flex justify-between items-center mb-1">
           <p
-            className="font-semibold text-gray-900 truncate"
+            className={`text-gray-900 text-sm truncate font-medium`}
             title={formatLabel(chat)}
           >
             {formatLabel(chat)}
@@ -186,15 +200,9 @@ export default function UserChatList({
           </span>
         </div>
 
-        {chat.username && (
+        {chat.username && chat.chatRoomType === 'PRIVATE' && (
           <p className="text-sm truncate" title={`Username: @${chat.username}`}>
             @{chat.username}
-          </p>
-        )}
-
-        {chat.unreadCount > 0 && (
-          <p className="mt-2 inline-block px-2 py-0.5 text-xs font-semibold text-white bg-red-600 rounded-full select-none">
-            {chat.unreadCount} unread
           </p>
         )}
       </Card>

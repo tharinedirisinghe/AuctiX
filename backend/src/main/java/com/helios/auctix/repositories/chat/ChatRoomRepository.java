@@ -86,45 +86,67 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
 
 
     @Query(value = """
-    SELECT
-        cr.id AS chat_room_id,
-        cr.chat_room_type,
-        cr.auction_id,
-        cr.created_at,
-        cr.updated_at,
-        COALESCE(s.unread_count, 0) AS unread_count,
-        COALESCE(s.notification_count, 0) AS notification_count,
-        a.title AS auction_title,
-        u.username,
-        u.first_name,
-        u.last_name,
-        ur.role_name AS role
-    FROM chat_rooms cr
-    JOIN chat_room_participants p ON cr.id = p.chat_room_id
-    LEFT JOIN chat_room_user_unread_status s ON cr.id = s.chat_room_id AND s.user_id = :userId
-    LEFT JOIN auctions a ON cr.auction_id = a.id
-    JOIN users u ON p.user_id = u.id
-    LEFT JOIN user_roles ur ON u.role_id = ur.id
-    WHERE p.user_id = :userId
-    AND (
-      :chatRoomType IS NULL OR cr.chat_room_type = :chatRoomType
-    )
-    AND (
-        :tsQuery IS NULL
-        OR (
-            (cr.chat_room_type IN ('PRIVATE', 'SUPPORT') AND (
-                LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
-                OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
-                OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
-            ))
-            OR
-            (cr.chat_room_type = 'AUCTION' AND a.search_vector @@ to_tsquery('english', :tsQuery))
+        SELECT
+            cr.id AS chat_room_id,
+            cr.chat_room_type,
+            cr.auction_id,
+            cr.created_at,
+            cr.updated_at,
+            COALESCE(s.unread_count, 0) AS unread_count,
+            COALESCE(s.notification_count, 0) AS notification_count,
+            a.title AS auction_title,
+            CASE
+                WHEN cr.chat_room_type = 'PRIVATE' THEN u.username
+                ELSE NULL
+            END AS username,
+            u.first_name,
+            u.last_name,
+            ur.role_name AS role,
+            latest.latest_timestamp
+        FROM chat_rooms cr
+        JOIN chat_room_participants p ON cr.id = p.chat_room_id
+        LEFT JOIN chat_room_user_unread_status s ON cr.id = s.chat_room_id AND s.user_id = :userId
+        LEFT JOIN auctions a ON cr.auction_id = a.id
+        LEFT JOIN users u ON u.id = (
+            SELECT p2.user_id
+            FROM chat_room_participants p2
+            WHERE p2.chat_room_id = cr.id AND p2.user_id != :userId
+            LIMIT 1
         )
-    )
-    GROUP BY cr.id, s.unread_count, s.notification_count, a.title,
-             u.username, u.first_name, u.last_name, ur.role_name
-    ORDER BY cr.updated_at DESC
-    LIMIT :limit OFFSET :offset
+        LEFT JOIN user_roles ur ON u.role_id = ur.id
+        LEFT JOIN (
+            SELECT
+                cm.chat_room_id,
+                MAX(cm.timestamp) AS latest_timestamp
+            FROM chat_messages cm
+            GROUP BY cm.chat_room_id
+        ) latest ON latest.chat_room_id = cr.id
+        WHERE p.user_id = :userId
+          AND (:chatRoomType IS NULL OR cr.chat_room_type = :chatRoomType)
+          AND (
+            :tsQuery IS NULL OR (
+                (cr.chat_room_type IN ('PRIVATE', 'SUPPORT') AND (
+                    LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                    OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                    OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))
+                ))
+                OR
+                (cr.chat_room_type = 'AUCTION' AND a.search_vector @@ to_tsquery('english', :tsQuery))
+            )
+          )
+        GROUP BY
+            cr.id,
+            s.unread_count,
+            s.notification_count,
+            a.title,
+            u.username,
+            u.first_name,
+            u.last_name,
+            ur.role_name,
+            latest.latest_timestamp,
+            cr.chat_room_type
+        ORDER BY latest.latest_timestamp DESC NULLS LAST
+        LIMIT :limit OFFSET :offset
     """, nativeQuery = true)
     List<Object[]> searchUserChatRooms(
             @Param("userId") UUID userId,

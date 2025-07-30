@@ -37,18 +37,18 @@ export function ProfileUrlsSection({
   useEffect(() => {
     if (form && name) {
       const formUrls = form.getValues(name) || [];
+
       if (formUrls.length > 0 && urls.length === 0) {
-        setUrls(
-          formUrls.map((url: any, idx: number) => ({
-            id: idx,
-            value: url.value || '',
-            timestamp: url.timestamp || Date.now(),
-          })),
-        );
+        const newUrls = formUrls.map((url: any, idx: number) => ({
+          id: idx,
+          value: url.value || '',
+          timestamp: url.timestamp || Date.now(),
+        }));
+        setUrls(newUrls);
         idCounter.current = formUrls.length;
       }
     }
-  }, [form, name, urls.length]);
+  }, [form, name, form?.getValues(name || '')]);
 
   const handleAppend = () => {
     if (isAdding) return;
@@ -89,13 +89,20 @@ export function ProfileUrlsSection({
     }
   };
 
-  // Update form value when URLs change
+  // Update form value when URLs change (but not during initialization)
   useEffect(() => {
-    if (form && name) {
+    if (form && name && urls.length >= 0) {
       const formattedUrls = urls
         .filter((url) => url.value.trim() !== '')
         .map(({ value, timestamp }) => ({ value, timestamp }));
-      form.setValue(name, formattedUrls, { shouldValidate: true });
+
+      const currentFormUrls = form.getValues(name) || [];
+      const isDifferent =
+        JSON.stringify(currentFormUrls) !== JSON.stringify(formattedUrls);
+
+      if (isDifferent) {
+        form.setValue(name, formattedUrls, { shouldValidate: true });
+      }
     }
 
     if (onChange) {

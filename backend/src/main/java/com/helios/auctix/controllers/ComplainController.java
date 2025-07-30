@@ -55,7 +55,7 @@ public class ComplainController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllComplaints(
-        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "1") int page,
         @RequestParam(defaultValue = "10") int size,
         @RequestParam(value = "sortby", required = false, defaultValue = "dateReported") String sortBy,
         @RequestParam(value = "order", required = false, defaultValue = "desc") String order,

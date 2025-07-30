@@ -33,7 +33,7 @@ import { DeliveryReviewsDialog } from '@/components/delivery/seller/DeliveryRevi
 import { DeliveryCalendar } from '@/components/delivery/seller/DeliveryCalendar';
 import { CalendarStats } from '@/components/delivery/seller/CalendarStats';
 import { Button } from '@/components/ui/button';
-import { Star, CalendarDays, List } from 'lucide-react';
+import { Star, CalendarDays, List, ArrowLeft } from 'lucide-react';
 
 
 const SellerDeliveryPage = () => {
@@ -322,49 +322,62 @@ const SellerDeliveryPage = () => {
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto p-6">
         <header className="mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Delivery Management</h1>
-              <p className="text-gray-500">
-                Track and manage your auction deliveries to buyers
-              </p>
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 w-fit"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden xs:inline">Back</span>
+              </Button>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">Delivery Management</h1>
+                <p className="text-gray-500 text-sm sm:text-base">
+                  Track and manage your auction deliveries to buyers
+                </p>
+              </div>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* View Mode Toggle */}
               <div className="flex items-center border rounded-lg p-1 bg-white">
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center ${
+                  className={`flex items-center flex-1 sm:flex-none ${
                     viewMode === 'list'
                       ? 'bg-blue-500 text-white'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   <List className="w-4 h-4 mr-1" />
-                  List
+                  <span className="hidden xs:inline">List</span>
                 </Button>
                 <Button
                   variant={viewMode === 'calendar' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('calendar')}
-                  className={`flex items-center ${
+                  className={`flex items-center flex-1 sm:flex-none ${
                     viewMode === 'calendar'
                       ? 'bg-blue-500 text-white'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   <CalendarDays className="w-4 h-4 mr-1" />
-                  Calendar
+                  <span className="hidden xs:inline">Calendar</span>
                 </Button>
               </div>
               <Button
                 onClick={() => navigate('/seller-reviews')}
-                className="bg-amber-500 hover:bg-amber-600 text-white flex items-center"
+                className="bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center w-full sm:w-auto"
+                size="sm"
               >
                 <Star className="w-4 h-4 mr-2" />
-                View My Reviews
+                <span className="hidden xs:inline">View My Reviews</span>
+                <span className="xs:hidden">Reviews</span>
               </Button>
             </div>
           </div>

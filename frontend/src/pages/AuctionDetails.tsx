@@ -234,6 +234,42 @@ function calculateBidIncrement(
   }
 }
 
+const formatTimestamp = (isoString: string): string => {
+  try {
+    const date = new Date(isoString);
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', isoString);
+      return isoString;
+    }
+
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Colombo', // Adjust timezone as needed
+    });
+  } catch (error) {
+    console.error('Error formatting timestamp:', error);
+    return isoString;
+  }
+};
+
+const processDescription = (desc: string): string => {
+  // Updated regex pattern to match your exact timestamp format
+  const timestampPattern =
+    /\[Edited on: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z)?)\]/g;
+
+  return desc.replace(timestampPattern, (match, timestamp) => {
+    const humanReadable = formatTimestamp(timestamp);
+    return `[Edited on: ${humanReadable}]`;
+  });
+};
+
 const AuctionDetailsPage = () => {
   const { auctionId } = useParams<{ auctionId: string }>();
   const [product, setProduct] = useState<ProductDetails | null>(null);
@@ -1011,7 +1047,7 @@ const AuctionDetailsPage = () => {
             >
               <h2 className="text-lg font-semibold mb-4">About this product</h2>
               <div className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">
-                {product.description}
+                {processDescription(product.description)}
               </div>
             </TabsContent>
 

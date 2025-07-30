@@ -1,6 +1,7 @@
 package com.helios.auctix.services;
 
 import com.helios.auctix.domain.auction.Auction;
+import com.helios.auctix.domain.auction.AuctionImagePath;
 import com.helios.auctix.domain.delivery.Delivery;
 import com.helios.auctix.domain.user.User;
 import com.helios.auctix.domain.user.UserAddress;
@@ -8,16 +9,19 @@ import com.helios.auctix.domain.user.UserRoleEnum;
 import com.helios.auctix.dtos.DeliveryCreateDTO;
 import com.helios.auctix.dtos.DeliveryDTO;
 import com.helios.auctix.dtos.DeliveryUpdateDTO;
+import com.helios.auctix.repositories.AuctionImagePathsRepository;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.BidRepository;
 import com.helios.auctix.repositories.DeliveryRepository;
 import com.helios.auctix.repositories.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,14 +29,29 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
 public class DeliveryService {
 
     private final DeliveryRepository deliveryRepository;
     private final AuctionRepository auctionRepository;
+    private final AuctionImagePathsRepository auctionImagePathsRepository;
     private final UserRepository userRepository;
     private final BidRepository bidRepository;
     private static final Logger logger = Logger.getLogger(DeliveryService.class.getName());
+    
+    @Value("${auctix.backend-url}")
+    private String backendUrl;
+    
+    public DeliveryService(DeliveryRepository deliveryRepository, 
+                          AuctionRepository auctionRepository,
+                          AuctionImagePathsRepository auctionImagePathsRepository,
+                          UserRepository userRepository,
+                          BidRepository bidRepository) {
+        this.deliveryRepository = deliveryRepository;
+        this.auctionRepository = auctionRepository;
+        this.auctionImagePathsRepository = auctionImagePathsRepository;
+        this.userRepository = userRepository;
+        this.bidRepository = bidRepository;
+    }
 
     @Transactional
     public DeliveryDTO createDelivery(DeliveryCreateDTO createDTO, User currentUser) {
@@ -211,7 +230,7 @@ public class DeliveryService {
     public DeliveryDTO getDeliveryById(UUID id, User currentUser) {
         logger.info("Fetching delivery by ID: " + id);
 
-        Delivery delivery = deliveryRepository.findById(id)
+        Delivery delivery = deliveryRepository.findByIdWithAuction(id)
                 .orElseThrow(() -> new IllegalArgumentException("Delivery not found"));
 
         // Check if user is buyer or seller of the delivery
@@ -420,8 +439,31 @@ public class DeliveryService {
         }
 
         // Try to get auction image if available
-        if (delivery.getAuction().getImagePaths() != null && !delivery.getAuction().getImagePaths().isEmpty()) {
-            dto.setAuctionImage(delivery.getAuction().getImagePaths().get(0).toString());
+        logger.info("Checking auction images for delivery: " + delivery.getId());
+        if (delivery.getAuction() != null) {
+            logger.info("Auction found: " + delivery.getAuction().getId());
+            List<AuctionImagePath> imagePaths = auctionImagePathsRepository.findById_AuctionId(delivery.getAuction().getId());
+            logger.info("Found " + imagePaths.size() + " image paths from repository");
+            if (!imagePaths.isEmpty()) {
+                // Create list of all image URLs
+                List<String> allImageUrls = new ArrayList<>();
+                for (AuctionImagePath imagePath : imagePaths) {
+                    String imageUrl = backendUrl + "/auctions/getAuctionImages?file_uuid=" + imagePath.getImageId().toString();
+                    allImageUrls.add(imageUrl);
+                }
+                
+                // Set all images
+                dto.setAuctionImages(allImageUrls);
+                
+                // Set first image for backward compatibility
+                dto.setAuctionImage(allImageUrls.get(0));
+                
+                logger.info("Setting " + allImageUrls.size() + " auction image URLs. First image: " + allImageUrls.get(0));
+            } else {
+                logger.info("No image paths found for auction: " + delivery.getAuction().getId());
+            }
+        } else {
+            logger.info("Auction is null");
         }
 
         // Get auction category if available

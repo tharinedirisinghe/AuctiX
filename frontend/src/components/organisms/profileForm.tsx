@@ -152,9 +152,14 @@ export function ProfileForm() {
         addressLine2: userData.address?.addressLine2 || '',
         country: userData.address?.country || '',
       },
-      urls: [],
+      urls:
+        userData.urls?.map((url) => ({
+          value: url || '',
+          timestamp: Date.now(),
+        })) || [],
     };
 
+    console.log('Bio set from userData:', values.bio);
     if ('bio' in userData && typeof userData.bio === 'string') {
       values.bio = userData.bio;
     }
@@ -172,7 +177,7 @@ export function ProfileForm() {
 
     if ('urls' in userData && Array.isArray(userData.urls)) {
       values.urls = (userData.urls as any[]).map((url) => ({
-        value: url.value || '',
+        value: url || '',
         timestamp: url.timestamp || Date.now(),
       }));
     }
@@ -303,6 +308,9 @@ export function ProfileForm() {
         addressLine1: formData.address.addressLine1 || '',
         addressLine2: formData.address.addressLine2 || '',
         country: formData.address.country || '',
+        city: '',
+        state: '',
+        postalCode: '',
       },
     };
 

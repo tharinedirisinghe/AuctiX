@@ -1,6 +1,7 @@
 // File: src/pages/User_Delivery.tsx
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { AppDispatch } from '@/store/store';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -29,9 +30,12 @@ import { DeliverySkeletons } from '@/components/delivery/shared/DeliverySkeleton
 import { Pagination } from '@/components/delivery/seller/Pagination';
 import { ReviewFormDialog } from '@/components/review/ReviewFormDialog';
 import { AddAddressDialog } from '@/components/delivery/buyer/AddAddressDialog';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const UserDeliveryPage = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const deliveries = useSelector(selectBuyerDeliveries);
   const isLoading = useSelector(selectDeliveryLoading);
   const error = useSelector(selectDeliveryError);
@@ -311,10 +315,24 @@ const UserDeliveryPage = () => {
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto p-6">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Deliveries</h1>
-          <p className="text-gray-500">
-            Track and manage your auction deliveries
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 w-fit"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden xs:inline">Back to Dashboard</span>
+              <span className="xs:hidden">Back</span>
+            </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">My Deliveries</h1>
+              <p className="text-gray-500 text-sm sm:text-base">
+                Track and manage your auction deliveries
+              </p>
+            </div>
+          </div>
         </header>
 
         <DeliveryHeroBanner />

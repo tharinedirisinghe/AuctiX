@@ -72,7 +72,7 @@ public class BidService {
                 .amount(bid.getAmount())
                 .bidTime(bid.getBidTime())
                 .createdAt(bid.getCreatedAt())
-                .bidder(bidderDto) // ✅ include full bidder
+                .bidder(bidderDto)
                 .build();
     }
 
@@ -284,6 +284,26 @@ public class BidService {
 
     }
 
+    public int countTotalBids(UUID userId) {
+
+        return bidRepository.countByBidderId(userId);
+    }
+
+    public int countWonAuctions(UUID userId) {
+
+        return auctionRepository.countAuctionsWonByUser(userId);
+    }
+
+    public int countLeadingBidAuctions(UUID userId) {
+
+        return bidRepository.countActiveAuctionsWhereUserIsHighestBidder(userId);
+    }
+
+    public int countActiveOutbidAuctions(UUID userId) {
+
+        return bidRepository.countActiveAuctionsWhereUserIsOutbid(userId);
+    }
+
     // Helper method to calculate minimum increment
     private double calculateMinimumIncrement(double currentBid) {
         // Calculate 5% increment with minimum of 100
@@ -433,5 +453,72 @@ public class BidService {
      */
     public List<UUID> getBiddersForAuction(UUID auctionId) {
         return bidRepository.findDistinctBidderIdsByAuctionId(auctionId);
+    }
+
+    /**
+     * Unfreeze the highest bid amount for a deleted auction and notify the bidder
+     * Only the highest bidder has frozen funds at any given time
+     */
+    @Transactional
+    public void unfreezeAllBidsForAuction(UUID auctionId) {
+        log.info("Unfreezing highest bid for deleted auction: " + auctionId);
+        
+        // Get the highest bid for this auction
+        Optional<Bid> highestBid = getHighestBidForAuction(auctionId);
+        
+        if (highestBid.isEmpty()) {
+            log.info("No bids found for auction " + auctionId);
+            return;
+        }
+
+        Bid bid = highestBid.get();
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+        
+        try {
+            // Unfreeze the highest bid amount
+            transactionService.unfreezeAmount(
+                    bid.getBidderId(),
+                    bid.getAmount(),
+                    "Auction cancelled/deleted: " + auction.getTitle()
+            );
+            
+            log.info("Unfroze " + bid.getAmount() + " for highest bidder " + bid.getBidderId());
+            
+            // Send notification to the highest bidder about auction cancellation
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        User bidder = userDetailsService.getUserById(bid.getBidderId());
+                        
+                        String title = "Auction Cancelled - Funds Refunded";
+                        String message = String.format(
+                                "The auction \"%s\" has been cancelled by the seller. Your bid of LKR %,.2f has been refunded to your wallet.",
+                                auction.getTitle(),
+                                bid.getAmount()
+                        );
+                        
+                        notificationEventPublisher.publishNotificationEvent(
+                                title,
+                                message,
+                                NotificationCategory.AUCTION_CANCELED,
+                                bidder,
+                                null
+                        );
+                        
+                        log.info("Sent cancellation notification to highest bidder " + bid.getBidderId());
+                    } catch (Exception e) {
+                        log.warning("Failed to send cancellation notification to bidder " + bid.getBidderId() + ": " + e.getMessage());
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            log.severe("Failed to unfreeze bid amount for bidder " + bid.getBidderId() + ": " + e.getMessage());
+            throw new IllegalStateException("Failed to unfreeze bid for bidder " + bid.getBidderId() + ": " + e.getMessage());
+        }
+        
+        log.info("Successfully unfroze bid amount for highest bidder on auction " + auctionId);
     }
 }

@@ -40,6 +40,7 @@ import SellerVerificationRequestsTable from '@/components/organisms/SellerVerifi
 import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
 import { SellerVerificationEvaluationPage } from '@/pages/SellerVerificationEvaluationPage';
 import UserChatManager from '@/pages/UserChatManager';
+import ManageBids from '@/pages/ManageBids';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -76,6 +77,17 @@ export default function AppRouter() {
                 redirectPath="/403"
               >
                 <ManageAuctions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-bids"
+            element={
+              <ProtectedRoute
+                allowedUsers={['SELLER', 'BIDDER', 'ADMIN', 'SUPER_ADMIN']}
+                redirectPath="/403"
+              >
+                <ManageBids />
               </ProtectedRoute>
             }
           />

@@ -32,13 +32,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         { title: 'Overview', url: '/dashboard', isActive: true },
         {
-          title: 'Auctions',
+          title: 'My Auctions',
           url: '/manage-auctions',
           roles: ['SELLER'],
         },
         {
           title: 'My Bids',
-          url: '/my-bids',
+          url: '/manage-bids',
           roles: ['BIDDER'],
         },
         {
@@ -52,11 +52,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           roles: ['BIDDER', 'SELLER'],
         },
         {
+          title: 'My Deliveries',
+          url: '/user-delivery',
+          roles: ['BIDDER'],
+        },
+        {
           title: 'Management',
           items: [
             {
               title: 'Delivery',
-              url: '/delivery',
+              url: '/seller-delivery',
               roles: ['SELLER'],
             },
             {

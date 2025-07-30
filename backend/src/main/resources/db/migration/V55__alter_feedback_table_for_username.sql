@@ -1,0 +1,5 @@
+ALTER TABLE feedback
+    DROP COLUMN IF EXISTS user_id;
+
+ALTER TABLE feedback
+    ADD COLUMN username VARCHAR(255) NULL;

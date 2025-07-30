@@ -4,6 +4,7 @@ import axios from 'axios';
 import { IAuthUser } from '@/types/IAuthUser';
 import { logout } from './authSlice';
 import { assets } from '@/config/assets';
+import { link } from 'fs';
 
 interface UserState extends IUser {
   loading: boolean;
@@ -71,7 +72,10 @@ export const fetchCurrentUser = createAsyncThunk(
           addressLine2: response.data.userAddress?.addressLine2 || '',
           country: response.data.userAddress?.country || '',
         },
-        urls: response.data.urls || [],
+        urls:
+          response.data.socialMediaLinks?.map((link: any) => {
+            return link.link;
+          }) || [],
         bio: response.data.bio || '',
       } as IUser;
 
@@ -106,6 +110,8 @@ const userSlice = createSlice({
         state.email = action.payload.email;
         state.firstName = action.payload.firstName;
         state.lastName = action.payload.lastName;
+        state.bio = action.payload.bio || '';
+        state.urls = action.payload.urls || [];
         state.profile_photo =
           action.payload.profile_photo || assets.default_profile_image;
         state.banner_photo =

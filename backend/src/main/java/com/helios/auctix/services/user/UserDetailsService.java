@@ -6,12 +6,10 @@ import com.helios.auctix.domain.notification.NotificationCategory;
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.domain.user.UserRequiredAction;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
-import com.helios.auctix.dtos.ProfileUpdateDataDTO;
-import com.helios.auctix.dtos.UserDTO;
-import com.helios.auctix.dtos.UserStatsDTO;
-import com.helios.auctix.dtos.UserAddressDTO;
+import com.helios.auctix.dtos.*;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
+import com.helios.auctix.mappers.impl.UserSocialMediaLinkMapperImpl;
 import com.helios.auctix.repositories.*;
 import com.helios.auctix.services.notification.senders.EmailNotificationSender;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +34,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -49,6 +48,8 @@ private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetRequestRepository passwordResetRequestRepository;
     private final EmailNotificationSender emailNotificationSender;
+    private final UserSocialMediaLinkMapperImpl userSocialMediaLinkMapperImpl;
+    private final UserSocialMediaLinksRepository userSocialMediaLinksRepository;
 
     @Autowired
     public UserDetailsService(
@@ -59,7 +60,8 @@ private final UserRepository userRepository;
             UserRoleRepository userRoleRepository,
             PasswordEncoder passwordEncoder,
             PasswordResetRequestRepository passwordResetRequestRepository,
-            EmailNotificationSender emailNotificationSender) {
+            EmailNotificationSender emailNotificationSender,
+            UserSocialMediaLinkMapperImpl userSocialMediaLinkMapperImpl, UserSocialMediaLinksRepository userSocialMediaLinksRepository) {
         this.userRepository = userRepository;
         this.userRequiredActionRepository = userRequiredActionRepository;
         this.userAddressRepository = userAddressRepository;
@@ -68,6 +70,8 @@ private final UserRepository userRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordResetRequestRepository = passwordResetRequestRepository;
         this.emailNotificationSender = emailNotificationSender;
+        this.userSocialMediaLinkMapperImpl = userSocialMediaLinkMapperImpl;
+        this.userSocialMediaLinksRepository = userSocialMediaLinksRepository;
     }
 
 
@@ -224,34 +228,55 @@ private final UserRepository userRepository;
 
 
     public UserServiceResponse updateUserProfile(User user, ProfileUpdateDataDTO profileData) {
-    log.info("Updating user profile" + profileData.getBio() + "  " + profileData.getFirstName() + " " + profileData.getLastName());
+        log.info("Updating user profile" + profileData.getBio() + "  " + profileData.getFirstName() + " " + profileData.getLastName());
 
-    user.setFirstName(profileData.getFirstName());
-    user.setLastName(profileData.getLastName());
+        user = userRepository.findByUsername(user.getUsername());
+        final User updatedUser = user;
 
-    UserAddress address;
-    if(user.getUserAddress() != null) {
-        address = userAddressRepository.findById(user.getUserAddress().getId()).orElse(new UserAddress());
+        List<UserSocialMediaLink> links = updatedUser.getSocialMediaLinks();
+        if (links != null) {
+            links.clear();
+        }
+
+        List<UserSocialMediaLink> newLinks = profileData.getUrls().stream()
+                .map(userSocialMediaLinkMapperImpl::mapFromString)
+                .peek(link -> link.setUser(updatedUser))
+                .toList();
+
+        if (links != null) {
+            links.addAll(newLinks);
+        } else {
+            updatedUser.setSocialMediaLinks(newLinks);
+        }
+
+        updatedUser.setFirstName(profileData.getFirstName());
+        updatedUser.setLastName(profileData.getLastName());
+        updatedUser.setBio(profileData.getBio());
+
+        UserAddress address;
+        if (updatedUser.getUserAddress() != null) {
+            address = userAddressRepository.findById(updatedUser.getUserAddress().getId()).orElse(new UserAddress());
+        } else {
+            address = new UserAddress();
+        }
+
+        if (profileData.getAddress() != null) {
+            address.setCountry(profileData.getAddress().getCountry());
+            address.setAddressNumber(profileData.getAddress().getAddressNumber());
+            address.setAddressLine1(profileData.getAddress().getAddressLine1());
+            address.setAddressLine2(profileData.getAddress().getAddressLine2());
+            address.setUser(updatedUser);
+        }
+
+        userAddressRepository.save(address);
+        userRepository.save(updatedUser);
+
+        log.info("Updated user profile");
+        this.resolveUserRequiredAction(updatedUser, UserRequiredActionEnum.COMPLETE_PROFILE);
+        log.info("Resolved required action COMPLETE_PROFILE for user: {}", updatedUser);
+
+        return new UserServiceResponse(true, "User profile updated successfully");
     }
-    else{
-        address = new UserAddress();
-    }
-    if (profileData.getAddress() != null) {
-        address.setCountry(profileData.getAddress().getCountry());
-        address.setAddressNumber(profileData.getAddress().getAddressNumber());
-        address.setAddressLine1(profileData.getAddress().getAddressLine1());
-        address.setAddressLine2(profileData.getAddress().getAddressLine2());
-        address.setUser(user);
-    }
-    userAddressRepository.save(address);
-    userRepository.save(user);
-    log.info("Updated user profile");
-
-    this.resolveUserRequiredAction(user, UserRequiredActionEnum.COMPLETE_PROFILE);
-    log.info("Resolved required action COMPLETE_PROFILE for user: {}", user.getUsername());
-
-    return new UserServiceResponse(true, "User profile updated successfully");
-}
 
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email);

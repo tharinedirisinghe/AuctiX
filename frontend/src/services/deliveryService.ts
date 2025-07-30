@@ -18,7 +18,8 @@ export interface Delivery {
   createdAt: string;
   updatedAt: string;
   buyerLocation?: string;
-  auctionImage?: string;
+  auctionImage?: string; // First image for backward compatibility
+  auctionImages?: string[]; // All auction images
   auctionCategory?: string;
 }
 

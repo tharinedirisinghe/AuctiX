@@ -35,20 +35,20 @@ public class FeedbackController {
     @PostMapping
     public ResponseEntity<String> submitFeedback(@RequestBody FeedbackDTO feedbackDTO) throws AuthenticationException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UUID userId = null;
+        String username = null;
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             User user = userDetailsService.getAuthenticatedUser(authentication);
             if (user != null) {
-                userId = user.getId();
+                username = user.getUsername();
             }
         }
-        feedbackService.saveFeedback(feedbackDTO.getRating(), feedbackDTO.getComment(), userId);
+        feedbackService.saveFeedback(feedbackDTO.getRating(), feedbackDTO.getComment(), username);
         return ResponseEntity.ok("Thanks for your feedback!");
     }
 
     @GetMapping
     public ResponseEntity<?> getAllFeedbacks(
-            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestParam(value = "query", required = false) String query,
             @RequestParam(value = "rating", required = false) Integer rating,

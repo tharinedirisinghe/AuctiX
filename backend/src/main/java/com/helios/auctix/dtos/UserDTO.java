@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -22,6 +23,10 @@ public class UserDTO {
 
     private UserRoleDTO userRole;
     private UploadDTO profilePicture;
+
+    private List<UserSocialMediaLinkDTO> socialMediaLinks;
+    private boolean isEmailVerified;
+    private String bio;
 
     private AdminDTO admin;
     private BidderDTO bidder;

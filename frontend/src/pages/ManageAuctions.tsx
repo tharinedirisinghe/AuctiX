@@ -434,7 +434,7 @@ const ManageAuctions = () => {
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
         </button>
-        <h1 className="text-2xl font-bold mb-2">Auctions</h1>
+        <h1 className="text-2xl font-bold mb-2">My Auctions</h1>
         <p className="text-gray-600">
           You can view and manage your auctions here
         </p>

@@ -32,7 +32,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         { title: 'Overview', url: '/dashboard', isActive: true },
         {
-          title: 'Auctions',
+          title: 'My Auctions',
           url: '/manage-auctions',
           roles: ['SELLER'],
         },

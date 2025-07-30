@@ -40,6 +40,23 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // Image gallery state
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [galleryTitle, setGalleryTitle] = useState('');
+
+  // Handle opening image gallery
+  const openImageGallery = (delivery: Delivery) => {
+    const images = delivery.auctionImages || (delivery.auctionImage ? [delivery.auctionImage] : []);
+    if (images.length > 0) {
+      setGalleryImages(images);
+      setGalleryTitle(delivery.auctionTitle || 'Auction Images');
+      setCurrentImageIndex(0);
+      setIsGalleryOpen(true);
+    }
+  };
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
@@ -359,16 +376,27 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({
                       className="p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-start space-x-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
-                          {delivery.auctionImage ? (
-                            <img
-                              src={delivery.auctionImage}
-                              alt={delivery.auctionTitle}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Package className="w-6 h-6 text-gray-400" />
-                          )}
+                        <div className="relative w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
+                          {(() => {
+                            const images = delivery.auctionImages || (delivery.auctionImage ? [delivery.auctionImage] : []);
+                            return images.length > 0 ? (
+                              <>
+                                <img
+                                  src={images[0]}
+                                  alt={delivery.auctionTitle}
+                                  className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => openImageGallery(delivery)}
+                                />
+                                {images.length > 1 && (
+                                  <div className="absolute top-0.5 right-0.5 bg-black bg-opacity-60 text-white text-xs px-1 py-0.5 rounded text-[10px]">
+                                    +{images.length - 1}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <Package className="w-6 h-6 text-gray-400" />
+                            );
+                          })()}
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -448,6 +476,71 @@ export const DeliveryCalendar: React.FC<DeliveryCalendarProps> = ({
           </Card>
         )}
       </div>
+
+      {/* Image Gallery Modal */}
+      {isGalleryOpen && galleryImages.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setIsGalleryOpen(false)}>
+          <div className="max-w-4xl max-h-screen w-full h-full flex flex-col items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="relative">
+              <img
+                src={galleryImages[currentImageIndex]}
+                alt={`${galleryTitle} - Image ${currentImageIndex + 1}`}
+                className="max-w-full max-h-[80vh] object-contain"
+              />
+              
+              {/* Navigation buttons */}
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? galleryImages.length - 1 : prev - 1))}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={() => setCurrentImageIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                  >
+                    →
+                  </button>
+                </>
+              )}
+              
+              {/* Close button */}
+              <button
+                onClick={() => setIsGalleryOpen(false)}
+                className="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Image counter */}
+            {galleryImages.length > 1 && (
+              <div className="mt-4 text-white text-center">
+                {currentImageIndex + 1} of {galleryImages.length}
+              </div>
+            )}
+            
+            {/* Thumbnail strip */}
+            {galleryImages.length > 1 && (
+              <div className="flex gap-2 mt-4 max-w-full overflow-x-auto">
+                {galleryImages.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image}
+                    alt={`Thumbnail ${index + 1}`}
+                    className={`w-16 h-16 object-cover cursor-pointer rounded ${
+                      index === currentImageIndex ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
+                    }`}
+                    onClick={() => setCurrentImageIndex(index)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

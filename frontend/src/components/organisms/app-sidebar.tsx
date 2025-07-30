@@ -46,13 +46,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           url: '/watchlist',
           roles: ['BIDDER'],
         },
+        {
+          title: 'My Deliveries',
+          url: '/user-delivery',
+          roles: ['BIDDER'],
+        },
 
         {
           title: 'Management',
           items: [
             {
               title: 'Delivery',
-              url: '/delivery',
+              url: '/seller-delivery',
               roles: ['SELLER'],
             },
             {

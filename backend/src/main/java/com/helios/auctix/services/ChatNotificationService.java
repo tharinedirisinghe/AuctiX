@@ -134,8 +134,8 @@ public class ChatNotificationService {
                     if (sellerOpt.isPresent()) {
                         User seller = sellerOpt.get();
 
-                        String sellerTitle = String.format(SELLER_CHAT_TITLE, auction.getTitle());
-                        String sellerMessage = String.format(SELLER_CHAT_MESSAGE, auction.getTitle());
+                        String sellerTitle = String.format(AUCTION_CHAT_TITLE, auction.getTitle());
+                        String sellerMessage = String.format(AUCTION_CHAT_MESSAGE, unreadCount, plural, auction.getTitle());
 
                         singleNotificationPublisher.publishNotificationEvent(
                                 sellerTitle,

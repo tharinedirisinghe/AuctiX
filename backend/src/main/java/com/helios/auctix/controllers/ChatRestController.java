@@ -157,7 +157,8 @@ public class ChatRestController  {
                 row[2].toString(), // username
                 row[3].toString(), // email
                 row[4].toString() + " " + row[5].toString(), // fullName
-                row[6].toString() // role
+                row[6].toString(), // role
+                ((Number)row[7]).intValue()
         )).toList();
 
         return ResponseEntity.ok(new PageImpl<>(dtos, PageRequest.of(page, size), dtos.size()));

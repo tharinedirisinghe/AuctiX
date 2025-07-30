@@ -40,25 +40,47 @@ public interface ChatRoomRepository extends CrudRepository<ChatRoom, UUID> {
 
     @Query(
         value = """
-        SELECT cr.id AS chatId, u.id AS userId, u.username, u.email, u.first_name, u.last_name, ur.role_name AS role
-        FROM chat_rooms cr
-        JOIN chat_room_participants crp ON cr.id = crp.chat_room_id
-        JOIN users u ON crp.user_id = u.id
-        JOIN user_roles ur ON u.role_id = ur.id
-        JOIN (
-            SELECT cm.chat_room_id, MAX(cm.timestamp) AS latest_timestamp
-            FROM chat_messages cm
-            GROUP BY cm.chat_room_id
-        ) latest ON latest.chat_room_id = cr.id
-        WHERE cr.chat_room_type = 'SUPPORT'
-        AND (ur.role_name = 'SELLER' OR ur.role_name = 'BIDDER')
-        AND (
-            LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :search, '%'))
-        )
-        ORDER BY latest.latest_timestamp DESC
-        LIMIT :limit OFFSET :offset
+            SELECT
+              cr.id AS chatId,
+              u.id AS userId,
+              u.username,
+              u.email,
+              u.first_name,
+              u.last_name,
+              ur.role_name AS role,
+              COALESCE(admin_unread.max_unread_count, 0) AS unreadCount
+            FROM chat_rooms cr
+            JOIN chat_room_participants crp ON cr.id = crp.chat_room_id
+            JOIN users u ON crp.user_id = u.id
+            JOIN user_roles ur ON u.role_id = ur.id
+            JOIN (
+                SELECT cm.chat_room_id, MAX(cm.timestamp) AS latest_timestamp
+                FROM chat_messages cm
+                GROUP BY cm.chat_room_id
+            ) latest ON latest.chat_room_id = cr.id
+            
+            -- Subquery for max unread count among admins in the chat room
+            LEFT JOIN (
+                SELECT
+                    cru.chat_room_id,
+                    MAX(cru.unread_count) AS max_unread_count
+                FROM chat_room_user_unread_status cru
+                JOIN users usr ON cru.user_id = usr.id
+                JOIN user_roles ur ON usr.role_id = ur.id
+                WHERE ur.role_name IN ('ADMIN', 'SUPERADMIN')
+                GROUP BY cru.chat_room_id
+            ) admin_unread ON admin_unread.chat_room_id = cr.id
+            
+            WHERE cr.chat_room_type = 'SUPPORT'
+              AND (ur.role_name = 'SELLER' OR ur.role_name = 'BIDDER')
+              AND (
+                  LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%'))
+                  OR LOWER(u.first_name) LIKE LOWER(CONCAT('%', :search, '%'))
+                  OR LOWER(u.last_name) LIKE LOWER(CONCAT('%', :search, '%'))
+              )
+            ORDER BY latest.latest_timestamp DESC
+            LIMIT :limit OFFSET :offset
+
         """,
         nativeQuery = true
     )

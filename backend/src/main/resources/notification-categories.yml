@@ -132,8 +132,40 @@ notificationCategories:
     alwaysHiddenRoles: []
     cannotEditRoles: []
     categoryGroup: WALLET
-    description: "Your wallet withdrawal has been successfully processed"
-    title: "Withdrawal successful"
+    description: "Get notified when your wallet withdraw is successful"
+    title: "Wallet withdrawal successful"
+
+  CHAT_UNREAD_MESSAGE:
+    allowedRoles: [BIDDER, SELLER]
+    alwaysHiddenRoles: []
+    cannotEditRoles: []
+    categoryGroup: CHAT
+    description: "Get notified when you have unread messages in a chat"
+    title: "Unread message"
+
+  SUPPORT_CHAT_UNREAD_MESSAGE:
+    allowedRoles: [BIDDER, SELLER]
+    alwaysHiddenRoles: [BIDDER, SELLER]
+    cannotEditRoles: [BIDDER, SELLER]
+    categoryGroup: CHAT
+    description: "Get notified when you have unread messages in your support chat"
+    title: "Support message"
+
+  WATCHER_AUCTION_CHAT_UNREAD_MESSAGE:
+    allowedRoles: [BIDDER]
+    alwaysHiddenRoles: []
+    cannotEditRoles: []
+    categoryGroup: CHAT
+    description: "Get notified when you have a new message in an auction you are watching"
+    title: "Auction chat update"
+
+  SELLER_AUCTION_CHAT_UNREAD_MESSAGE:
+    allowedRoles: [SELLER]
+    alwaysHiddenRoles: []
+    cannotEditRoles: []
+    categoryGroup: CHAT
+    description: "Get notified when you have a  message in your auction chat"
+    title: "New message from bidder in auction chat"
 
   PROMO:
     allowedRoles: [BIDDER, SELLER]

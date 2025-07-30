@@ -226,7 +226,8 @@ export function WatchlistGridItem({
                 <AlertDialogTitle>Remove from Watchlist</AlertDialogTitle>
                 <AlertDialogDescription>
                   Are you sure you want to remove "{auction.title}" from your
-                  watchlist?
+                  watchlist? You will no longer receive notifications for
+                  auction events and auction chat
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

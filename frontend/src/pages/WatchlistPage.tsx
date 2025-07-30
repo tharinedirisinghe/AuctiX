@@ -67,6 +67,12 @@ export default function WatchlistPage() {
       setWatchlistItems(result.data);
       setTotalPages(result.totalPages);
       setTotalItems(result.totalElements);
+      console.log(
+        'total pages',
+        result.totalPages,
+        'total items',
+        result.totalElements,
+      );
     } catch (err) {
       console.error('Failed to fetch watchlist:', err);
       setError('Failed to load watchlist. Please try again.');
@@ -129,21 +135,23 @@ export default function WatchlistPage() {
   };
 
   return (
-    <div className="container py-8 px-2 mx-auto">
-      <h1 className="text-3xl font-bold text-gray-800 mb-1">My Watchlist</h1>
-      <p className=" mb-4">
-        Stay informed by adding auctions to your watchlist, recieve
-        notifications on the auction
-      </p>
+    <div className="min-h-screen flex flex-col px-6 md:px-8 py-8 max-w-7xl mx-auto container">
+      <div className="flex-grow">
+        <h1 className="text-3xl font-bold text-gray-800 mb-1">My Watchlist</h1>
+        <p className="mb-4">
+          Stay informed by adding auctions to your watchlist, receive
+          notifications on the auction and auction chat.
+        </p>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-6">
-        <input
-          type="text"
-          placeholder="Search auctions..."
-          value={search}
-          onChange={handleSearchChange}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-1/3"
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-6">
+          <input
+            type="text"
+            placeholder="Search auctions..."
+            value={search}
+            onChange={handleSearchChange}
+            className="border border-gray-300 rounded px-3 py-2 w-full sm:w-1/3"
+          />
+        </div>
 
         {/*
 
@@ -189,32 +197,32 @@ export default function WatchlistPage() {
         </DropdownMenu>
 
         */}
-      </div>
 
-      <div className="relative">
-        {isLoading && (
-          <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10">
-            <div className="text-gray-600">Loading...</div>
-          </div>
-        )}
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-10">
+              <div className="text-gray-600">Loading...</div>
+            </div>
+          )}
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline"> {error}</span>
-          </div>
-        )}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+              <strong className="font-bold">Error!</strong>
+              <span className="block sm:inline"> {error}</span>
+            </div>
+          )}
 
-        {watchlistItems.length === 0 ? (
-          <div className="bg-white rounded-md p-6 text-center text-gray-600 border border-gray-200">
-            <p className="text-lg font-medium mb-2">Your watchlist is empty!</p>
-            <p>Start browsing auctions to add items you're interested in.</p>
-            <a href="/" className="text-blue-600 hover:underline mt-4 block">
-              Browse Auctions
-            </a>
-          </div>
-        ) : (
-          <>
+          {watchlistItems.length === 0 ? (
+            <div className="bg-white rounded-md p-6 text-center text-gray-600 border border-gray-200">
+              <p className="text-lg font-medium mb-2">
+                Your watchlist is empty!
+              </p>
+              <p>Start browsing auctions to add items you're interested in.</p>
+              <a href="/" className="text-blue-600 hover:underline mt-4 block">
+                Browse Auctions
+              </a>
+            </div>
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 justify-items-start">
               {watchlistItems.map((auction) => (
                 <WatchlistGridItem
@@ -226,16 +234,17 @@ export default function WatchlistPage() {
                 />
               ))}
             </div>
+          )}
+        </div>
+      </div>
 
-            <div className="mt-8 flex flex-col items-center">
-              <PaginationNav
-                pages={totalPages}
-                currentPage={currentPage + 1}
-                handlePage={(page) => setCurrentPage(page - 1)}
-              />
-            </div>
-          </>
-        )}
+      {/* Always at bottom unless page fills up */}
+      <div className="mt-8 flex justify-center">
+        <PaginationNav
+          pages={totalPages}
+          currentPage={currentPage}
+          handlePage={setCurrentPage}
+        />
       </div>
     </div>
   );

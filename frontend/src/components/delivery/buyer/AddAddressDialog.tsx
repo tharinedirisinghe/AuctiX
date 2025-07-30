@@ -100,16 +100,28 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
 
     if (!addressData.addressLine1.trim()) {
       newErrors.addressLine1 = 'Address line 1 is required';
+    } else if (addressData.addressLine1.trim().length < 3) {
+      newErrors.addressLine1 = 'Address must be at least 3 characters';
     }
+    
     if (!addressData.city.trim()) {
       newErrors.city = 'City is required';
+    } else if (addressData.city.trim().length < 2) {
+      newErrors.city = 'City must be at least 2 characters';
     }
+    
     if (!addressData.state.trim()) {
       newErrors.state = 'State is required';
+    } else if (addressData.state.trim().length < 2) {
+      newErrors.state = 'State must be at least 2 characters';
     }
+    
     if (!addressData.postalCode.trim()) {
       newErrors.postalCode = 'Postal code is required';
+    } else if (addressData.postalCode.trim().length < 3) {
+      newErrors.postalCode = 'Postal code must be at least 3 characters';
     }
+    
     if (!addressData.country.trim()) {
       newErrors.country = 'Country is required';
     }
@@ -183,6 +195,7 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                   }
                   className="col-span-3"
                   placeholder="House/Building number"
+                  maxLength={20}
                 />
               </div>
 
@@ -199,6 +212,8 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                     }
                     className={errors.addressLine1 ? 'border-red-500' : ''}
                     placeholder="Street address"
+                    minLength={3}
+                    maxLength={100}
                   />
                   {errors.addressLine1 && (
                     <p className="text-sm text-red-500 mt-1">
@@ -220,6 +235,7 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                   }
                   className="col-span-3"
                   placeholder="Apartment, suite, etc. (optional)"
+                  maxLength={100}
                 />
               </div>
 
@@ -234,6 +250,8 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                     onChange={(e) => handleInputChange('city', e.target.value)}
                     className={errors.city ? 'border-red-500' : ''}
                     placeholder="City"
+                    minLength={2}
+                    maxLength={50}
                   />
                   {errors.city && (
                     <p className="text-sm text-red-500 mt-1">{errors.city}</p>
@@ -252,6 +270,8 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                     onChange={(e) => handleInputChange('state', e.target.value)}
                     className={errors.state ? 'border-red-500' : ''}
                     placeholder="State/Province"
+                    minLength={2}
+                    maxLength={50}
                   />
                   {errors.state && (
                     <p className="text-sm text-red-500 mt-1">{errors.state}</p>
@@ -272,6 +292,8 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                     }
                     className={errors.postalCode ? 'border-red-500' : ''}
                     placeholder="Postal/ZIP code"
+                    minLength={3}
+                    maxLength={20}
                   />
                   {errors.postalCode && (
                     <p className="text-sm text-red-500 mt-1">
@@ -294,6 +316,8 @@ export const AddAddressDialog: React.FC<AddAddressDialogProps> = ({
                     }
                     className={errors.country ? 'border-red-500' : ''}
                     placeholder="Country"
+                    minLength={2}
+                    maxLength={50}
                   />
                   {errors.country && (
                     <p className="text-sm text-red-500 mt-1">

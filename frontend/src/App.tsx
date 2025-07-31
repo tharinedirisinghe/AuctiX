@@ -10,15 +10,19 @@ import {
 } from './store/slices/notificationSlice';
 import { Toaster } from './components/ui/toaster';
 import { fetchPendingRequiredActions } from './store/slices/requiredActionsSlice';
+import { FCMHandlerEventListener } from './lib/FCMMessageListener';
+import { listenForForegroundMessages } from './firebase/firebase';
+import AdminTools from './components/organisms/AdminTools';
 
 const App: React.FC = () => {
   const dispatch = useAppDispatch();
   const auth: IAuthUser = useAppSelector((state) => state.auth as IAuthUser);
+  listenForForegroundMessages();
 
   useEffect(() => {
     const fetchNotifications = () => {
-      // dispatch(fetchLatestNotifications());
-      // dispatch(fetchUnreadCount());
+      dispatch(fetchLatestNotifications());
+      dispatch(fetchUnreadCount());
     };
 
     dispatch(restoreUser());
@@ -35,8 +39,10 @@ const App: React.FC = () => {
 
   return (
     <>
+      <FCMHandlerEventListener />
       <AppRouter />
       <Toaster />
+      <AdminTools />
     </>
   );
 };

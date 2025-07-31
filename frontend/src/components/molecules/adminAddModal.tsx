@@ -1,4 +1,3 @@
-'use client';
 import { z } from 'zod';
 import { set, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,16 +31,24 @@ import { IRegisterAdmin } from '@/services/authService';
 // Hardcoded permissions configuration that would come from the server
 const permissionsConfig = {
   permissions: [
-    { id: 'view_users', label: 'View Users' },
-    { id: 'edit_users', label: 'Edit Users' },
-    { id: 'delete_users', label: 'Delete Users' },
-    { id: 'view_products', label: 'View Products' },
-    { id: 'edit_products', label: 'Edit Products' },
-    { id: 'delete_products', label: 'Delete Products' },
-    { id: 'view_orders', label: 'View Orders' },
-    { id: 'edit_orders', label: 'Edit Orders' },
-    { id: 'view_analytics', label: 'View Analytics' },
-  ],
+    {
+      id: 'verification_approvals',
+      label: 'Verification Approvals',
+      disabled: true,
+      defaultChecked: true,
+    },
+    {
+      id: 'users_management',
+      label: 'Users Management',
+      disabled: true,
+      defaultChecked: true,
+    },
+  ] as Array<{
+    id: string;
+    label: string;
+    disabled?: boolean;
+    defaultChecked?: boolean;
+  }>,
 };
 
 const formSchema = z.object({
@@ -78,7 +85,7 @@ export function AdminAddModal({ isOpen, onConfirm, close }: AdminModalProps) {
       password: '',
       firstName: 'auctix',
       lastName: 'admin',
-      permissions: [],
+      permissions: ['verification_approvals', 'users_management'],
     },
   });
 
@@ -280,7 +287,9 @@ export function AdminAddModal({ isOpen, onConfirm, close }: AdminModalProps) {
                                           checked={field.value?.includes(
                                             permission.id,
                                           )}
+                                          disabled={permission.disabled}
                                           onCheckedChange={(checked) => {
+                                            if (permission.disabled) return;
                                             return checked
                                               ? field.onChange([
                                                   ...field.value,

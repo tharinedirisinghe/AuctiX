@@ -11,7 +11,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Data
 public class SellerDTO {
-    @JsonIgnore
+//    @JsonIgnore
     private UUID sellerId;
     private Boolean isVerified;
     private Boolean isActive;

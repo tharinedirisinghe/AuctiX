@@ -1,6 +1,7 @@
 // File: src/pages/Seller_Delivery.tsx
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchSellerDeliveries,
   updateStatus,
@@ -9,8 +10,8 @@ import {
   selectDeliveryLoading,
   selectDeliveryError,
   clearDeliveryError,
-  createNewDelivery,
 } from '@/store/slices/deliverySlice';
+import { requestDeliveryAddress } from '@/services/deliveryService';
 import { AppDispatch } from '@/store/store'; // Added missing import
 import { toast } from '@/components/ui/use-toast';
 import { Delivery } from '@/services/deliveryService';
@@ -20,7 +21,6 @@ import { DeliveryHeroBanner } from '@/components/delivery/seller/DeliveryHeroBan
 import { DeliveryStats } from '@/components/delivery/seller/DeliveryStats';
 import { DeliveryFilter } from '@/components/delivery/seller/DeliveryFilter';
 import { DeliveryCard } from '@/components/delivery/seller/DeliveryCard';
-import { NewDeliveryDialog } from '@/components/delivery/seller/NewDeliveryDialog';
 import { DatePickerDialog } from '@/components/delivery/seller/DatePickerDialog';
 import { DeliveryDetailsDialog } from '@/components/delivery/seller/DeliveryDetailsDialog';
 import { EmptyDeliveryState } from '@/components/delivery/seller/EmptyDeliveryState';
@@ -29,19 +29,16 @@ import { ErrorDisplay } from '@/components/delivery/seller/ErrorDisplay';
 import { LoadingIndicator } from '@/components/delivery/shared/LoadingIndicator';
 import { DeliverySkeletons } from '@/components/delivery/shared/DeliverySkeletons';
 import { isValidDate } from '@/components/delivery/shared/DateHelper';
+import { DeliveryReviewsDialog } from '@/components/delivery/seller/DeliveryReviewsDialog';
+import { DeliveryCalendar } from '@/components/delivery/seller/DeliveryCalendar';
+import { CalendarStats } from '@/components/delivery/seller/CalendarStats';
+import { Button } from '@/components/ui/button';
+import { Star, CalendarDays, List, ArrowLeft } from 'lucide-react';
 
-// Define interface for new delivery data
-interface NewDeliveryData {
-  auctionId: string;
-  buyerId: string;
-  deliveryDate: string;
-  deliveryAddress: string;
-  notes?: string;
-  trackingNumber?: string;
-}
 
 const SellerDeliveryPage = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const deliveries = useSelector(selectSellerDeliveries);
   const isLoading = useSelector(selectDeliveryLoading);
   const error = useSelector(selectDeliveryError);
@@ -61,10 +58,15 @@ const SellerDeliveryPage = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
-  const [showNewDeliveryModal, setShowNewDeliveryModal] =
-    useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
+
+  // Review dialog state
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState<boolean>(false);
+  const [reviewDelivery, setReviewDelivery] = useState<Delivery | null>(null);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   // Fetch deliveries on mount
   useEffect(() => {
@@ -255,33 +257,59 @@ const SellerDeliveryPage = () => {
     setSelectedDelivery(delivery);
   };
 
-  // Create new delivery
-  const handleCreateDelivery = (data: NewDeliveryData) => {
-    dispatch(createNewDelivery(data))
-      .unwrap()
-      .then(() => {
-        setShowNewDeliveryModal(false);
-        toast({
-          title: 'Delivery Created',
-          description: 'New delivery has been created successfully',
-          variant: 'default',
-        });
-      })
-      .catch((error) => {
-        toast({
-          title: 'Creation Failed',
-          description:
-            typeof error === 'string' ? error : 'Could not create delivery',
-          variant: 'destructive',
-        });
-      });
-  };
 
   const resetFilters = () => {
     setTypeFilter('all');
     setStatusFilter('all');
     setDateFilter('all');
     setSearchTerm('');
+  };
+
+  // Request address from buyer
+  const handleRequestAddress = async (id: string) => {
+    try {
+      await requestDeliveryAddress(id);
+      toast({
+        title: 'Address Requested',
+        description: 'The buyer has been notified to provide their delivery address.',
+        variant: 'default',
+      });
+      // Refresh deliveries to update the UI
+      dispatch(fetchSellerDeliveries());
+    } catch {
+      toast({
+        title: 'Request Failed',
+        description: 'Could not request address from buyer. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle view reviews
+  const handleViewReviews = (delivery: Delivery) => {
+    setReviewDelivery(delivery);
+    setIsReviewDialogOpen(true);
+  };
+
+  // Handle contact buyer (placeholder)
+  const handleContactBuyer = (delivery: Delivery) => {
+    // Placeholder - just shows it works
+    console.log('Contact buyer for delivery:', delivery.id);
+  };
+
+  // Handle calendar date click
+  const handleCalendarDateClick = (date: string, dayDeliveries: Delivery[]) => {
+    console.log('Calendar date clicked:', date, dayDeliveries);
+  };
+
+  // Handle calendar delivery click
+  const handleCalendarDeliveryClick = (delivery: Delivery) => {
+    viewDeliveryDetails(delivery);
+  };
+
+  // Handle calendar date update
+  const handleCalendarDateUpdate = (deliveryId: string, currentDate: string) => {
+    openDatePicker(deliveryId, currentDate);
   };
 
   // Refresh deliveries
@@ -294,10 +322,65 @@ const SellerDeliveryPage = () => {
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto p-6">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Delivery Management</h1>
-          <p className="text-gray-500">
-            Track and manage your auction deliveries to buyers
-          </p>
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 w-fit"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden xs:inline">Back</span>
+              </Button>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">Delivery Management</h1>
+                <p className="text-gray-500 text-sm sm:text-base">
+                  Track and manage your auction deliveries to buyers
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* View Mode Toggle */}
+              <div className="flex items-center border rounded-lg p-1 bg-white">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center flex-1 sm:flex-none ${
+                    viewMode === 'list'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <List className="w-4 h-4 mr-1" />
+                  <span className="hidden xs:inline">List</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('calendar')}
+                  className={`flex items-center flex-1 sm:flex-none ${
+                    viewMode === 'calendar'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <CalendarDays className="w-4 h-4 mr-1" />
+                  <span className="hidden xs:inline">Calendar</span>
+                </Button>
+              </div>
+              <Button
+                onClick={() => navigate('/seller-reviews')}
+                className="bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center w-full sm:w-auto"
+                size="sm"
+              >
+                <Star className="w-4 h-4 mr-2" />
+                <span className="hidden xs:inline">View My Reviews</span>
+                <span className="xs:hidden">Reviews</span>
+              </Button>
+            </div>
+          </div>
         </header>
 
         <DeliveryHeroBanner />
@@ -308,68 +391,94 @@ const SellerDeliveryPage = () => {
         {/* Loading indicator */}
         <LoadingIndicator isLoading={isLoading} />
 
-        {/* Stats Cards */}
-        <DeliveryStats
-          deliveries={deliveries || []}
-          isLoading={isLoading}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
-
-        {/* Search & Filter */}
-        <DeliveryFilter
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          setShowNewDeliveryModal={setShowNewDeliveryModal}
-          isLoading={isLoading}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          dateFilter={dateFilter}
-          setDateFilter={setDateFilter}
-          resetFilters={resetFilters}
-        />
-
-        {/* Delivery Cards */}
-        {isLoading && !deliveries?.length ? (
-          <DeliverySkeletons count={3} />
-        ) : filteredDeliveries.length === 0 ? (
-          <EmptyDeliveryState
+        {/* Stats Cards - Show only in list view */}
+        {viewMode === 'list' && (
+          <DeliveryStats
+            deliveries={deliveries || []}
+            isLoading={isLoading}
             activeTab={activeTab}
-            setShowNewDeliveryModal={setShowNewDeliveryModal}
+            setActiveTab={setActiveTab}
           />
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {currentDeliveries.map((delivery) => (
-              <DeliveryCard
-                key={delivery.id}
-                delivery={delivery}
-                handleUpdateStatus={handleUpdateStatus}
-                openDatePicker={openDatePicker}
-                viewDeliveryDetails={viewDeliveryDetails}
-                isLoading={isLoading}
-              />
-            ))}
-          </div>
         )}
 
-        {/* Pagination */}
-        {filteredDeliveries.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            itemsPerPage={itemsPerPage}
-            totalItems={filteredDeliveries.length}
-            currentItemsCount={currentDeliveries.length}
-            goToPreviousPage={goToPreviousPage}
-            goToNextPage={goToNextPage}
+        {/* Search & Filter - Show only in list view */}
+        {viewMode === 'list' && (
+          <DeliveryFilter
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
             isLoading={isLoading}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            dateFilter={dateFilter}
+            setDateFilter={setDateFilter}
+            resetFilters={resetFilters}
           />
+        )}
+
+        {/* Content based on view mode */}
+        {viewMode === 'list' ? (
+          <>
+            {/* Delivery Cards */}
+            {isLoading && !deliveries?.length ? (
+              <DeliverySkeletons count={3} />
+            ) : filteredDeliveries.length === 0 ? (
+              <EmptyDeliveryState
+                activeTab={activeTab}
+                />
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {currentDeliveries.map((delivery) => (
+                  <DeliveryCard
+                    key={delivery.id}
+                    delivery={delivery}
+                    handleUpdateStatus={handleUpdateStatus}
+                    openDatePicker={openDatePicker}
+                    viewDeliveryDetails={viewDeliveryDetails}
+                    handleRequestAddress={handleRequestAddress}
+                    onViewReviews={handleViewReviews}
+                    onContactBuyer={handleContactBuyer}
+                    isLoading={isLoading}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {filteredDeliveries.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                itemsPerPage={itemsPerPage}
+                totalItems={filteredDeliveries.length}
+                currentItemsCount={currentDeliveries.length}
+                goToPreviousPage={goToPreviousPage}
+                goToNextPage={goToNextPage}
+                isLoading={isLoading}
+              />
+            )}
+          </>
+        ) : (
+          /* Calendar View */
+          <>
+            {/* Calendar Stats */}
+            <CalendarStats
+              deliveries={deliveries || []}
+              isLoading={isLoading}
+            />
+            
+            {/* Calendar Component */}
+            <DeliveryCalendar
+              deliveries={deliveries || []}
+              onDateClick={handleCalendarDateClick}
+              onDeliveryClick={handleCalendarDeliveryClick}
+              onUpdateDate={handleCalendarDateUpdate}
+              isLoading={isLoading}
+            />
+          </>
         )}
       </div>
 
@@ -394,13 +503,16 @@ const SellerDeliveryPage = () => {
         openDatePicker={openDatePicker}
       />
 
-      {/* New Delivery Modal */}
-      <NewDeliveryDialog
-        isOpen={showNewDeliveryModal}
-        onClose={() => setShowNewDeliveryModal(false)}
-        onSubmit={handleCreateDelivery}
-        isLoading={isLoading}
+      {/* Delivery Reviews Dialog */}
+      <DeliveryReviewsDialog
+        isOpen={isReviewDialogOpen}
+        onClose={() => {
+          setIsReviewDialogOpen(false);
+          setReviewDelivery(null);
+        }}
+        delivery={reviewDelivery}
       />
+
     </div>
   );
 };

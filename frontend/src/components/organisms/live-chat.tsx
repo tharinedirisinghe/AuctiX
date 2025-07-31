@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Client } from '@stomp/stompjs';
+import { Client, StompHeaders } from '@stomp/stompjs';
+import { useInView } from 'react-intersection-observer';
 import SockJS from 'sockjs-client';
 import { ChatMessageDTO } from '@/types/IChatMessageDTO';
 import { IAuthUser } from '@/types/IAuthUser';
@@ -12,11 +13,36 @@ import { Label } from '@radix-ui/react-dropdown-menu';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
-const AuctionChat = ({ auctionId }: { auctionId: string }) => {
+type ChatRoomProps =
+  | {
+      type: 'AUCTION';
+      auctionId: string;
+      title?: string;
+      limitUIHeight?: boolean;
+    }
+  | {
+      type: 'SUPPORT' | 'PRIVATE' | 'GROUP';
+      chatRoomId: string;
+      title?: string;
+      limitUIHeight?: boolean;
+    };
+
+const LiveChat = (props: ChatRoomProps) => {
+  const { type, title, limitUIHeight } = props;
+
+  const { ref, inView } = useInView({
+    threshold: 0.4,
+    triggerOnce: false,
+  });
+
+  const chatRoomId = type !== 'AUCTION' ? props.chatRoomId : undefined;
+  const auctionId = type === 'AUCTION' ? props.auctionId : undefined;
+
   const [stompClient, setStompClient] = useState<Client | null>(null);
   const [messages, setMessages] = useState<ChatMessageProps[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [connected, setConnected] = useState(false);
+  const [isGuest, setIsGuest] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeightRef = useRef(0);
@@ -36,6 +62,39 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  let topicPath = '';
+  const sendMessageDestination = `/app/chat.sendMessage/${type}/${type === 'AUCTION' ? auctionId : chatRoomId}`;
+
+  const getMessageFetchEndpoint = (
+    chatType: string,
+    auctionId?: string,
+    chatRoomId?: string,
+  ): string => {
+    const id = chatType === 'AUCTION' ? auctionId : chatRoomId;
+    if (!id) throw new Error(`Missing ID for chatType: ${chatType}`);
+    return `/chat/${chatType}/${id}/messages`;
+  };
+
+  const setTopicPath = () => {
+    switch (type) {
+      case 'AUCTION':
+        topicPath = `/topic/chat/auction/${auctionId}`;
+        break;
+      case 'SUPPORT':
+        topicPath = `/topic/chat/support/${chatRoomId}`;
+        break;
+      case 'PRIVATE':
+        topicPath = `/topic/chat/direct/${chatRoomId}`;
+        break;
+      case 'GROUP':
+        topicPath = `/topic/chat/group/${chatRoomId}`;
+        break;
+      default:
+        console.error('Invalid chat type');
+        return;
+    }
+  };
 
   // Flag to control scroll behavior
   const isLoadingOlderMessages = useRef(false);
@@ -63,12 +122,15 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
       }
 
       try {
-        const response = await axiosInstance.get(
-          `/public/chat/${auctionId}/messages`,
-          {
-            params: { page: pageNum, size: 3 },
-          },
+        const msgFetchPath = getMessageFetchEndpoint(
+          type,
+          auctionId,
+          chatRoomId,
         );
+
+        const response = await axiosInstance.get(msgFetchPath, {
+          params: { page: pageNum, size: limitUIHeight ? 5 : 3 },
+        });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const newMessages: any[] = response.data;
@@ -170,6 +232,34 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
 
   // Connect to WebSocket
   useEffect(() => {
+    setTopicPath();
+
+    if (topicPath == null) {
+      return;
+    }
+
+    let connectHeaders: StompHeaders | undefined;
+
+    if (
+      isAuthenticated &&
+      userAuth.token &&
+      (type === 'AUCTION' ? auctionId : chatRoomId)
+    ) {
+      connectHeaders = {
+        Authorization: `Bearer ${userAuth.token}`,
+        chatType: type,
+        chatId: type === 'AUCTION' ? auctionId! : chatRoomId!,
+      };
+    } else if (!isAuthenticated && type === 'AUCTION' && auctionId) {
+      // Allow anonymous read for auction chats
+      connectHeaders = {
+        chatType: 'AUCTION',
+        chatId: auctionId,
+      };
+    } else {
+      connectHeaders = undefined;
+    }
+
     const client = new Client({
       webSocketFactory: () => new SockJS(webSocketURL),
       debug: function (str) {
@@ -178,17 +268,23 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
-      connectHeaders: isAuthenticated
-        ? { Authorization: `Bearer ${userAuth.token}` }
-        : {},
-      onConnect: () => {
+      connectHeaders: connectHeaders,
+      onConnect: (frame) => {
         console.log('Connected to WebSocket');
+        const serverUserName = frame.headers['user-name'];
+        if (serverUserName?.startsWith('guest')) {
+          console.log('Connected as guest user:', serverUserName);
+          setIsGuest(true);
+        } else {
+          setIsGuest(false);
+          console.log('Authenticated user:', serverUserName);
+        }
         setConnected(true);
 
         // Subscribe to the auction chat topic only if not already subscribed
         if (!subscriptionRef.current) {
           subscriptionRef.current = client.subscribe(
-            `/topic/auction/${auctionId}/chat`,
+            topicPath,
             (messageOutput) => {
               try {
                 const receivedMessage: ChatMessageDTO = JSON.parse(
@@ -221,6 +317,8 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
                   ...prevMessages,
                   newChatMessage,
                 ]);
+
+                updateLastReadTimestamp();
 
                 if (newChatMessage.isSentByCurrentUser) {
                   lastNewMessageSource.current = 'self';
@@ -266,6 +364,8 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
     };
   }, [
     auctionId,
+    chatRoomId,
+    topicPath,
     webSocketURL,
     user,
     isAuthenticated,
@@ -274,7 +374,7 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   ]);
 
   const sendMessage = () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isGuest) {
       console.error('Cannot send messages in guest mode');
       return;
     }
@@ -292,7 +392,7 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
 
       // Send to server
       stompClient.publish({
-        destination: `/app/chat.sendMessage/${auctionId}`,
+        destination: sendMessageDestination,
         body: JSON.stringify(chatMessage),
         headers: {
           Authorization: `Bearer ${userAuth.token}`,
@@ -340,20 +440,83 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
     if (!user.loading) {
       // Initial load should scroll to bottom
       isLoadingOlderMessages.current = false;
-      fetchMessages(0);
+      fetchMessages(0).then(() => {
+        updateLastReadTimestamp();
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userAuth, user.loading]);
 
+  const isChatScrolledToBottom = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return false;
+    const threshold = 100; // px from bottom
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      threshold
+    );
+  };
+
+  const isTabVisible = () => document.visibilityState === 'visible';
+  const isChatVisible = () => inView;
+
+  const shouldUpdateLastRead = () => {
+    console.log(
+      'should update last read' +
+        isChatScrolledToBottom() +
+        isTabVisible() +
+        isChatVisible(),
+    );
+    return isChatScrolledToBottom() && isTabVisible() && isChatVisible();
+  };
+
+  const updateLastReadTimestamp = async () => {
+    if (shouldUpdateLastRead()) {
+      try {
+        const chatId = type === 'AUCTION' ? auctionId : chatRoomId;
+        if (!chatId) return;
+
+        await axiosInstance.put(`/chat/${type}/${chatId}/last-read`);
+      } catch (error) {
+        console.error('Failed to update last read timestamp', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isChatVisible()) {
+        setTimeout(() => {
+          updateLastReadTimestamp();
+        }, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Trigger when inView changes
+  useEffect(() => {
+    if (inView) {
+      updateLastReadTimestamp();
+    }
+  }, [inView]);
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-2 border-b">
-        <h2 className="font-medium">Auction Chat</h2>
+    <div className="flex flex-col h-full max-h-screen">
+      <div className="flex items-center justify-between p-2 border-b" ref={ref}>
+        <h2 className="font-medium">{title ? title : 'Chat'}</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm">
-            {isAuthenticated
-              ? 'Connected to chat'
-              : 'Connected in Guest Mode (Read Only)'}
+            {connected
+              ? isGuest
+                ? 'Connected in Guest Mode (Read Only)'
+                : 'Connected to chat'
+              : 'Disconnected'}
           </span>
           <div
             className={`h-2 w-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}
@@ -363,7 +526,9 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
       </div>
 
       <div
-        className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[500px]"
+        className={`flex-1 overflow-y-auto p-4 space-y-4 ${
+          limitUIHeight ? 'max-h-[500px]' : 'max-h-svh'
+        }`}
         ref={scrollContainerRef}
       >
         {hasMore ? (
@@ -452,9 +617,9 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
               autoComplete="off"
               required
               className="flex-1"
-              disabled={!connected || !isAuthenticated}
+              disabled={!connected || isGuest}
             />
-            <Button type="submit" disabled={!connected || !isAuthenticated}>
+            <Button type="submit" disabled={!connected || isGuest}>
               Send
             </Button>
           </div>
@@ -464,4 +629,4 @@ const AuctionChat = ({ auctionId }: { auctionId: string }) => {
   );
 };
 
-export default AuctionChat;
+export default LiveChat;

@@ -16,6 +16,7 @@ import {
 } from '@/services/sellerVerificationService';
 import { toast } from 'react-toastify';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export enum VerificationStatus {
   NO_VERIFICATION_REQUESTED = 'NO_VERIFICATION_REQUESTED',
@@ -28,6 +29,7 @@ export function VerificationForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
   const [verificationStatus, setVerificationStatus] =
@@ -70,8 +72,16 @@ export function VerificationForm() {
   };
 
   const handleBack = () => {
-    // TODO: Implement back navigation
-    console.log('Navigate back');
+    if (
+      verificationStatus === VerificationStatus.APPROVED ||
+      verificationStatus === VerificationStatus.PENDING
+    ) {
+      navigate('/dashboard');
+    } else if (verificationStatus === VerificationStatus.REJECTED) {
+      setVerificationStatus(VerificationStatus.NO_VERIFICATION_REQUESTED);
+      setVerificationSubmissions([]);
+      setSelectedFiles([]);
+    }
   };
 
   useEffect(() => {

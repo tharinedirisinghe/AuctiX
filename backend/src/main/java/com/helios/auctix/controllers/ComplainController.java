@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -53,21 +55,32 @@ public class ComplainController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllComplaints(
-        @RequestParam(value = "limit", required = false, defaultValue = "10") Integer limit,
-        @RequestParam(value = "offset", required = false, defaultValue = "0") Integer offset,
-        @RequestParam(value = "sortby", required = false, defaultValue = "id") String sortBy,
-        @RequestParam(value = "order", required = false, defaultValue = "asc") String order,
-        @RequestParam(value = "search", required = false) String search) {
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(value = "sortby", required = false, defaultValue = "dateReported") String sortBy,
+        @RequestParam(value = "order", required = false, defaultValue = "desc") String order,
+        @RequestParam(value = "search", required = false) String search,
+        @RequestParam(value = "status", required = false) ComplaintStatus status){
 
-            try{
-                Page complaintPage = complaintService.getAllComplaints(limit,offset,sortBy,order,search);
-                return ResponseEntity.ok(complaintPage);
-            }
-            catch (IllegalArgumentException e){
-                return ResponseEntity.badRequest().body(e.getMessage());
-            }
+        try {
+            Page<Complaint> complaintPage = complaintService.getAllComplaints(page, size, sortBy, order, search, status);
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", complaintPage.getContent());
+            response.put("totalPages", complaintPage.getTotalPages());
+            response.put("size", complaintPage.getSize());
+            response.put("pageable", Map.of("pageNumber", complaintPage.getNumber()));
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
 
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Integer>> getComplaintStats() {
+        Map<String, Integer> stats = complaintService.getComplaintStats();
+        return ResponseEntity.ok(stats);
+    }
 
 
     @GetMapping("/{id}")

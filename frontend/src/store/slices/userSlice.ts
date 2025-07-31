@@ -4,6 +4,7 @@ import axios from 'axios';
 import { IAuthUser } from '@/types/IAuthUser';
 import { logout } from './authSlice';
 import { assets } from '@/config/assets';
+import { link } from 'fs';
 
 interface UserState extends IUser {
   loading: boolean;
@@ -15,10 +16,18 @@ const initialState: UserState = {
   email: null,
   firstName: null,
   lastName: null,
-  fcmTokens: [],
   profile_photo: assets.default_profile_image,
   banner_photo: assets.default_banner_image,
   role: null,
+  bio: null,
+  address: {
+    addressNumber: '',
+    addressLine1: '',
+    addressLine2: '',
+    country: '',
+  },
+  urls: [],
+  isVerified: false,
   loading: true,
   error: null,
 };
@@ -44,16 +53,31 @@ export const fetchCurrentUser = createAsyncThunk(
 
       // Add additional setup for user data
       const userData = {
-        ...response.data,
-        profile_photo_link: response.data.profilePicture?.id
+        username: response.data.username,
+        email: response.data.email,
+        firstName: response.data.firstName || null,
+        lastName: response.data.lastName || null,
+
+        profile_photo: response.data.profilePicture?.id
           ? `${baseURL}/user/getUserProfilePhoto?file_uuid=${response.data.profilePicture.id}`
           : assets.default_profile_image,
-        banner_photo_link: response.data.seller?.bannerId
-          ? `${baseURL}/user/getUserProfilePhoto?file_uuid=${response.data.seller.bannerId}`
+        banner_photo: response.data.seller?.bannerId
+          ? `${baseURL}/user/getUserBannerPhoto?file_uuid=${response.data.seller.bannerId}`
           : assets.default_banner_image,
-        fcmTokens: response.data.fcmTokens || [],
-      };
-      delete userData.profilePicture;
+        role: response.data?.userRole?.userRole || null,
+        isVerified: response.data.seller?.isVerified || false,
+        address: {
+          addressNumber: response.data.userAddress?.addressNumber || '',
+          addressLine1: response.data.userAddress?.addressLine1 || '',
+          addressLine2: response.data.userAddress?.addressLine2 || '',
+          country: response.data.userAddress?.country || '',
+        },
+        urls:
+          response.data.socialMediaLinks?.map((link: any) => {
+            return link.link;
+          }) || [],
+        bio: response.data.bio || '',
+      } as IUser;
 
       console.log('Processed user data:', userData);
       return userData;
@@ -86,11 +110,20 @@ const userSlice = createSlice({
         state.email = action.payload.email;
         state.firstName = action.payload.firstName;
         state.lastName = action.payload.lastName;
-        state.fcmTokens = action.payload.fcmTokens;
+        state.bio = action.payload.bio || '';
+        state.urls = action.payload.urls || [];
         state.profile_photo =
-          action.payload.profile_photo_link || assets.default_profile_image;
-        state.banner_photo = action.payload.banner_photo_link;
-        state.role = action.payload.userRole.userRole;
+          action.payload.profile_photo || assets.default_profile_image;
+        state.banner_photo =
+          action.payload.banner_photo || assets.default_banner_image;
+        state.role = action.payload.role;
+        state.address = {
+          addressNumber: action.payload.address?.addressNumber || '',
+          addressLine1: action.payload.address?.addressLine1 || '',
+          addressLine2: action.payload.address?.addressLine2 || '',
+          country: action.payload.address?.country || '',
+        };
+        state.isVerified = action.payload.isVerified || false;
         console.log('User data updated:', action.payload);
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {

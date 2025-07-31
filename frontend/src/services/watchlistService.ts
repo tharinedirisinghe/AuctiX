@@ -87,10 +87,10 @@ export const getWatchList = async ({
 
     return {
       data,
-      currentPage: response.data.pageable?.pageNumber || 0,
-      totalPages: response.data.totalPages || 1,
-      size: response.data.size || data.length,
-      totalElements: response.data.totalElements || data.length,
+      currentPage: response.data.page.number || 0,
+      totalPages: response.data.page.totalPages || 1,
+      size: response.data.page.size,
+      totalElements: response.data.page.totalElements,
     };
   } catch (error) {
     console.error('Error fetching watchlist:', error);

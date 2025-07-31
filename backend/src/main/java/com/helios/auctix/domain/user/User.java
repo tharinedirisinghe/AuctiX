@@ -68,6 +68,18 @@ public class User {
     @JoinColumn(name = "id")
     private UserAddress userAddress;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PasswordResetRequest> passwordResetRequest;
+
+    @Column(name = "is_suspended", nullable = false)
+    private boolean isSuspended = false;
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<SuspendedUser> suspensions;
+
+    @OneToMany(mappedBy = "suspendedBy", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<SuspendedUser> suspensionsIssued;
+
     // helper method to make it cleaner to get the role enum
     @JsonProperty("role")
     public UserRoleEnum getRoleEnum() {
@@ -82,4 +94,18 @@ public class User {
 
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private NotificationGlobalPreference notificationGlobalPreference;
+
+    @Column(name = "bio")
+    private String bio;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private List<UserSocialMediaLink> socialMediaLinks;
 }

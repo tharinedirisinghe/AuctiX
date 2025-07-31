@@ -34,6 +34,7 @@ public class NotificationCategoryLoader {
                 category.setAllowedRoles(Set.of(UserRoleEnum.values()));
                 category.setCannotEditRoles(Set.of());
                 category.setAlwaysHiddenRoles(Set.of());
+                category.setBypassSettingsRoles(Set.of());
                 continue;
             }
             category.setTitle(meta.getTitle());
@@ -42,6 +43,7 @@ public class NotificationCategoryLoader {
             category.setAllowedRoles(meta.getAllowedRoles());
             category.setCannotEditRoles(meta.getCannotEditRoles());
             category.setAlwaysHiddenRoles(meta.getAlwaysHiddenRoles());
+            category.setBypassSettingsRoles((meta.getBypassSettingsRoles()));
         }
     }
 }

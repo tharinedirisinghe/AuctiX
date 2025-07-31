@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { Filter } from 'lucide-react';
 import AuctionCard from '../components/molecules/auctionCard';
-
+import { useNavigate, useSearchParams } from 'react-router-dom';
 interface Seller {
   id: string;
   username: string;
@@ -53,113 +53,165 @@ interface PaginationInfo {
   itemsPerPage: number;
 }
 
-type FilterType = 'active' | 'expired' | 'upcoming';
+type FilterType = 'active' | 'ended' | 'upcoming';
 
-// AuctionTimer hook and util for time remaining and auction status
+const CATEGORIES = [
+  'Electronics',
+  'Computers & Tech',
+  'Fashion & Clothing',
+  'Home & Garden',
+  'Sports & Recreation',
+  'Books & Media',
+  'Toys & Games',
+  'Musical Instruments',
+  'Tools & Equipment',
+  'Collectibles & Antiques',
+  'Art & Crafts',
+  'Automotive',
+  'Jewelry & Watches',
+  'Health & Beauty',
+  'Business & Industrial',
+  'Traditional Items',
+  'Other',
+];
 
-export type AuctionStatus = 'upcoming' | 'active' | 'expired';
+// Utility function to sort auctions based on filter type
+const sortAuctions = (
+  auctions: Auction[],
+  filterType: FilterType,
+): Auction[] => {
+  const now = Date.now();
 
-export function useAuctionTimer(
-  startTime: string,
-  endTime: string,
-): [TimeRemaining, AuctionStatus] {
-  const [timeRemaining, setTimeRemaining] = useState<TimeRemaining>({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
+  return auctions.sort((a, b) => {
+    const aStart = new Date(a.startTime).getTime();
+    const aEnd = new Date(a.endTime).getTime();
+    const bStart = new Date(b.startTime).getTime();
+    const bEnd = new Date(b.endTime).getTime();
+
+    switch (filterType) {
+      case 'active':
+        // Sort by remaining time (ascending) - least remaining time first
+        const aTimeLeft = aEnd - now;
+        const bTimeLeft = bEnd - now;
+        return aTimeLeft - bTimeLeft;
+
+      case 'upcoming':
+        // Sort by time to start (ascending) - nearest opening first
+        const aTimeToStart = aStart - now;
+        const bTimeToStart = bStart - now;
+        return aTimeToStart - bTimeToStart;
+
+      case 'ended':
+        // Sort by end time (descending) - most recently ended first
+        return bEnd - aEnd;
+
+      default:
+        return 0;
+    }
   });
-
-  const [status, setStatus] = useState<AuctionStatus>('active');
-
-  useEffect(() => {
-    const calculateTimeRemaining = () => {
-      const now = Date.now();
-      const start = new Date(startTime).getTime();
-      const end = new Date(endTime).getTime();
-
-      if (now < start) {
-        const diff = start - now;
-        setStatus('upcoming');
-        setTimeRemaining({
-          days: Math.floor(diff / 86400000),
-          hours: Math.floor((diff % 86400000) / 3600000),
-          minutes: Math.floor((diff % 3600000) / 60000),
-          seconds: Math.floor((diff % 60000) / 1000),
-        });
-      } else if (now < end) {
-        const diff = end - now;
-        setStatus('active');
-        setTimeRemaining({
-          days: Math.floor(diff / 86400000),
-          hours: Math.floor((diff % 86400000) / 3600000),
-          minutes: Math.floor((diff % 3600000) / 60000),
-          seconds: Math.floor((diff % 60000) / 1000),
-        });
-      } else {
-        setStatus('expired');
-        setTimeRemaining({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      }
-    };
-
-    calculateTimeRemaining();
-    const interval = setInterval(calculateTimeRemaining, 1000);
-    return () => clearInterval(interval);
-  }, [startTime, endTime]);
-
-  return [timeRemaining, status];
-}
-
-// Util to format the timer text output for display
-export function getAuctionTimerText(
-  time: TimeRemaining,
-  status: AuctionStatus,
-) {
-  const { days, hours, minutes, seconds } = time;
-  if (status === 'upcoming')
-    return `Starts in: ${days}d ${hours}h ${minutes}m ${seconds}s`;
-  if (status === 'active') return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-  return 'Expired';
-}
+};
 
 // FilterContent component for filter options
 const FilterContent: React.FC<{
   activeFilter: FilterType;
+  selectedCategory: string;
   onFilterChange: (filter: FilterType) => void;
+  onCategoryChange: (category: string) => void;
   onClose?: () => void;
-}> = ({ activeFilter, onFilterChange, onClose }) => {
+}> = ({
+  activeFilter,
+  selectedCategory,
+  onFilterChange,
+  onCategoryChange,
+  onClose,
+}) => {
   const filters = [
     { key: 'active' as FilterType, label: 'Active Auctions' },
     { key: 'upcoming' as FilterType, label: 'Upcoming Auctions' },
     {
-      key: 'expired' as FilterType,
-      label: 'Expired Auctions',
+      key: 'ended' as FilterType,
+      label: 'Ended Auctions',
       subtitle: '(Last 3 days)',
     },
   ];
 
   return (
-    <div className="space-y-2">
-      {filters.map((filter) => (
-        <Button
-          key={filter.key}
-          variant={activeFilter === filter.key ? 'default' : 'ghost'}
-          className="w-full justify-start"
-          onClick={() => {
-            onFilterChange(filter.key);
-            onClose?.();
-          }}
-        >
-          <div className="text-left">
-            <div>{filter.label}</div>
-            {filter.subtitle && (
-              <div className="text-xs text-muted-foreground">
-                {filter.subtitle}
+    <div className="space-y-6">
+      {/* Status Filter */}
+      <div>
+        <h3 className="font-medium mb-3">Auction Status</h3>
+        <div className="space-y-2">
+          {filters.map((filter) => (
+            <Button
+              key={filter.key}
+              variant={activeFilter === filter.key ? 'default' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => {
+                onFilterChange(filter.key);
+                // DON'T close the sidebar here - let user select category too
+              }}
+            >
+              <div className="text-left">
+                <div>{filter.label}</div>
+                {filter.subtitle && (
+                  <div className="text-xs text-muted-foreground">
+                    {filter.subtitle}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div>
+        <h3 className="font-medium mb-3">Category</h3>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          <Button
+            variant={selectedCategory === '' ? 'default' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => {
+              onCategoryChange('');
+              // DON'T close the sidebar here either
+            }}
+          >
+            All Categories
+          </Button>
+          {CATEGORIES.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? 'default' : 'ghost'}
+              className="w-full justify-start text-sm"
+              onClick={() => {
+                onCategoryChange(category);
+                // DON'T close the sidebar here either
+              }}
+            >
+              {category}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Apply/Clear Buttons */}
+      <div className="space-y-2 pt-4 border-t">
+        <Button
+          className="w-full"
+          onClick={onClose} // Only close when Apply is clicked
+        >
+          Apply Filters
         </Button>
-      ))}
+        {selectedCategory !== '' && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => onCategoryChange('')}
+          >
+            Clear Category
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
@@ -168,7 +220,15 @@ const AuctionsPage: React.FC = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('active');
+
+  // These are the currently applied filters (used for fetching)
+  const [appliedFilter, setAppliedFilter] = useState<FilterType>('active');
+  const [appliedCategory, setAppliedCategory] = useState<string>('');
+
+  // These are the selected filters in the sidebar (not yet applied)
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>('active');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+
   const [pagination, setPagination] = useState<PaginationInfo>({
     currentPage: 1,
     totalPages: 1,
@@ -177,95 +237,181 @@ const AuctionsPage: React.FC = () => {
   });
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
 
-  const fetchAuctions = async (filter: FilterType, page: number = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('q') ?? '';
+  const navigate = useNavigate();
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auctions/all?filter=${filter}&page=${page}&limit=${pagination.itemsPerPage}&sort=latest`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
-      );
+  const fetchAuctions = useCallback(
+    async (filter: FilterType, page: number = 1, category: string = '') => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch auctions: ${response.status}`);
-      }
+        // Convert filter type for API call (ended -> expired for backend compatibility)
+        const apiFilter = filter === 'ended' ? 'expired' : filter;
 
-      const data = await response.json();
-
-      // Handle different response formats
-      if (data.auctions && Array.isArray(data.auctions)) {
-        // If the API returns paginated data
-        setAuctions(data.auctions);
-        setPagination((prev) => ({
-          ...prev,
-          currentPage: data.currentPage || page,
-          totalPages: data.totalPages || 1,
-          totalItems: data.totalItems || data.auctions.length,
-        }));
-      } else if (Array.isArray(data)) {
-        // If the API returns a simple array (fallback for current API)
-        // Implement client-side pagination
-        const itemsPerPage = pagination.itemsPerPage;
-        const startIndex = (page - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-
-        // Sort by latest first (assuming there's a createdAt or similar field)
-        const sortedData = data.sort((a, b) => {
-          const dateA = new Date(a.startTime || a.createdAt || 0);
-          const dateB = new Date(b.startTime || b.createdAt || 0);
-          return dateB.getTime() - dateA.getTime();
+        // Build query parameters
+        const params = new URLSearchParams({
+          filter: apiFilter,
+          page: page.toString(),
+          limit: pagination.itemsPerPage.toString(),
+          sort: 'latest',
+          searchQuery: searchQuery,
         });
 
-        const paginatedData = sortedData.slice(startIndex, endIndex);
-        const totalPages = Math.ceil(data.length / itemsPerPage);
+        if (category && category !== '') {
+          params.append('category', category);
+        }
 
-        setAuctions(paginatedData);
-        setPagination((prev) => ({
-          ...prev,
-          currentPage: page,
-          totalPages,
-          totalItems: data.length,
-        }));
-      } else {
+        // DEBUG LOGS
+        console.log('Fetching auctions with params:', {
+          filter: apiFilter,
+          category: category,
+          page: page,
+        });
+        console.log(
+          'Full URL:',
+          `${import.meta.env.VITE_API_URL}/auctions/all?${params.toString()}`,
+        );
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/auctions/all?${params.toString()}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch auctions: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Handle different response formats
+        if (data.auctions && Array.isArray(data.auctions)) {
+          // If the API returns paginated data
+          const sortedAuctions = sortAuctions(data.auctions, filter);
+          setAuctions(sortedAuctions);
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: data.currentPage || page,
+            totalPages: data.totalPages || 1,
+            totalItems: data.totalItems || data.auctions.length,
+          }));
+        } else if (Array.isArray(data)) {
+          // If the API returns a simple array (fallback for current API)
+          // Sort the data first, then implement client-side pagination
+          const sortedData = sortAuctions(data, filter);
+
+          const itemsPerPage = pagination.itemsPerPage;
+          const startIndex = (page - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          const paginatedData = sortedData.slice(startIndex, endIndex);
+          const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
+          setAuctions(paginatedData);
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: page,
+            totalPages,
+            totalItems: sortedData.length,
+          }));
+        } else {
+          setAuctions([]);
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: 0,
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching auctions:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred');
         setAuctions([]);
-        setPagination((prev) => ({
-          ...prev,
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: 0,
-        }));
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Error fetching auctions:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setAuctions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [pagination.itemsPerPage, searchQuery],
+  ); // Only depend on itemsPerPage
 
+  // Initial load and when applied filters change
   useEffect(() => {
-    fetchAuctions(activeFilter, 1);
-  }, [activeFilter]);
+    fetchAuctions(appliedFilter, 1, appliedCategory);
+  }, [appliedFilter, appliedCategory, fetchAuctions]);
 
+  // Update handlers (only update selected filters, don't apply immediately)
   const handleFilterChange = (filter: FilterType) => {
-    setActiveFilter(filter);
+    setSelectedFilter(filter);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
 
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  };
+
+  // Apply the selected filters
+  const handleApplyFilters = () => {
+    setAppliedFilter(selectedFilter);
+    setAppliedCategory(selectedCategory);
+    setFilterSidebarOpen(false);
+  };
+
+  // Separate handler for just closing the sidebar
+  const handleCloseSidebar = () => {
+    setFilterSidebarOpen(false);
+  };
+
   const handlePageChange = (page: number) => {
-    fetchAuctions(activeFilter, page);
+    fetchAuctions(appliedFilter, page, appliedCategory);
   };
 
   const handleCardClick = (auctionId: string) => {
-    window.location.href = `/auction-details/${auctionId}`;
+    navigate(`/auction-details/${auctionId}`);
   };
+
+  // Remove AuctionCardWithTimer, use AuctionCard directly
+  const renderedAuctions = useMemo(() => {
+    return auctions.map((auction) => {
+      const imageUrl =
+        auction.images && auction.images.length > 0
+          ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.images[0]}`
+          : '/api/placeholder/400/250';
+
+      const sellerAvatarUrl =
+        auction.seller.profilePicture && auction.seller.profilePicture.id
+          ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.seller.profilePicture.id}`
+          : '/api/placeholder/24/24';
+
+      const sellerName = auction.seller.firstName
+        ? `${auction.seller.firstName} ${auction.seller.lastName}`
+        : auction.seller.username;
+
+      return (
+        <div
+          key={auction.id}
+          className="cursor-pointer"
+          onClick={() => handleCardClick(auction.id)}
+        >
+          <AuctionCard
+            imageUrl={imageUrl}
+            productName={auction.title}
+            category={auction.category}
+            sellerName={sellerName}
+            sellerAvatar={sellerAvatarUrl}
+            startingPrice={auction.startingPrice.toLocaleString()}
+            startTime={auction.startTime}
+            endTime={auction.endTime}
+          />
+        </div>
+      );
+    });
+  }, [auctions]);
 
   if (loading) {
     return (
@@ -293,7 +439,7 @@ const AuctionsPage: React.FC = () => {
         <div className="text-center py-12">
           <p className="text-red-600 text-lg">Error: {error}</p>
           <Button
-            onClick={() => fetchAuctions(activeFilter, 1)}
+            onClick={() => fetchAuctions(appliedFilter, 1, appliedCategory)}
             className="mt-4"
           >
             Try Again
@@ -303,50 +449,6 @@ const AuctionsPage: React.FC = () => {
     );
   }
 
-  // Create a separate component for auction card with timer
-  const AuctionCardWithTimer: React.FC<{
-    auction: Auction;
-    onCardClick: (id: string) => void;
-  }> = ({ auction, onCardClick }) => {
-    const [timeRemaining, status] = useAuctionTimer(
-      auction.startTime,
-      auction.endTime,
-    );
-    const timerText = getAuctionTimerText(timeRemaining, status);
-
-    // Correct image URL construction using the API endpoint
-    const imageUrl =
-      auction.images && auction.images.length > 0
-        ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.images[0]}`
-        : '/api/placeholder/400/250';
-
-    // Get seller avatar URL
-    const getSellerAvatarUrl = () => {
-      if (auction.seller.profilePicture && auction.seller.profilePicture.id) {
-        return `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.seller.profilePicture.id}`;
-      }
-      return '/api/placeholder/24/24';
-    };
-
-    return (
-      <div className="cursor-pointer" onClick={() => onCardClick(auction.id)}>
-        <AuctionCard
-          imageUrl={imageUrl}
-          productName={auction.title}
-          category={auction.category}
-          sellerName={
-            auction.seller.firstName
-              ? `${auction.seller.firstName} ${auction.seller.lastName}`
-              : auction.seller.username
-          }
-          sellerAvatar={getSellerAvatarUrl()}
-          startingPrice={auction.startingPrice.toLocaleString()}
-          timeRemaining={timerText}
-        />
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen mx-auto px-10 py-6 sm:py-8 sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl">
       <div className="mb-6 sm:mb-8 flex items-center justify-between">
@@ -355,14 +457,25 @@ const AuctionsPage: React.FC = () => {
           <h1 className="text-xl sm:text-4xl font-semibold">All Auctions</h1>
         </div>
 
-        <Sheet>
+        <Sheet open={filterSidebarOpen} onOpenChange={setFilterSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setFilterSidebarOpen(true)}
+            >
               <Filter className="h-4 w-4" />
               Filters
-              <Badge variant="secondary" className="ml-1">
-                {activeFilter}
-              </Badge>
+              <div className="flex gap-1">
+                <Badge variant="secondary" className="text-xs">
+                  {appliedFilter}
+                </Badge>
+                {appliedCategory && (
+                  <Badge variant="outline" className="text-xs">
+                    {appliedCategory}
+                  </Badge>
+                )}
+              </div>
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72">
@@ -371,8 +484,11 @@ const AuctionsPage: React.FC = () => {
             </SheetHeader>
             <div className="mt-6">
               <FilterContent
-                activeFilter={activeFilter}
+                activeFilter={selectedFilter}
+                selectedCategory={selectedCategory}
                 onFilterChange={handleFilterChange}
+                onCategoryChange={handleCategoryChange}
+                onClose={handleApplyFilters}
               />
             </div>
           </SheetContent>
@@ -382,7 +498,7 @@ const AuctionsPage: React.FC = () => {
       {auctions.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground text-lg">
-            No {activeFilter} auctions found
+            No {appliedFilter} auctions found
           </p>
         </div>
       ) : (
@@ -395,18 +511,12 @@ const AuctionsPage: React.FC = () => {
                 pagination.currentPage * pagination.itemsPerPage,
                 pagination.totalItems,
               )}{' '}
-              of {pagination.totalItems} {activeFilter} auctions
+              of {pagination.totalItems} {appliedFilter} auctions
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {auctions.map((auction) => (
-              <AuctionCardWithTimer
-                key={auction.id}
-                auction={auction}
-                onCardClick={handleCardClick}
-              />
-            ))}
+            {renderedAuctions}
           </div>
 
           {pagination.totalPages > 1 && (

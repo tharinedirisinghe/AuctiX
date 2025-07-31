@@ -12,6 +12,7 @@ import com.helios.auctix.services.fileUpload.FileUploadUseCaseEnum;
 import com.helios.auctix.services.user.UserDetailsService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -46,9 +47,37 @@ public class AuctionController {
     @Autowired
     private FileUploadService uploader;
 
+    // First, create an ErrorResponse class for consistent error responses
+    public class ErrorResponse {
+        private String message;
+        private String error;
+        private int status;
+        private long timestamp;
+
+        public ErrorResponse(String message, String error, int status) {
+            this.message = message;
+            this.error = error;
+            this.status = status;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        // Getters and setters
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+
+        public String getError() { return error; }
+        public void setError(String error) { this.error = error; }
+
+        public int getStatus() { return status; }
+        public void setStatus(int status) { this.status = status; }
+
+        public long getTimestamp() { return timestamp; }
+        public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
+
     // Create a new auction with multipart/form-data
     @PostMapping("/create")
-    public ResponseEntity<Auction> createAuction(
+    public ResponseEntity<?> createAuction(
             @RequestParam("title") String title,
             @RequestParam("description") String description,
             @RequestParam("startingPrice") double startingPrice,
@@ -70,15 +99,131 @@ public class AuctionController {
             User seller = userDetailsService
                     .getAuthenticatedUser(authentication);
 
+            // Check if user is a seller
             if (seller.getRole().getId() != SELLER_ROLE_ID) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Access denied. Only sellers can create auctions.",
+                        "FORBIDDEN",
+                        HttpStatus.FORBIDDEN.value()
+                );
                 return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN) //returning 403 status code if user isn't a seller
-                        .body(null);
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(errorResponse);
             }
 
-            // Parse dates with timezone support
-            Instant startInstant = Instant.parse(startTime);
-            Instant endInstant = Instant.parse(endTime);
+            // Validate images
+            if (images == null || images.isEmpty()) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "At least one image is required.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
+
+            if (images.size() > 5) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Maximum 5 images are allowed.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
+
+            // Validate image files
+            for (MultipartFile image : images) {
+                if (image.getSize() > 5 * 1024 * 1024) { // 5MB limit
+                    ErrorResponse errorResponse = new ErrorResponse(
+                            "Each image must be less than 5MB.",
+                            "VALIDATION_ERROR",
+                            HttpStatus.BAD_REQUEST.value()
+                    );
+                    return ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body(errorResponse);
+                }
+
+                String contentType = image.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    ErrorResponse errorResponse = new ErrorResponse(
+                            "Only image files are allowed.",
+                            "VALIDATION_ERROR",
+                            HttpStatus.BAD_REQUEST.value()
+                    );
+                    return ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body(errorResponse);
+                }
+            }
+
+            // Parse and validate dates
+            Instant startInstant;
+            Instant endInstant;
+
+            try {
+                startInstant = Instant.parse(startTime);
+                endInstant = Instant.parse(endTime);
+            } catch (DateTimeParseException e) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Invalid date format. Please use ISO 8601 format.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
+
+            // Additional date validations
+            Instant now = Instant.now();
+            if (startInstant.isBefore(now)) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Start time must be in the future.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
+
+            if (endInstant.isBefore(startInstant)) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "End time must be after start time.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
+
+            long durationHours = java.time.Duration.between(startInstant, endInstant).toHours();
+            if (durationHours < 1) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Auction must run for at least 1 hour.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
+
+            if (durationHours > 30 * 24) { // 30 days
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Auction cannot run for more than 30 days.",
+                        "VALIDATION_ERROR",
+                        HttpStatus.BAD_REQUEST.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(errorResponse);
+            }
 
             Auction auction = Auction.builder()
                     .title(title)
@@ -91,25 +236,65 @@ public class AuctionController {
                     .seller(seller.getSeller())
                     .build();
 
-            List<UUID> imagePaths = images.stream()
-                    .map(this::saveImage)
-                    .collect(Collectors.toList());
-            auction.setImagePaths(imagePaths);
+            // Save images
+            List<UUID> imagePaths;
+            try {
+                imagePaths = images.stream()
+                        .map(this::saveImage)
+                        .collect(Collectors.toList());
+                auction.setImagePaths(imagePaths);
+            } catch (Exception e) {
+                log.severe("Error saving images: " + e.getMessage());
+                ErrorResponse errorResponse = new ErrorResponse(
+                        "Failed to save images. Please try again.",
+                        "IMAGE_SAVE_ERROR",
+                        HttpStatus.INTERNAL_SERVER_ERROR.value()
+                );
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(errorResponse);
+            }
 
             Auction createdAuction = auctionService.createAuction(auction);
+
+
 
             log.info("Auction created successfully with ID: " + createdAuction.getId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdAuction);
 
-        } catch (DateTimeParseException e) {
-            log.warning("Invalid date format");
-            return ResponseEntity.badRequest().build();
         } catch (AuthenticationException e) {
-            // handle AuthenticationException gives when user is not authenticated
-            return ResponseEntity.badRequest().build();
+            log.warning("Authentication failed: " + e.getMessage());
+            ErrorResponse errorResponse = new ErrorResponse(
+                    "Authentication failed. Please log in again.",
+                    "AUTHENTICATION_ERROR",
+                    HttpStatus.UNAUTHORIZED.value()
+            );
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(errorResponse);
+
+        } catch (IllegalArgumentException e) {
+            log.warning("Validation error: " + e.getMessage());
+            ErrorResponse errorResponse = new ErrorResponse(
+                    e.getMessage(),
+                    "VALIDATION_ERROR",
+                    HttpStatus.BAD_REQUEST.value()
+            );
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(errorResponse);
+
         } catch (Exception e) {
-            log.warning("Error creating auction");
-            return ResponseEntity.internalServerError().build();
+            log.severe("Unexpected error creating auction: " + e.getMessage());
+            e.printStackTrace(); // For debugging
+            ErrorResponse errorResponse = new ErrorResponse(
+                    "An unexpected error occurred. Please try again later.",
+                    "INTERNAL_SERVER_ERROR",
+                    HttpStatus.INTERNAL_SERVER_ERROR.value()
+            );
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse);
         }
     }
 
@@ -199,27 +384,55 @@ public class AuctionController {
     // Add this method to your existing AuctionController class
 
     @GetMapping("/all")
-    public ResponseEntity<List<AuctionDetailsDTO>> getAllAuctions(
-            @RequestParam(value = "filter", defaultValue = "active") String filter) {
+    public ResponseEntity<?> getAllAuctions(
+            @RequestParam(value = "filter", defaultValue = "active") String filter,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "searchQuery", required = false) String searchQuery,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "limit", defaultValue = "12") int limit)
+
+    {
+        // DEBUG LOG
+        System.out.println("Received filter: " + filter + ", category: " + category);
+
         try {
-            List<AuctionDetailsDTO> auctions;
+            String tsQuery = auctionService.buildTsQuery(searchQuery);
+
+            Page<Auction> pagedAuctions;
+            List<AuctionDetailsDTO> auctionDTOs;
 
             switch (filter.toLowerCase()) {
                 case "active":
-                    auctions = auctionService.getActiveAuctionsDTO();
+
+                    pagedAuctions = auctionService.getActiveAuctionsPaged(category, tsQuery, page, limit);
                     break;
                 case "expired":
-                    auctions = auctionService.getExpiredAuctionsDTO();
+                    pagedAuctions = auctionService.getExpiredAuctionsPaged(category, tsQuery, page, limit);
                     break;
-                case "upcoming":  // Add new case for upcoming
-                    auctions = auctionService.getUpcomingAuctionsDTO();
+                case "upcoming":
+                    pagedAuctions = auctionService.getUpcomingAuctionsPaged(category, tsQuery, page, limit);
                     break;
                 default:
-                    auctions = auctionService.getAllAuctionsDTO();
+                    pagedAuctions = auctionService.getAllAuctionsPaged(category, tsQuery, page, limit);
+
                     break;
             }
 
-            return ResponseEntity.ok(auctions);
+
+            // DEBUG LOG
+//            System.out.println("Returning " + auctions.size() + " auctions");
+
+            auctionDTOs = pagedAuctions.getContent().stream()
+                    .map(auctionService::convertToDTO)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("auctions", auctionDTOs);
+            response.put("currentPage", pagedAuctions.getNumber() + 1);
+            response.put("totalPages", pagedAuctions.getTotalPages());
+            response.put("totalItems", pagedAuctions.getTotalElements());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.warning("Error fetching auctions with filter " + filter + ": " + e.getMessage());
             return ResponseEntity.internalServerError().build();
@@ -235,9 +448,11 @@ public class AuctionController {
      * @return List of seller's auctions
      */
     @GetMapping("/seller/auctions")
-    public ResponseEntity<List<SellerAuctionDTO>> getSellerAuctions(
+    public ResponseEntity<Page<AuctionDetailsDTO>> getSellerAuctions(
             @RequestParam(value = "filter", defaultValue = "total") String filter,
-            @RequestParam(value = "search", required = false) String searchTerm) {
+            @RequestParam(value = "search", required = false) String searchTerm,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User seller = userDetailsService.getAuthenticatedUser(authentication);
@@ -246,13 +461,14 @@ public class AuctionController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
             }
 
-            // Map frontend filter names to backend filter names
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
             String mappedFilter = mapFrontendFilterToBackend(filter);
 
-            List<SellerAuctionDTO> auctions = auctionService.getSellerAuctions(
-                    seller.getSeller().getId(), mappedFilter, searchTerm);
-
-            return ResponseEntity.ok(auctions);
+            Page<AuctionDetailsDTO> detailedPage = auctionService.getDetailedSellerAuctions(
+                    seller.getId(), mappedFilter, searchTerm, pageable
+            );
+            return ResponseEntity.ok(detailedPage);
         } catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (Exception e) {
@@ -363,7 +579,9 @@ public class AuctionController {
      * @return Response message
      */
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteAuction(@PathVariable UUID id) {
+    public ResponseEntity<?> deleteAuction(
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User seller = userDetailsService.getAuthenticatedUser(authentication);
@@ -385,17 +603,23 @@ public class AuctionController {
             // Check if auction has bids
             boolean hasBids = bidService.hasAuctionReceivedBids(id);
 
-            String result = auctionService.deleteAuction(id, hasBids);
-            return ResponseEntity.ok(result);
+            if (hasBids && (requestBody == null || requestBody.get("reason") == null || requestBody.get("reason").trim().isEmpty())) {
+                return ResponseEntity.badRequest().body("Deletion reason is required for auctions with bids");
+            }
+
+            String deletionReason = hasBids ? requestBody.get("reason") : null;
+            String result = auctionService.deleteAuction(id, hasBids, deletionReason, seller.getSeller().getId());
+            return ResponseEntity.ok(Map.of("message", result));
 
         } catch (IllegalArgumentException e) {
             log.warning("Invalid request parameters: " + e.getMessage());
-            return ResponseEntity.badRequest().body("Invalid request parameters.");
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authentication required"));
         } catch (Exception e) {
             log.warning("Error deleting auction: " + e.getMessage());
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.internalServerError().body(Map.of("error", "Internal server error"));
         }
     }
 
@@ -427,6 +651,49 @@ public class AuctionController {
             log.warning("Error fetching auction for update: " + e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+
+    @GetMapping("/seller/{id}")
+    public ResponseEntity<Page<AuctionDetailsDTO>> getAuctionsBySeller(
+            @PathVariable UUID id,
+            @RequestParam(value = "filter", defaultValue = "total") String filter,
+            @RequestParam(value = "search", required = false) String searchTerm,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size) {
+        try {
+            if (id == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            String mappedFilter = mapFrontendFilterToBackend(filter);
+
+            // ✅ Directly get detailed page from service
+            Page<AuctionDetailsDTO> detailedPage = auctionService.getDetailedSellerAuctions(id, mappedFilter, searchTerm, pageable);
+
+            return ResponseEntity.ok(detailedPage);
+
+        } catch (IllegalArgumentException e) {
+            log.warning("Invalid argument provided: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.warning("Error fetching seller auctions: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+
+
+    @GetMapping("/search")
+    public ResponseEntity<List<AuctionDetailsDTO>> searchAuctions(@RequestParam String q) {
+        List<Auction> results = auctionService.searchAuctions(q);
+
+        List<AuctionDetailsDTO> dtos = results.stream()
+                .map(auctionService::convertToDTO)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
     }
 
 

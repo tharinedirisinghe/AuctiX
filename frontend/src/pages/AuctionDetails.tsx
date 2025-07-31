@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,12 @@ import AxiosRequest from '@/services/axiosInspector';
 import { useToast } from '@/hooks/use-toast';
 import AuctionReport from '@/components/organisms/AuctionReport';
 import { title } from 'process';
-import AuctionChat from '@/components/organisms/auction-chat';
+import LiveChat from '@/components/organisms/live-chat';
 import AddToWatchlistButton from '@/components/molecules/AddToWatchlistButton';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useAuctionWebSocket } from '@/hooks/useAuctionWebSocket';
+import { Link } from 'react-router-dom';
 
 // Import the timer utilities from your auction page or create them here
 interface TimeRemaining {
@@ -47,31 +48,6 @@ export function useAuctionTimer(
         setServerOffset(0);
         setIsOffsetReady(true);
         console.log('Using client time for testing');
-
-        /* UNCOMMENT THIS WHEN TESTING SERVER TIME SYNC
-      const clientTime = Date.now();
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auctions/server-time`,
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch server time');
-      }
-
-      const data = await response.json();
-      const serverTime = data.timestamp;
-      const offset = serverTime - clientTime;
-
-      setServerOffset(offset);
-      setIsOffsetReady(true);
-
-      console.log('Server time synced:', {
-        offset: offset,
-        serverTime: new Date(serverTime).toISOString(),
-        clientTime: new Date(clientTime).toISOString(),
-        offsetMinutes: Math.round(offset / 1000 / 60),
-      });
-      */
       } catch (error) {
         console.error('Failed to sync server time, using client time:', error);
         setServerOffset(0);
@@ -119,17 +95,6 @@ export function useAuctionTimer(
 
       // Add small buffer to prevent flickering during transitions
       const BUFFER_MS = 2000; // 2 second buffer
-
-      // Debug logging
-      console.log('Auction Timer Debug:', {
-        now: new Date(now).toISOString(),
-        start: new Date(start).toISOString(),
-        end: new Date(end).toISOString(),
-        serverOffset: serverOffset,
-        minutesToStart: Math.round((start - now) / 1000 / 60),
-        minutesToEnd: Math.round((end - now) / 1000 / 60),
-        currentStatus: status,
-      });
 
       // Determine status with buffer zones
       if (now < start - BUFFER_MS) {
@@ -186,7 +151,7 @@ export function getAuctionTimerText(
   const { days, hours, minutes, seconds } = time;
 
   if (status === 'expired') {
-    return 'Expired';
+    return '';
   }
 
   const timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
@@ -223,20 +188,87 @@ interface ProductDetails {
     firstName: string;
     lastName: string;
     profilePicture: string | null;
+    seller?: {
+      sellerId: string;
+      isVerified: boolean;
+      isActive: boolean;
+      bannerId: string | null;
+    };
   };
   endTime: string;
   startTime: string;
   bidHistory: BidHistory[];
+  deletionStatus?: 'ACTIVE' | 'DELETED';
+  deleted?: boolean;
 }
 
 function calculateBidIncrement(
   startingPrice: number,
   currentBid: number,
 ): number {
-  const base = Math.max(startingPrice, currentBid || startingPrice);
-  const increment = base * 0.05;
-  return Math.ceil(increment / 100) * 100;
+  const effectiveBid = Math.max(startingPrice, currentBid || 0);
+
+  // Industry-standard tiered increment system
+  if (effectiveBid < 1000) {
+    return 50; // LKR 50 increments for bids under 1K
+  } else if (effectiveBid < 5000) {
+    return 100; // LKR 100 increments for 1K-5K
+  } else if (effectiveBid < 10000) {
+    return 250; // LKR 250 increments for 5K-10K
+  } else if (effectiveBid < 25000) {
+    return 500; // LKR 500 increments for 10K-25K
+  } else if (effectiveBid < 50000) {
+    return 1000; // LKR 1K increments for 25K-50K
+  } else if (effectiveBid < 100000) {
+    return 2500; // LKR 2.5K increments for 50K-100K
+  } else if (effectiveBid < 250000) {
+    return 5000; // LKR 5K increments for 100K-250K
+  } else if (effectiveBid < 500000) {
+    return 10000; // LKR 10K increments for 250K-500K
+  } else if (effectiveBid < 1000000) {
+    return 25000; // LKR 25K increments for 500K-1M
+  } else if (effectiveBid < 2500000) {
+    return 50000; // LKR 50K increments for 1M-2.5M
+  } else {
+    return 100000; // LKR 100K increments for 2.5M+
+  }
 }
+
+const formatTimestamp = (isoString: string): string => {
+  try {
+    const date = new Date(isoString);
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', isoString);
+      return isoString;
+    }
+
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Colombo', // Adjust timezone as needed
+    });
+  } catch (error) {
+    console.error('Error formatting timestamp:', error);
+    return isoString;
+  }
+};
+
+const processDescription = (desc: string): string => {
+  // Updated regex pattern to match your exact timestamp format
+  const timestampPattern =
+    /\[Edited on: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z)?)\]/g;
+
+  return desc.replace(timestampPattern, (match, timestamp) => {
+    const humanReadable = formatTimestamp(timestamp);
+    return `[Edited on: ${humanReadable}]`;
+  });
+};
 
 const AuctionDetailsPage = () => {
   const { auctionId } = useParams<{ auctionId: string }>();
@@ -247,6 +279,9 @@ const AuctionDetailsPage = () => {
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  // console.log('Product Deleted Status:', product?.deletionStatus);
+
+  const isBiddingDisabled = product?.deletionStatus === 'DELETED';
 
   // Use the auction timer hook
   const [timeRemaining, auctionStatus] = useAuctionTimer(
@@ -256,8 +291,8 @@ const AuctionDetailsPage = () => {
   const timerText = getAuctionTimerText(timeRemaining, auctionStatus);
 
   function transformBidData(backendData: any) {
-    const getAvatarUrl = (profilePicture: { id: any }) => {
-      if (profilePicture && profilePicture.id) {
+    const getAvatarUrl = (profilePicture: { id: any } | null | undefined) => {
+      if (profilePicture?.id) {
         return `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${profilePicture.id}`;
       }
       return '/defaultProfilePhoto.jpg';
@@ -267,13 +302,14 @@ const AuctionDetailsPage = () => {
       username: any;
       firstName: any;
       lastName: any;
-      profilePicture: { id: any };
+      profilePicture?: { id: any } | null;
     }) => ({
       id: user.username,
       name: `${user.firstName} ${user.lastName}`,
-      avatar: getAvatarUrl(user.profilePicture),
+      avatar: getAvatarUrl(user?.profilePicture),
     });
 
+    // REPLACE the return statement in transformBidData function with this:
     return {
       id: backendData.id,
       category: backendData.category,
@@ -299,6 +335,10 @@ const AuctionDetailsPage = () => {
       },
       endTime: backendData.endTime,
       startTime: backendData.startTime,
+      // Add deletion status fields
+      isDeleted: backendData.isDeleted || false,
+      deletionStatus: backendData.deletionStatus || null,
+      status: backendData.status,
       bidHistory: backendData.bidHistory.map((bid: any) => ({
         bidder: transformUser(bid.bidder),
         amount: bid.amount,
@@ -335,43 +375,75 @@ const AuctionDetailsPage = () => {
     }
   }, [auctionId]);
 
-  useAuctionWebSocket(auctionId!, (payload) => {
-    const newBid = payload.newBid;
-    const updatedHistory = payload.bidHistory;
-
-    const updatedProduct = { ...product! }; // product is already fetched earlier
-
-    // Update highest bid
-    updatedProduct.currentBid = newBid.amount;
-    updatedProduct.currentBidder = newBid.bidder
-      ? {
-          id: newBid.bidder.username,
-          name: `${newBid.bidder.firstName} ${newBid.bidder.lastName}`,
-          avatar: newBid.bidder.profilePicture?.id
-            ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${newBid.bidder.profilePicture.id}`
-            : '/defaultProfilePhoto.jpg',
+  // FIXED WebSocket callback with proper error handling
+  const handleBidUpdate = useCallback(
+    (payload: any) => {
+      console.log('WebSocket received payload:', payload); // ✅ Add this
+      try {
+        if (!payload || !payload.newBid) {
+          console.warn('Invalid WebSocket payload received:', payload);
+          return;
         }
-      : {
-          id: '',
-          name: 'No bidder yet',
-          avatar: '/defaultProfilePhoto.jpg',
-        };
 
-    // Update bid history
-    updatedProduct.bidHistory = updatedHistory.map((bid: any) => ({
-      bidder: {
-        id: bid.bidder.username,
-        name: `${bid.bidder.firstName} ${bid.bidder.lastName}`,
-        avatar: bid.bidder.profilePicture?.id
-          ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${bid.bidder.profilePicture.id}`
-          : '/defaultProfilePhoto.jpg',
-      },
-      amount: bid.amount,
-      timestamp: bid.bidTime,
-    }));
+        const newBid = payload.newBid;
+        const updatedHistory = payload.bidHistory || [];
 
-    setProduct(updatedProduct);
-  });
+        if (!product) {
+          console.warn('Product not loaded yet, skipping WebSocket update');
+          return;
+        }
+
+        const updatedProduct = { ...product };
+        updatedProduct.currentBid = newBid.amount || 0;
+
+        if (newBid.bidder) {
+          updatedProduct.currentBidder = {
+            id: newBid.bidder.username || '',
+            name: `${newBid.bidder.firstName || 'Unknown'} ${newBid.bidder.lastName || 'User'}`,
+            avatar: newBid.bidder.profilePicture?.id
+              ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${newBid.bidder.profilePicture.id}`
+              : '/defaultProfilePhoto.jpg',
+          };
+        } else {
+          updatedProduct.currentBidder = {
+            id: '',
+            name: 'Anonymous Bidder',
+            avatar: '/defaultProfilePhoto.jpg',
+          };
+        }
+
+        updatedProduct.bidHistory = updatedHistory.map((bid: any) => ({
+          bidder: {
+            id: bid.bidder?.username || '',
+            name: `${bid.bidder?.firstName || 'Unknown'} ${bid.bidder?.lastName || 'User'}`,
+            avatar: bid.bidder?.profilePicture?.id
+              ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${bid.bidder.profilePicture.id}`
+              : '/defaultProfilePhoto.jpg',
+          },
+          amount: bid.amount || 0,
+          timestamp: bid.bidTime || new Date().toISOString(),
+        }));
+
+        // Recalculate increment with new system
+        updatedProduct.bidIncrement = calculateBidIncrement(
+          updatedProduct.startingPrice,
+          updatedProduct.currentBid,
+        );
+
+        setProduct(updatedProduct);
+        // 🔥 KEY FIX: Update bid amount input when new bid comes in
+        const newMinimumBid =
+          updatedProduct.currentBid + updatedProduct.bidIncrement;
+        setBidAmount(newMinimumBid);
+      } catch (error) {
+        console.error('Error processing WebSocket update:', error);
+      }
+    },
+    [product],
+  ); // only include 'product', no need for bidAmount
+
+  // Attach the memoized function
+  useAuctionWebSocket(auctionId!, handleBidUpdate);
 
   useEffect(() => {
     if (product) {
@@ -394,19 +466,83 @@ const AuctionDetailsPage = () => {
     if (!product) return;
 
     const minAllowedBid =
-      Math.max(product.startingPrice, product.currentBid) +
-      product.bidIncrement;
+      product.currentBid > 0
+        ? product.currentBid + product.bidIncrement
+        : product.startingPrice;
 
-    // Ensure the bid doesn't go below the minimum allowed bid
-    if (bidAmount - product.bidIncrement >= minAllowedBid) {
-      setBidAmount(bidAmount - product.bidIncrement);
+    // Decrease by one increment, but don't go below minimum
+    const newBidAmount = bidAmount - product.bidIncrement;
+    if (newBidAmount >= minAllowedBid) {
+      setBidAmount(newBidAmount);
     } else {
       setBidAmount(minAllowedBid);
     }
   };
 
+  // Updated bid validation with better UX
+  const validateBidAmount = (
+    amount: number,
+  ): { isValid: boolean; message?: string } => {
+    if (!product) return { isValid: false, message: 'Product not loaded' };
+
+    const minAllowedBid =
+      product.currentBid > 0
+        ? product.currentBid + product.bidIncrement
+        : product.startingPrice;
+
+    if (amount < minAllowedBid) {
+      return {
+        isValid: false,
+        message: `Minimum bid is LKR ${minAllowedBid.toLocaleString()}${product.currentBid > 0 ? ` (${product.bidIncrement.toLocaleString()} increment)` : ''}`,
+      };
+    }
+
+    if (amount > 999_999_999) {
+      return { isValid: false, message: 'Bid amount too large' };
+    }
+
+    return { isValid: true };
+  };
+
   const handlePlaceBid = async () => {
     if (!product || !auctionId) return;
+
+    if (product.deleted) {
+      toast({
+        title: 'Auction Deleted',
+        description: 'You cannot place a bid on a deleted auction.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Pre-validation checks
+    if (auctionStatus !== 'active') {
+      toast({
+        title: 'Bid Not Allowed',
+        description:
+          auctionStatus === 'upcoming'
+            ? 'This auction has not started yet'
+            : 'This auction has already ended',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const minAllowedBid =
+      product.currentBid > 0
+        ? product.currentBid + product.bidIncrement
+        : product.startingPrice;
+
+    if (bidAmount < minAllowedBid) {
+      toast({
+        title: 'Invalid Bid Amount',
+        description: `Minimum bid is LKR ${minAllowedBid.toLocaleString()}`,
+        variant: 'destructive',
+      });
+      setBidAmount(minAllowedBid);
+      return;
+    }
 
     try {
       await axiosInstance.post(`/bids/place`, {
@@ -415,26 +551,213 @@ const AuctionDetailsPage = () => {
       });
 
       toast({
-        title: 'Bid Placed!',
+        title: 'Bid Placed Successfully!',
         description: `Your bid of LKR ${bidAmount.toLocaleString()} was placed successfully.`,
-        variant: 'success',
+        variant: 'default',
       });
+
+      // Clear any previous errors
+      setError(null);
     } catch (err: any) {
       console.error('Error placing bid:', err);
-      const errorResponse =
-        err?.response?.data?.message ||
-        'Failed to place bid. Please try again.';
 
-      setError(errorResponse);
+      // Handle different error types based on response structure
+      const errorData = err?.response?.data;
+      let errorTitle = 'Bid Failed';
+      let errorMessage = 'Failed to place bid. Please try again.';
+
+      if (errorData) {
+        // Handle structured error responses
+        if (
+          typeof errorData === 'object' &&
+          errorData.error &&
+          errorData.message
+        ) {
+          errorTitle = getErrorTitle(errorData.error);
+          errorMessage = errorData.message;
+        }
+        // Handle simple string responses
+        else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      }
+
+      // Handle specific HTTP status codes
+      if (err?.response?.status === 401) {
+        errorTitle = 'Authentication Required';
+        errorMessage = 'Please log in to place a bid';
+
+        // Optional: Redirect to login page
+        // window.location.href = '/login';
+      } else if (err?.response?.status === 403) {
+        errorTitle = 'Access Denied';
+        errorMessage =
+          errorData?.message ||
+          'You are not allowed to place bids on this auction';
+      } else if (err?.response?.status === 409) {
+        errorTitle = 'Bid Conflict';
+        // The error message from backend should be descriptive enough
+      } else if (err?.response?.status === 500) {
+        errorTitle = 'Server Error';
+        errorMessage = 'A server error occurred. Please try again later.';
+      }
+
+      setError(errorMessage);
 
       toast({
-        title: 'Bid Failed',
-        description: errorResponse,
+        title: errorTitle,
+        description: errorMessage,
         variant: 'destructive',
       });
 
-      setTimeout(() => setError(null), 5000);
+      // Clear error after 10 seconds for better UX
+      setTimeout(() => setError(null), 10000);
     }
+  };
+
+  const handleShareAuction = async () => {
+    if (!product) return;
+
+    const shareData = {
+      title: `${product.title} - Auction`,
+      text: `Check out this auction: ${product.title}\nCurrent bid: LKR ${product.currentBid?.toLocaleString()}\n${getTimerLabel(auctionStatus)}: ${timerText}`,
+      url: window.location.href,
+    };
+
+    // Check if the Web Share API is supported
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare(shareData)
+    ) {
+      try {
+        await navigator.share(shareData);
+        // toast({
+        //   title: 'Shared Successfully',
+        //   description: 'Auction shared successfully!',
+        //   variant: 'default',
+        // });
+      } catch (error) {
+        // User cancelled sharing or error occurred
+        console.log('Share cancelled or failed:', error);
+      }
+    } else {
+      // Fallback: Copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: 'Link Copied',
+          description: 'Auction link copied to clipboard!',
+          variant: 'default',
+        });
+      } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        toast({
+          title: 'Link Copied',
+          description: 'Auction link copied to clipboard!',
+          variant: 'default',
+        });
+      }
+    }
+  };
+
+  const renderBidButton = () => {
+    if (!product) return null;
+
+    // Check if auction is deleted first - this takes priority
+    if (product.deleted || product.deletionStatus === 'DELETED') {
+      return (
+        <div className="space-y-2">
+          <Button
+            className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
+            disabled
+          >
+            Auction Deleted - Bidding Unavailable
+          </Button>
+          <p className="text-xs text-red-500 text-center">
+            This auction has been deleted and is no longer available for bidding
+          </p>
+        </div>
+      );
+    }
+
+    if (auctionStatus === 'upcoming') {
+      return (
+        <Button
+          className="w-full bg-gray-300 text-gray-600 cursor-not-allowed"
+          disabled
+        >
+          Auction Not Started Yet
+        </Button>
+      );
+    }
+
+    if (auctionStatus === 'expired') {
+      const hasWinner = product.currentBid > 0;
+      return (
+        <Button
+          className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
+          disabled
+        >
+          {hasWinner ? 'Auction Won' : 'No Bids Placed'}
+        </Button>
+      );
+    }
+
+    const validation = validateBidAmount(bidAmount);
+    const minAllowedBid =
+      product.currentBid > 0
+        ? product.currentBid + product.bidIncrement
+        : product.startingPrice;
+
+    return (
+      <div className="space-y-2">
+        <Button
+          onClick={handlePlaceBid}
+          disabled={!validation.isValid}
+          className={`w-full ${
+            validation.isValid
+              ? 'bg-yellow-400 hover:bg-yellow-500 text-black'
+              : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+          }`}
+        >
+          {validation.isValid
+            ? `Place Bid - LKR ${bidAmount.toLocaleString()}`
+            : `Minimum: LKR ${minAllowedBid.toLocaleString()}`}
+        </Button>
+
+        {/* Show increment info */}
+        <p className="text-xs text-gray-500 text-center">
+          Bid increments: LKR {product.bidIncrement.toLocaleString()}
+        </p>
+
+        {!validation.isValid && validation.message && (
+          <p className="text-xs text-red-500 text-center">
+            {validation.message}
+          </p>
+        )}
+      </div>
+    );
+  };
+  // Helper function to get user-friendly error titles
+  const getErrorTitle = (errorCode: string): string => {
+    const errorTitles: { [key: string]: string } = {
+      AUTHENTICATION_REQUIRED: 'Login Required',
+      USER_NOT_FOUND: 'Session Expired',
+      INVALID_BID: 'Invalid Bid',
+      BID_CONFLICT: 'Bid Conflict',
+      ACCESS_DENIED: 'Access Denied',
+      INTERNAL_ERROR: 'Server Error',
+    };
+
+    return errorTitles[errorCode] || 'Bid Failed';
   };
 
   const [reportOpen, setReportOpen] = useState(false);
@@ -464,7 +787,7 @@ const AuctionDetailsPage = () => {
       case 'active':
         return 'Closes in';
       case 'expired':
-        return 'Ended';
+        return 'Auction Ended';
       default:
         return 'Closes in';
     }
@@ -493,6 +816,28 @@ const AuctionDetailsPage = () => {
       </div>
     );
   }
+
+  const handleBidAmountChange = (value: number) => {
+    if (!product) return;
+
+    if (error) setError(null);
+
+    if (value < 0) {
+      setBidAmount(0);
+      return;
+    }
+
+    if (value > 999_999_999) {
+      toast({
+        title: 'Bid Too Large',
+        description: 'Please enter a reasonable bid amount',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setBidAmount(value);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -538,37 +883,57 @@ const AuctionDetailsPage = () => {
           <div className="pb-4 border-b-4 border-yellow-400">
             <br></br>
             <p className="text-2xl">
-              <span className="text-gray-400">
-                {getTimerLabel(auctionStatus)}{' '}
-              </span>
-              <span className="">
-                {timerText === '0d 0h 0m 0s' && auctionStatus !== 'expired'
-                  ? 'Loading...'
-                  : timerText}
-              </span>
+              {product.deleted || product.deletionStatus === 'DELETED' ? (
+                <span className="text-gray-400">Auction Deleted</span>
+              ) : (
+                <>
+                  <span className="text-gray-400">
+                    {getTimerLabel(auctionStatus)}{' '}
+                  </span>
+                  <span className="">
+                    {timerText === '0d 0h 0m 0s' && auctionStatus !== 'expired'
+                      ? 'Loading...'
+                      : timerText}
+                  </span>
+                </>
+              )}
             </p>
             {/* Enhanced debug info - remove after testing */}
             {/* <p className="text-xs text-gray-500">Status: {auctionStatus}</p> */}
           </div>
 
           <div className="bg-gray-100 p-4 rounded-md mt-4">
-            <p className="text-sm text-gray-700 ">Current Highest Bid</p>
-            <p className="text-4xl font-bold mb-2">
-              LKR {product.currentBid?.toLocaleString()}
-            </p>
-            <div className="flex items-center text-sm">
-              <p>By</p>
-              <img
-                src={
-                  product.currentBidder?.avatar !== 'NULL'
-                    ? product.currentBidder?.avatar
-                    : '/defaultProfilePhoto.jpg'
-                }
-                alt={product.currentBidder?.name}
-                className="w-6 h-6 rounded-full ml-2 mr-1"
-              />
-              <p>{product.currentBidder?.name}</p>
-            </div>
+            {product.deleted || product.deletionStatus === 'DELETED' ? (
+              <div className="text-center">
+                <p className=" text-gray-500 mb-2 font-bold text-lg">
+                  This auction has been deleted
+                </p>
+
+                <p className="text-sm text-gray-600 mt-2">
+                  Bidding is no longer available
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-700 ">Current Highest Bid</p>
+                <p className="text-4xl font-bold mb-2">
+                  LKR {product.currentBid?.toLocaleString()}
+                </p>
+                <div className="flex items-center text-sm">
+                  <p>By</p>
+                  <img
+                    src={
+                      product.currentBidder?.avatar !== 'NULL'
+                        ? product.currentBidder?.avatar
+                        : '/defaultProfilePhoto.jpg'
+                    }
+                    alt={product.currentBidder?.name}
+                    className="w-6 h-6 rounded-full ml-2 mr-1"
+                  />
+                  <p>{product.currentBidder?.name}</p>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mt-4">
@@ -576,54 +941,45 @@ const AuctionDetailsPage = () => {
               Starting Price: LKR {product.startingPrice?.toLocaleString()}
             </p>
 
-            {auctionStatus === 'active' ? (
-              <>
-                <div className="flex items-center gap-2 mb-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDecrementBid}
-                    className="w-8 h-8 p-0"
-                  >
-                    -
-                  </Button>
-                  <Input
-                    type="number"
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(Number(e.target.value))}
-                    className="text-center"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleIncrementBid}
-                    className="w-8 h-8 p-0"
-                  >
-                    +
-                  </Button>
-                </div>
-                <Button
-                  onClick={handlePlaceBid}
-                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-black"
-                >
-                  Place Bid - LKR {bidAmount.toLocaleString()}
-                </Button>
-              </>
-            ) : auctionStatus === 'upcoming' ? (
+            <div className="flex items-center gap-2 mb-4">
               <Button
-                className="w-full bg-yellow-200 text-gray-600 cursor-not-allowed"
-                disabled
+                variant="outline"
+                size="sm"
+                onClick={handleDecrementBid}
+                className="w-8 h-8 p-0"
+                disabled={
+                  product.deleted || product.deletionStatus === 'DELETED'
+                }
               >
-                Auction not started
+                -
               </Button>
-            ) : (
+              <Input
+                type="number"
+                value={bidAmount}
+                onChange={(e) => handleBidAmountChange(Number(e.target.value))}
+                className="text-center"
+                min="0"
+                max="999999999"
+                step="100"
+                readOnly
+                disabled={
+                  product.deleted || product.deletionStatus === 'DELETED'
+                }
+              />
               <Button
-                className="w-full bg-gray-200 text-gray-600 cursor-not-allowed"
-                disabled
+                variant="outline"
+                size="sm"
+                onClick={handleIncrementBid}
+                className="w-8 h-8 p-0"
+                disabled={
+                  product.deleted || product.deletionStatus === 'DELETED'
+                }
               >
-                Auction ended
+                +
               </Button>
-            )}
+            </div>
+
+            {renderBidButton()}
           </div>
 
           <div className="grid grid-cols-3 gap-4 pt-4">
@@ -642,10 +998,14 @@ const AuctionDetailsPage = () => {
               <Heart className="h-5 w-5 mb-1" />
               Add to Watchlist
             </Button> */}
-            <AddToWatchlistButton auctionId={product.id} />
+            <AddToWatchlistButton
+              auctionId={product.id}
+              endTime={product.endTime}
+            />
             <Button
               variant="ghost"
               className="flex flex-col items-center text-xs"
+              onClick={handleShareAuction}
             >
               <Share className="h-5 w-5 mb-1" />
               Share
@@ -654,7 +1014,10 @@ const AuctionDetailsPage = () => {
 
           <div className="flex items-center mt-6">
             <p className="text-sm mr-2">By</p>
-            <span className="border rounded-full p-1 pr-2 flex items-center">
+            <Link
+              to={`/seller/${product.seller.seller?.sellerId}`}
+              className="border rounded-full p-1 pr-2 flex items-center hover:bg-gray-100 transition"
+            >
               <img
                 src={
                   product.seller.profilePicture || '/defaultProfilePhoto.jpg'
@@ -665,82 +1028,136 @@ const AuctionDetailsPage = () => {
               <p className="text-sm">
                 {product.seller.firstName} {product.seller.lastName}
               </p>
-            </span>
+            </Link>
           </div>
         </div>
       </div>
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Information and Bid History Section - Takes 2 columns (same width as main image) */}
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="information" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="information">Information</TabsTrigger>
+              <TabsTrigger value="bid-history">Bid History</TabsTrigger>
+            </TabsList>
 
-      <div className="mt-8">
-        <Tabs defaultValue="information" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="information">Information</TabsTrigger>
-            <TabsTrigger value="bid-history">Bid History</TabsTrigger>
-          </TabsList>
+            <TabsContent
+              value="information"
+              className="p-4 border rounded-md mt-2"
+            >
+              <h2 className="text-lg font-semibold mb-4">About this product</h2>
+              <div className="text-sm text-gray-600 mb-4 whitespace-pre-wrap">
+                {processDescription(product.description)}
+              </div>
+            </TabsContent>
 
-          <TabsContent
-            value="information"
-            className="p-4 border rounded-md mt-2"
-          >
-            <h2 className="text-lg font-semibold mb-4">About this product</h2>
-            <p className="text-sm text-gray-600 mb-4">{product.description}</p>
-          </TabsContent>
+            <TabsContent
+              value="bid-history"
+              className="p-4 border rounded-md mt-2"
+            >
+              <h2 className="text-lg font-semibold mb-4">Bid History</h2>
+              {product.bidHistory.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto pr-2">
+                  {' '}
+                  {/* Add scroll container */}
+                  <ul>
+                    {product.bidHistory.map((bid, index) => (
+                      <li
+                        key={index}
+                        className="mb-2 pb-2 border-b last:border-b-0"
+                      >
+                        <div className="flex items-center">
+                          <img
+                            src={
+                              bid.bidder?.avatar !== 'NULL'
+                                ? bid.bidder?.avatar
+                                : '/default-avatar.png'
+                            }
+                            alt={bid.bidder?.name || 'Bidder'}
+                            className="w-8 h-8 rounded-full mr-2 flex-shrink-0"
+                          />
+                          <div className="flex-grow min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {bid.bidder.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              LKR {bid.amount.toLocaleString()} •{' '}
+                              {new Date(bid.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No bid history available yet.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
 
-          <TabsContent
-            value="bid-history"
-            className="p-4 border rounded-md mt-2"
-          >
-            <h2 className="text-lg font-semibold mb-4">Bid History</h2>
-            {product.bidHistory.length > 0 ? (
-              <ul>
-                {product.bidHistory.map((bid, index) => (
-                  <li key={index} className="mb-2 pb-2 border-b">
-                    <div className="flex items-center">
-                      <img
-                        src={
-                          bid.bidder?.avatar !== 'NULL'
-                            ? bid.bidder?.avatar
-                            : '/default-avatar.png'
-                        }
-                        alt={bid.bidder?.name || 'Bidder'}
-                        className="w-8 h-8 rounded-full mr-2"
-                      />
-                      <div>
-                        <p className="text-sm font-medium">{bid.bidder.name}</p>
-                        <p className="text-xs text-gray-500">
-                          LKR {bid.amount.toLocaleString()} •{' '}
-                          {new Date(bid.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                No bid history available yet.
-              </p>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Live Chat Section - Takes 1 column (right side) */}
+        <div>
+          <div className="border rounded-md p-4">
+            <h2 className="text-lg font-semibold mb-4">Live Chat</h2>
+            <div className="text-sm text-gray-500">
+              {auctionId ? (
+                <LiveChat
+                  auctionId={auctionId}
+                  type="AUCTION"
+                  title="Auction Chat"
+                  limitUIHeight={true}
+                />
+              ) : (
+                <div>Sorry chat is unavailable</div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div className="border rounded-md p-4 mt-6">
-        <h2 className="text-lg font-semibold mb-4">Live Chat</h2>
-        <p className="text-sm text-gray-500">
-          {auctionId ? (
-            <AuctionChat auctionId={auctionId} />
-          ) : (
-            <div>Sorry chat is unavailable</div>
-          )}
-        </p>
-      </div>
-
       {error && (
-        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md">
-          {error}
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setError(null)}
+                className="text-red-400 hover:text-red-600"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
       <AuctionReport
         itemId={product.id}
         open={reportOpen}

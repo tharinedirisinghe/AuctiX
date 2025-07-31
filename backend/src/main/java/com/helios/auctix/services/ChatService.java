@@ -3,10 +3,17 @@ package com.helios.auctix.services;
 import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.chat.ChatMessage;
 import com.helios.auctix.domain.chat.ChatRoom;
+import com.helios.auctix.domain.chat.ChatRoomType;
+import com.helios.auctix.domain.chat.ChatRoomUserUnreadStatus;
+import com.helios.auctix.domain.user.Bidder;
+import com.helios.auctix.domain.user.Seller;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.domain.user.UserRoleEnum;
+import com.helios.auctix.dtos.ChatRoomSearchResultDTO;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.chat.ChatMessageRepository;
 import com.helios.auctix.repositories.chat.ChatRoomRepository;
+import com.helios.auctix.repositories.chat.ChatRoomUserUnreadStatusRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.java.Log;
 import org.springframework.data.domain.PageRequest;
@@ -14,20 +21,28 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Log
 @Service
 public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
-
+    private final ChatRoomUserUnreadStatusRepository statusRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final AuctionRepository auctionRepository;
 
 
-    public ChatService(ChatMessageRepository chatMessageRepository, ChatRoomRepository chatRoomRepository, AuctionRepository auctionRepository) {
+    public ChatService(
+            ChatMessageRepository chatMessageRepository,
+            ChatRoomUserUnreadStatusRepository statusRepository,
+            ChatRoomRepository chatRoomRepository,
+            AuctionRepository auctionRepository
+    ) {
         this.chatMessageRepository = chatMessageRepository;
+        this.statusRepository = statusRepository;
         this.chatRoomRepository = chatRoomRepository;
         this.auctionRepository = auctionRepository;
     }
@@ -37,13 +52,12 @@ public class ChatService {
     }
 
     @Transactional
-    public boolean joinChatRoom (User user, UUID auctionId) {
-
-        Optional<ChatRoom> chatRoomOpt = this.chatRoomRepository.findChatRoomByAuctionId(auctionId);
+    public boolean joinChatRoom(User user, UUID auctionId) {
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findChatRoomByAuctionId(auctionId);
         ChatRoom chatRoom;
 
         if (chatRoomOpt.isEmpty()) {
-            log.severe("There isn't a chat room for the given chatroom id, creating one");
+            log.warning("There isn't a chat room for the given auction, creating one");
             chatRoom = createChatRoomForAuction(auctionId);
         } else {
             chatRoom = chatRoomOpt.get();
@@ -52,15 +66,44 @@ public class ChatService {
         // "ON CONFLICT DO NOTHING" in the query means if the user is already in the chat room, the insert is ignored.
         chatRoomRepository.addUserToChatRoom(chatRoom.getId(), user.getId());
 
-        log.info("User" + user.getId() + " entered the chat room" + chatRoom.getId());
+        log.info("User " + user.getId() + " entered the chat room " + chatRoom.getId());
 
         return true;
     }
 
-    public ChatRoom getChatRoom(String auctionId) {
+    @Transactional
+    public boolean joinChatRoom(User user, UUID chatRoomId, ChatRoomType chatRoomType) {
+        if (chatRoomType == ChatRoomType.AUCTION) {
+            throw new IllegalArgumentException("Use joinChatRoom(User, UUID auctionId) for auction chat rooms.");
+        }
+
+        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findById(chatRoomId);
+        ChatRoom chatRoom;
+
+        if (chatRoomOpt.isEmpty()) {
+            log.warning("There isn't a chat room for the given ID, creating one");
+
+            chatRoom = ChatRoom.builder()
+                    .type(chatRoomType)
+                    .build();
+
+            chatRoom = chatRoomRepository.save(chatRoom);
+        } else {
+            chatRoom = chatRoomOpt.get();
+        }
+
+        chatRoomRepository.addUserToChatRoom(chatRoom.getId(), user.getId());
+
+        log.info("User " + user.getId() + " entered the chat room " + chatRoom.getId());
+
+        return true;
+    }
+
+    public ChatRoom getChatRoomByAuctionId(String auctionId) {
         try {
+            log.warning("No chat room for auction ID " + auctionId);
             return chatRoomRepository.findChatRoomByAuctionId(UUID.fromString(auctionId))
-                    .orElseThrow(() -> new IllegalStateException("No chat room for auction ID " + auctionId));
+                    .orElse(null);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid auction ID format: " + auctionId);
         }
@@ -72,25 +115,14 @@ public class ChatService {
 //        return chatMessageRepository.findByChatRoomIdOrderByTimestampAsc(chatRoomId, pageable);
 //    }
 
-    public List<ChatMessage> getMessagesBeforeTimestamp(String auctionId, LocalDateTime beforeTimestamp, int page, int size) {
+    public List<ChatMessage> getMessagesBeforeTimestamp(ChatRoom chatRoom, LocalDateTime beforeTimestamp, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("timestamp")));
 
-        UUID auctionUUID;
-        try {
-            auctionUUID = UUID.fromString(auctionId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid auctionId UUID");
+        if (chatRoom == null) {
+            throw new IllegalArgumentException("Chat Room is empty");
         }
 
-        Optional<ChatRoom> chatRoomOpt = chatRoomRepository.findChatRoomByAuctionId(auctionUUID);
-
-        if (chatRoomOpt.isEmpty()) {
-            throw new NoSuchElementException("Chat room not found for auctionId " + auctionId);
-        }
-
-        ChatRoom chatRoom = chatRoomOpt.get();
         UUID chatRoomId = chatRoom.getId();
-
         return chatMessageRepository.findByChatRoomIdAndTimestampBeforeOrderByTimestampDesc(chatRoomId, beforeTimestamp, pageable);
     }
 
@@ -105,6 +137,7 @@ public class ChatService {
         }
 
         ChatRoom chatRoom = ChatRoom.builder()
+                .type(ChatRoomType.AUCTION)
                 .auction(auction)
                 .build();
 
@@ -117,5 +150,115 @@ public class ChatService {
 
         return savedChatRoom;
     }
+
+
+    public ChatRoom getOrCreateSupportChatForUser(User user) {
+        if (user.getRoleEnum() != UserRoleEnum.SELLER && user.getRoleEnum() != UserRoleEnum.BIDDER) {
+            throw new IllegalStateException("Only sellers and bidders have support chats.");
+        }
+
+        Optional<ChatRoom> existingChat = chatRoomRepository.findSupportChatByUserId(user.getId());
+        if (existingChat.isPresent()) {
+            return existingChat.get();
+        }
+
+        ChatRoom newChat = new ChatRoom();
+        newChat.setType(ChatRoomType.SUPPORT);
+        chatRoomRepository.save(newChat);
+
+        joinChatRoom(user, newChat.getId(), ChatRoomType.SUPPORT);
+        return chatRoomRepository.save(newChat);
+    }
+    public ChatRoom getOrCreateWinnerSellerChat(User winner, User seller, Auction auction) {
+
+        if (!(seller.getRoleEnum().equals(UserRoleEnum.SELLER)
+                && winner.getRoleEnum().equals(UserRoleEnum.BIDDER))) {
+            throw new IllegalArgumentException("Invalid roles for winner-seller chat.");
+        }
+
+        Optional<ChatRoom> existingChat = chatRoomRepository
+                .findPrivateChatBetweenForAuction(seller.getId(), winner.getId(), auction.getId());
+
+        if (existingChat.isPresent()) {
+            return existingChat.get();
+        }
+
+        ChatRoom newChat = new ChatRoom();
+        newChat.setType(ChatRoomType.PRIVATE);
+        newChat.setAuction(auction);
+
+        chatRoomRepository.save(newChat);
+
+        joinChatRoom(seller, newChat.getId(), ChatRoomType.PRIVATE);
+        joinChatRoom(winner, newChat.getId(), ChatRoomType.PRIVATE);
+
+        return chatRoomRepository.save(newChat);
+    }
+
+
+    @Transactional
+    public void incrementUnreadCountForOthers(UUID chatRoomId, UUID senderId) {
+        statusRepository.incrementUnreadCountForOthers(chatRoomId, senderId);
+    }
+
+    /**
+     * When a user reads messages in chatRoom to reset unread and notification sent counts.
+     */
+    @Transactional
+    public void markAsRead(UUID chatRoomId, UUID userId) {
+        ChatRoomUserUnreadStatus status = statusRepository.findByChatRoomIdAndUserId(chatRoomId, userId);
+        if (status != null) {
+            status.setUnreadCount(0);
+            status.setLastReadTimestamp(LocalDateTime.now());
+            status.setNotificationCount(0);
+            status.setLastNotifiedAt(null);
+            statusRepository.save(status);
+        }
+    }
+
+
+    public List<ChatRoomSearchResultDTO> searchChats(UUID userId, String searchTerm, String chatRoomType, int limit, int offset) {
+        String tsQuery = buildTsQuery(searchTerm);
+
+        if (chatRoomType == null || chatRoomType.isBlank() || "all".equalsIgnoreCase(chatRoomType)) {
+            chatRoomType = null;
+        }
+
+        List<Object[]> rawResults = chatRoomRepository.searchUserChatRooms(userId, searchTerm,  tsQuery, chatRoomType, limit, offset);
+
+        return rawResults.stream().map(row -> {
+            ChatRoomSearchResultDTO dto = new ChatRoomSearchResultDTO();
+            dto.setChatRoomId((UUID) row[0]);
+            dto.setChatRoomType((String) row[1]);
+            dto.setAuctionId((UUID) row[2]);
+            dto.setCreatedAt((Timestamp) row[3]);
+            dto.setUpdatedAt((Timestamp) row[4]);
+            dto.setUnreadCount((Integer) row[5]);
+            dto.setNotificationCount((Integer) row[6]);
+            dto.setAuctionTitle((String) row[7]);
+            dto.setUsername((String) row[8]);
+            dto.setFirstName((String) row[9]);
+            dto.setLastName((String) row[10]);
+            dto.setRole((String) row[11]);
+            return dto;
+        }).toList();
+    }
+
+    private String buildTsQuery(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) {
+            return null;
+        }
+
+        String sanitized = searchTerm.replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}\\s]", "");
+        return Arrays.stream(sanitized.trim().split("\\s+"))
+                .filter(word -> !word.isBlank())
+                .map(word -> word + ":*")
+                .collect(Collectors.joining(" & "));
+    }
+
+
+
+
+
 
 }

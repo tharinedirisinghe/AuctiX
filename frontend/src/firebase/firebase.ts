@@ -70,7 +70,8 @@ export const listenForForegroundMessages = async () => {
 
   onMessage(messaging, (payload) => {
     console.log('Foreground notification received:', payload);
-    // Handle foreground notification here
+    const event = new CustomEvent('fcm-notification', { detail: payload });
+    window.dispatchEvent(event);
   });
 };
 

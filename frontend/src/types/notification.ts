@@ -13,6 +13,7 @@ export const NOTIFICATION_CATEGORY_GROUP_LABELS = {
   PROMO: 'Promotional',
   AUCTION: 'Auction',
   WALLET: 'Wallet',
+  CHAT: 'Chat',
   DEFAULT: 'General',
 } as const;
 

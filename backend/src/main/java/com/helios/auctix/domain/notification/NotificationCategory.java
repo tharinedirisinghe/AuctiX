@@ -40,7 +40,12 @@ public enum NotificationCategory {
     ACCOUNT_REINSTATED,
 
     WALLET_RECHARGE_SUCCESS,
-    WALLET_WITHDRAWAL_SUCCESS;
+    WALLET_WITHDRAWAL_SUCCESS,
+
+    CHAT_UNREAD_MESSAGE,
+    SUPPORT_CHAT_UNREAD_MESSAGE,
+    WATCHER_AUCTION_CHAT_UNREAD_MESSAGE,
+    SELLER_AUCTION_CHAT_UNREAD_MESSAGE;
 
     private String title;
     private String description;
@@ -53,6 +58,9 @@ public enum NotificationCategory {
 
     // Which roles never see this notification in their preferences UI
     private Set<UserRoleEnum> alwaysHiddenRoles;
+
+    // Roles for whom this notification bypasses global channel settings
+    private Set<UserRoleEnum> bypassSettingsRoles;
 
     // Constructor for default: all roles allowed
     NotificationCategory(String title, String description, NotificationCategoryGroup group) {
@@ -89,4 +97,5 @@ public enum NotificationCategory {
     public void setAllowedRoles(Set<UserRoleEnum> allowedRoles) { this.allowedRoles = allowedRoles; }
     public void setCannotEditRoles(Set<UserRoleEnum> cannotEditRoles) { this.cannotEditRoles = cannotEditRoles; }
     public void setAlwaysHiddenRoles(Set<UserRoleEnum> alwaysHiddenRoles) { this.alwaysHiddenRoles = alwaysHiddenRoles; }
+    public void setBypassSettingsRoles(Set<UserRoleEnum> bypassSettingsRoles) {this.bypassSettingsRoles = bypassSettingsRoles;}
 }

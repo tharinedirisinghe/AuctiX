@@ -219,7 +219,8 @@ public class FileUploadService {
                 if(requestedUser == null) {
                     return new FileUploadResponse(false,"Unautherized");
                 }
-                if(requestedUser.getId()!=uploadedFileInfo.getOwnerId() || !requestedUser.getRole().equals(UserRoleEnum.ADMIN)) {
+                log.info("requested user: id: "+ requestedUser.getId() +" uploadFileInfo ownerId: "+ uploadedFileInfo.getOwnerId() +" " + (requestedUser.getId() == uploadedFileInfo.getOwnerId()));
+                if(!(requestedUser.getId().equals(uploadedFileInfo.getOwnerId()) || requestedUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
                     return new FileUploadResponse(false,"Only file owner and admins can access the private files");
                 }
 

@@ -26,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -78,17 +80,34 @@ public class ComplaintService {
         return savedComplaint;
     }
 
-    public Page<Complaint> getAllComplaints(Integer limit, Integer offset, String sortBy, String order, String search) {
-        Sort.Direction direction = order.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(offset, limit, Sort.by(direction, sortBy));
+    public Page<Complaint> getAllComplaints(Integer page, Integer size, String sortBy, String order, String search, ComplaintStatus status) {
+        Sort.Direction direction = order.equalsIgnoreCase("asc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        log.info("limit: {}, offset: {}, sortBy: {}, order: {}, search: {}", limit, offset, sortBy, order, search);
-        if (search != null && !search.trim().isEmpty()) {
-            log.info("search: {}", search);
-            return complaintRepository.findByReportedBy_UsernameContainingIgnoreCaseOrReasonContainingIgnoreCase(search,search,search, pageable);
+        if (status != null && search != null && !search.trim().isEmpty()) {
+            return complaintRepository.findByStatusAndReasonContainingIgnoreCaseOrReportedBy_UsernameContainingIgnoreCaseOrReadableIdContainingIgnoreCase(
+                    status, search, search, search, pageable);
+        } else if (status != null) {
+            return complaintRepository.findByStatus(
+                    status, pageable);
+        } else if (search != null && !search.trim().isEmpty()) {
+            return complaintRepository.findByReasonContainingIgnoreCaseOrReportedBy_UsernameContainingIgnoreCaseOrReadableIdContainingIgnoreCase(
+                    search, search, search, pageable);
         } else {
             return complaintRepository.findAll(pageable);
         }
+    }
+
+    public Map<String, Integer> getComplaintStats() {
+        Map<String, Integer> stats = new HashMap<>();
+        int total = (int) complaintRepository.count();
+        stats.put("total", total);
+
+        for (ComplaintStatus status : ComplaintStatus.values()) {
+            int count = complaintRepository.countByStatus(status);
+            stats.put(status.name(), count);
+        }
+        return stats;
     }
 
     public Complaint getComplaintById(UUID id) {
@@ -97,12 +116,11 @@ public class ComplaintService {
     }
 
     public List<Complaint> getComplaintsByUser(String username) {
-        UserDetailsService userDetailsService = new UserDetailsService();
         User user = userDetailsService.getUserByUsername(username);
         if(user == null) {
-            new RuntimeException("User not found");
+            throw new RuntimeException("User not found");
         }
-        return complaintRepository.findByReportedByOrderByDateReportedDesc(user);
+        return complaintRepository.findByReportedByOrderByDateReported(user);
     }
 
     @Transactional

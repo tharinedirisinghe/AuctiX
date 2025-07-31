@@ -3,11 +3,9 @@ import {
   AlertCircle,
   CalendarClock,
   MapPin,
-  MessageCircle,
   Package,
   Truck,
   User,
-  X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,11 +33,25 @@ interface DeliveryDetailsDialogProps {
 export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
   selectedDelivery,
   setSelectedDelivery,
-  handleContactSeller,
   isContactSellerModalOpen,
 }) => {
   // Create a local state to control the dialog visibility
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Image gallery state
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Handle opening image gallery
+  const openImageGallery = () => {
+    if (selectedDelivery) {
+      const images = selectedDelivery.auctionImages || (selectedDelivery.auctionImage ? [selectedDelivery.auctionImage] : []);
+      if (images.length > 0) {
+        setCurrentImageIndex(0);
+        setIsGalleryOpen(true);
+      }
+    }
+  };
 
   // Update local open state when selectedDelivery changes
   useEffect(() => {
@@ -70,36 +82,38 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
       }}
     >
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogHeader>
           <DialogTitle>Delivery Details</DialogTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-full"
-            onClick={handleClose}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </Button>
         </DialogHeader>
         <div className="py-4">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-20 h-20 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
-              {selectedDelivery.auctionImage ? (
-                <img
-                  src={selectedDelivery.auctionImage}
-                  alt={selectedDelivery.auctionTitle}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src =
-                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23d1d5db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
-                  }}
-                />
-              ) : (
-                getItemIcon(selectedDelivery.auctionCategory)
-              )}
+            <div className="relative w-20 h-20 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
+              {(() => {
+                const images = selectedDelivery.auctionImages || (selectedDelivery.auctionImage ? [selectedDelivery.auctionImage] : []);
+                return images.length > 0 ? (
+                  <>
+                    <img
+                      src={images[0]}
+                      alt={selectedDelivery.auctionTitle}
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={openImageGallery}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src =
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23d1d5db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+                      }}
+                    />
+                    {images.length > 1 && (
+                      <div className="absolute top-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1.5 py-0.5 rounded">
+                        +{images.length - 1}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  getItemIcon(selectedDelivery.auctionCategory)
+                );
+              })()}
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
@@ -162,7 +176,12 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
               <Badge
                 className={`${getStatusInfo(selectedDelivery.status).color} border`}
               >
-                {getStatusInfo(selectedDelivery.status).icon}
+                {(() => {
+                  const StatusIcon = getStatusInfo(
+                    selectedDelivery.status,
+                  ).iconComponent;
+                  return <StatusIcon className="w-3 h-3 mr-1" />;
+                })()}
                 {getStatusInfo(selectedDelivery.status).text}
               </Badge>
               <span className="text-sm text-gray-500 ml-2">
@@ -221,17 +240,6 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
             </Button>
 
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-amber-300 hover:bg-amber-400 text-gray-900 flex items-center"
-                onClick={() => {
-                  handleContactSeller(selectedDelivery);
-                }}
-                type="button"
-              >
-                <MessageCircle className="mr-1.5" size={16} />
-                Contact Seller
-              </Button>
               {selectedDelivery.trackingNumber && (
                 <Button
                   size="sm"
@@ -247,6 +255,78 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
           </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Image Gallery Modal */}
+      {isGalleryOpen && selectedDelivery && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]" onClick={() => setIsGalleryOpen(false)}>
+          <div className="max-w-4xl max-h-screen w-full h-full flex flex-col items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const images = selectedDelivery.auctionImages || (selectedDelivery.auctionImage ? [selectedDelivery.auctionImage] : []);
+              return images.length > 0 ? (
+                <>
+                  <div className="relative">
+                    <img
+                      src={images[currentImageIndex]}
+                      alt={`${selectedDelivery.auctionTitle} - Image ${currentImageIndex + 1}`}
+                      className="max-w-full max-h-[80vh] object-contain"
+                    />
+                    
+                    {/* Navigation buttons */}
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                        >
+                          ←
+                        </button>
+                        <button
+                          onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                        >
+                          →
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* Close button */}
+                    <button
+                      onClick={() => setIsGalleryOpen(false)}
+                      className="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  
+                  {/* Image counter */}
+                  {images.length > 1 && (
+                    <div className="mt-4 text-white text-center">
+                      {currentImageIndex + 1} of {images.length}
+                    </div>
+                  )}
+                  
+                  {/* Thumbnail strip */}
+                  {images.length > 1 && (
+                    <div className="flex gap-2 mt-4 max-w-full overflow-x-auto">
+                      {images.map((image, index) => (
+                        <img
+                          key={index}
+                          src={image}
+                          alt={`Thumbnail ${index + 1}`}
+                          className={`w-16 h-16 object-cover cursor-pointer rounded ${
+                            index === currentImageIndex ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
+                          }`}
+                          onClick={() => setCurrentImageIndex(index)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : null;
+            })()}
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 };

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -34,13 +35,17 @@ public class AuctionSchedulerService {
     private final BidRepository bidRepository;
     private final BidService bidService;
     private final CoinTransactionService transactionService;
+    private final DeliveryService deliveryService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
     private final WatchListNotifyService watchListNotifyService;
     private final AuctionNotificationLogRepository auctionNotificationLogRepository;
+    private final AuctionWatchListRepository watchListRepository;
+    private final ChatService chatService;
 
     private static final long SCHEDULE_FIXED_RATE_MS = 60_000;
+    private static final long ONE_HOUR_MS = 60 * 60 * 1000;
     private static final long AUCTION_SOON_WINDOW_MINUTES = 10;
     private static final long AUCTION_START_DETECTION_WINDOW_MINUTES = 1;
 
@@ -83,38 +88,48 @@ public class AuctionSchedulerService {
             BidRepository bidRepository,
             BidService bidService,
             CoinTransactionService transactionService,
+            DeliveryService deliveryService,
             NotificationEventPublisher notificationEventPublisher,
             UserRepository userRepository,
             WalletRepository walletRepository,
-            WatchListNotifyService watchListNotifyService, AuctionNotificationLogRepository auctionNotificationLogRepository) {
+            WatchListNotifyService watchListNotifyService,
+            AuctionNotificationLogRepository auctionNotificationLogRepository,
+            AuctionWatchListRepository watchListRepository,
+            ChatService chatService
+    ) {
         this.auctionRepository = auctionRepository;
         this.bidRepository = bidRepository;
         this.bidService = bidService;
         this.transactionService = transactionService;
+        this.deliveryService = deliveryService;
         this.notificationEventPublisher = notificationEventPublisher;
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
         this.watchListNotifyService = watchListNotifyService;
         this.auctionNotificationLogRepository = auctionNotificationLogRepository;
+        this.watchListRepository = watchListRepository;
+        this.chatService = chatService;
     }
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.of("Asia/Colombo"));
 
     /**
-     * Scheduled job to check for completed auctions every minute
+     * Scheduled job to check for completed auctions every second
      */
-    @Scheduled(fixedRate = 60000) // Run every minute
+    @Scheduled(fixedRateString = "${auction.scheduler.completed.rate:1000}")
     @Transactional
     public void processCompletedAuctions() {
         try {
             Instant now = Instant.now();
-            logger.info("Running scheduled job to process completed auctions at " + now);
 
             // Find auctions that have ended but haven't been processed yet
             List<Auction> completedAuctions = auctionRepository.findByEndTimeBeforeAndCompletedFalse(now);
 
-            logger.info("Found " + completedAuctions.size() + " completed auctions to process");
+            // Only log when there are auctions to process (reduce log noise)
+            if (!completedAuctions.isEmpty()) {
+                logger.info("Found " + completedAuctions.size() + " completed auctions to process at " + now);
+            }
 
             for (Auction auction : completedAuctions) {
                 try {
@@ -165,7 +180,19 @@ public class AuctionSchedulerService {
                             winningBid.getAmount()
                     );
 
-                    // 3. Send notifications
+                    // 3. Automatically create delivery
+                    try {
+                        deliveryService.createAutomaticDelivery(
+                                auctionId,
+                                winningBid.getBidderId(),
+                                winningBid.getAmount()
+                        );
+                        logger.info("Successfully created automatic delivery for auction: " + auctionId);
+                    } catch (Exception e) {
+                        logger.warning("Failed to create automatic delivery for auction " + auctionId + ": " + e.getMessage());
+                    }
+
+                    // 4. Send notifications
                     if (bidder != null) {
                         try {
                             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -209,6 +236,7 @@ public class AuctionSchedulerService {
 
                                     watchListNotifyService.notifySubscribers(
                                             auction,
+                                            null,
                                             excludedFromWatchlistNotify,
                                             watcherTitle,
                                             watcherMessage,
@@ -223,10 +251,13 @@ public class AuctionSchedulerService {
                         }
                     }
 
-                    // 4. Mark the auction as completed
+                    // 5. Mark the auction as completed
                     auction.setCompleted(true);
                     auction.setWinningBidId(winningBid.getId());
                     auctionRepository.save(auction);
+
+                    // add them to a chat
+                    chatService.getOrCreateWinnerSellerChat(bidder, seller, auction);
 
                     logger.info("Successfully completed auction: " + auctionId);
 
@@ -247,9 +278,10 @@ public class AuctionSchedulerService {
                             String auctionTitle = auction.getTitle();
                             String auctionUrl = String.format(AUCTION_DETAILS_PATH_TEMPLATE, auction.getId());
                             String messageSeller = String.format(AUCTION_ENDED_NO_BIDS_SELLER_MESSAGE_TEMPLATE, auctionTitle);
+                            String notificationTitle = String.format(AUCTION_ENDED_NO_BIDS_TITLE, auction.getTitle());
 
                             notificationEventPublisher.publishNotificationEvent(
-                                    AUCTION_ENDED_NO_BIDS_TITLE,
+                                    notificationTitle,
                                     messageSeller,
                                     NotificationCategory.AUCTION_COMPLETED,
                                     auction.getSeller().getUser(),
@@ -261,7 +293,8 @@ public class AuctionSchedulerService {
                             watchListNotifyService.notifySubscribers(
                                     auction,
                                     null,
-                                    AUCTION_ENDED_NO_BIDS_TITLE,
+                                    null,
+                                    notificationTitle,
                                     messageWatcher,
                                     NotificationCategory.AUCTION_COMPLETED,
                                     auctionUrl
@@ -314,6 +347,7 @@ public class AuctionSchedulerService {
                 watchListNotifyService.notifySubscribers(
                         auction,
                         null,
+                        null,
                         title,
                         message,
                         NotificationCategory.AUCTION_END_SOON,
@@ -354,6 +388,7 @@ public class AuctionSchedulerService {
 
                 watchListNotifyService.notifySubscribers(
                         auction,
+                        null,
                         null,
                         title,
                         message,
@@ -396,6 +431,7 @@ public class AuctionSchedulerService {
                 watchListNotifyService.notifySubscribers(
                         auction,
                         null,
+                        null,
                         title,
                         message,
                         NotificationCategory.AUCTION_STARTED,
@@ -425,4 +461,15 @@ public class AuctionSchedulerService {
             throw e;
         }
     }
+
+    @Scheduled(fixedRate = ONE_HOUR_MS)
+    public void cleanOldEndedAuctionsFromWatchlists() {
+        Instant tenDaysAgo = Instant.now().minus(Duration.ofDays(10));
+        int removed = watchListRepository.deleteWatchListEntriesForExpiredAuctions(tenDaysAgo);
+
+        if (removed > 0) {
+            log.info("Removed {} old watchlist entries for auctions ended before {}", removed, tenDaysAgo);
+        }
+    }
+
 }

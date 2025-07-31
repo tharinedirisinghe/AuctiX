@@ -58,4 +58,13 @@ public interface AdminActionRepository extends JpaRepository<AdminAction, UUID> 
     );
 
     Page<AdminAction> findByDescriptionContainingIgnoreCaseAndActivityType(Pageable pageable, String descriptionSearch, AdminActionsEnum actionTypeFilter);
+
+    @Query("SELECT a FROM AdminAction a WHERE " +
+            "(:descriptionSearch IS NULL OR LOWER(a.description) LIKE LOWER(CONCAT('%', :descriptionSearch, '%'))) AND " +
+            "(:actionTypeFilterEnumVal IS NULL OR a.activityType = :actionTypeFilterEnumVal)")
+    Page<AdminAction> searchAdminActionsNoUserSearch(
+            Pageable pageable,
+            @Param("descriptionSearch") String descriptionSearch,
+            @Param("actionTypeFilterEnumVal") AdminActionsEnum actionTypeFilterEnumVal
+    );
 }

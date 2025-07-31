@@ -254,6 +254,7 @@ export function TabsDemo({
         continueBtn="Ok"
         continueAction={handleAccept}
         cancelBtn={null}
+        timeoutSeconds={3}
       />
       <Tabs
         defaultValue="Buyers"
@@ -373,12 +374,12 @@ export function TabsDemo({
                 )}
               </Button>
 
-              <Button
+              {/* <Button
                 variant="secondary"
                 className="w-full mt-2 flex items-center justify-center"
               >
                 Sign up with Google
-              </Button>
+              </Button> */}
               <div className="text-center text-sm mt-2">
                 Already have an account?
                 <a href="/login" className="underline underline-offset-4">
@@ -493,12 +494,12 @@ export function TabsDemo({
                   'Sign up'
                 )}
               </Button>
-              <Button
+              {/* <Button
                 variant="secondary"
                 className="w-full mt-2 flex items-center justify-center"
               >
                 Sign up with Google
-              </Button>
+              </Button> */}
               <div className="text-center text-sm mt-2">
                 Already have an account?
                 <a href="/login" className="underline underline-offset-4">

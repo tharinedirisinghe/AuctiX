@@ -51,6 +51,49 @@ export const fetchPendingRequiredActions = createAsyncThunk(
   },
 );
 
+// TODO: Implement the markAsResolved action to handle marking actions as resolved
+export interface MarkAsResolvedPayload {
+  id?: string;
+}
+
+export const markAsResolved = createAsyncThunk(
+  'requiredActions/markAsResolved',
+  async (
+    payload: MarkAsResolvedPayload,
+    { rejectWithValue, getState, dispatch },
+  ) => {
+    try {
+      const baseURL = import.meta.env.VITE_API_URL;
+      const authUser = (getState() as any).auth as IAuthUser;
+      const response = await axios
+        .post(
+          `${baseURL}/user/markActionAsResolved?id=${payload.id}`,
+          {},
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authUser?.token}`,
+            },
+          },
+        )
+        .then((res) => res.data)
+        .catch((err) => {
+          console.error('Error marking action as resolved:', err);
+          return rejectWithValue('Failed to mark announcement as resolved');
+        });
+      return response;
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        console.error('Unauthorized! logging out...');
+        dispatch(logout());
+      }
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to mark action as resolved',
+      );
+    }
+  },
+);
+
 const requiredActionsSlice = createSlice({
   name: 'requiredActions',
   initialState,
@@ -66,8 +109,14 @@ const requiredActionsSlice = createSlice({
         state.loading = false;
         state.pendingActions = action.payload.map((recode: any) => {
           return {
-            ...recode,
             actionType: recode.actionType || null,
+            context:
+              typeof recode.context === 'string'
+                ? { ...JSON.parse(recode.context), id: recode.id }
+                : { ...recode.context, id: recode.id },
+            resolvedAt: recode.resolvedAt || null,
+            createdAt: recode.createdAt || null,
+            resolved: recode.resolved,
           };
         });
         console.log('pending actions updated:', action.payload);
@@ -76,6 +125,15 @@ const requiredActionsSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
         console.error('Error fetching pending actions:', action.payload);
+      })
+      .addCase(markAsResolved.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        console.error(
+          'Error marking action as resolved locally handled event"):',
+          action.payload,
+        );
+        state.pendingActions = [];
       });
   },
 });

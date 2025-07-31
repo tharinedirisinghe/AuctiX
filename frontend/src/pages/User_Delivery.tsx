@@ -1,6 +1,7 @@
 // File: src/pages/User_Delivery.tsx
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { AppDispatch } from '@/store/store';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -11,6 +12,9 @@ import {
   clearDeliveryError,
 } from '@/store/slices/deliverySlice';
 import { Delivery } from '@/services/deliveryService';
+import { reviewService } from '@/services/reviewService';
+import { updateDeliveryAddress } from '@/services/addressService';
+import { AddressData } from '@/components/delivery/buyer/AddAddressDialog';
 
 // Import components
 import { DeliveryHeroBanner } from '@/components/delivery/buyer/DeliveryHeroBanner';
@@ -24,9 +28,14 @@ import { ErrorDisplay } from '@/components/delivery/buyer/ErrorDisplay';
 import { LoadingIndicator } from '@/components/delivery/shared/LoadingIndicator';
 import { DeliverySkeletons } from '@/components/delivery/shared/DeliverySkeletons';
 import { Pagination } from '@/components/delivery/seller/Pagination';
+import { ReviewFormDialog } from '@/components/review/ReviewFormDialog';
+import { AddAddressDialog } from '@/components/delivery/buyer/AddAddressDialog';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const UserDeliveryPage = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const deliveries = useSelector(selectBuyerDeliveries);
   const isLoading = useSelector(selectDeliveryLoading);
   const error = useSelector(selectDeliveryError);
@@ -46,10 +55,62 @@ const UserDeliveryPage = () => {
     useState<boolean>(false);
   const [contactMessage, setContactMessage] = useState<string>('');
 
+  // Review state
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState<boolean>(false);
+  const [reviewDelivery, setReviewDelivery] = useState<Delivery | null>(null);
+  const [reviewEligibility, setReviewEligibility] = useState<{[key: string]: boolean}>({});
+  const [existingReviews, setExistingReviews] = useState<{[key: string]: boolean}>({});
+
+  // Address state
+  const [isAddressDialogOpen, setIsAddressDialogOpen] = useState<boolean>(false);
+  const [selectedDeliveryForAddress, setSelectedDeliveryForAddress] = useState<Delivery | null>(null);
+  const [isAddressLoading, setIsAddressLoading] = useState<boolean>(false);
+
   // Fetch deliveries on mount
   useEffect(() => {
     dispatch(fetchBuyerDeliveries());
   }, [dispatch]);
+
+  // Check review eligibility and existing reviews for all deliveries
+  useEffect(() => {
+    const checkReviewStatus = async () => {
+      if (deliveries.length === 0) return;
+
+      const eligibilityPromises = deliveries.map(async (delivery) => {
+        try {
+          const canReview = await reviewService.canReviewDelivery(delivery.id);
+          const existingReview = await reviewService.getReviewByDeliveryId(delivery.id);
+          return {
+            deliveryId: delivery.id,
+            canReview,
+            hasReview: existingReview !== null,
+          };
+        } catch (error) {
+          console.error(`Error checking review status for delivery ${delivery.id}:`, error);
+          return {
+            deliveryId: delivery.id,
+            canReview: false,
+            hasReview: false,
+          };
+        }
+      });
+
+      const results = await Promise.all(eligibilityPromises);
+      
+      const eligibilityMap: {[key: string]: boolean} = {};
+      const reviewsMap: {[key: string]: boolean} = {};
+      
+      results.forEach(({ deliveryId, canReview, hasReview }) => {
+        eligibilityMap[deliveryId] = canReview;
+        reviewsMap[deliveryId] = hasReview;
+      });
+
+      setReviewEligibility(eligibilityMap);
+      setExistingReviews(reviewsMap);
+    };
+
+    checkReviewStatus();
+  }, [deliveries]);
 
   // Reset current page when filters change
   useEffect(() => {
@@ -176,6 +237,66 @@ const UserDeliveryPage = () => {
     setLocalSelectedDelivery(null);
   };
 
+  // Handle review click
+  const handleReviewClick = (delivery: Delivery) => {
+    setReviewDelivery(delivery);
+    setIsReviewDialogOpen(true);
+  };
+
+  // Handle review submitted
+  const handleReviewSubmitted = () => {
+    // Refresh review status after successful submission
+    if (reviewDelivery) {
+      setExistingReviews(prev => ({
+        ...prev,
+        [reviewDelivery.id]: true
+      }));
+      setReviewEligibility(prev => ({
+        ...prev,
+        [reviewDelivery.id]: false
+      }));
+    }
+    setIsReviewDialogOpen(false);
+    setReviewDelivery(null);
+  };
+
+  // Handle add address click
+  const handleAddAddress = (delivery: Delivery) => {
+    setSelectedDeliveryForAddress(delivery);
+    setIsAddressDialogOpen(true);
+  };
+
+  // Handle save address
+  const handleSaveAddress = async (addressData: AddressData) => {
+    if (!selectedDeliveryForAddress) return;
+    
+    setIsAddressLoading(true);
+    try {
+      await updateDeliveryAddress(selectedDeliveryForAddress.id, addressData);
+      
+      toast({
+        title: 'Address Updated',
+        description: 'Your delivery address has been saved successfully.',
+        variant: 'default',
+      });
+
+      // Refresh deliveries to get updated address
+      dispatch(fetchBuyerDeliveries());
+      
+      setIsAddressDialogOpen(false);
+      setSelectedDeliveryForAddress(null);
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save address. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddressLoading(false);
+    }
+  };
+
   // Reset filters
   const resetFilters = () => {
     setTypeFilter('all');
@@ -194,10 +315,24 @@ const UserDeliveryPage = () => {
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto p-6">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Deliveries</h1>
-          <p className="text-gray-500">
-            Track and manage your auction deliveries
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 w-fit"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden xs:inline">Back to Dashboard</span>
+              <span className="xs:hidden">Back</span>
+            </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">My Deliveries</h1>
+              <p className="text-gray-500 text-sm sm:text-base">
+                Track and manage your auction deliveries
+              </p>
+            </div>
+          </div>
         </header>
 
         <DeliveryHeroBanner />
@@ -218,8 +353,6 @@ const UserDeliveryPage = () => {
 
         {/* Search & Filter */}
         <DeliveryFilter
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           showFilters={showFilters}
@@ -247,6 +380,10 @@ const UserDeliveryPage = () => {
                 delivery={delivery}
                 handleContactSeller={handleContactSeller}
                 viewDeliveryDetails={viewDeliveryDetails}
+                onReviewClick={handleReviewClick}
+                canReview={reviewEligibility[delivery.id] || false}
+                hasReview={existingReviews[delivery.id] || false}
+                onAddAddress={handleAddAddress}
               />
             ))}
           </div>
@@ -283,6 +420,26 @@ const UserDeliveryPage = () => {
         contactMessage={contactMessage}
         setContactMessage={setContactMessage}
         sendContactMessage={sendContactMessage}
+      />
+
+      {/* Review Form Dialog */}
+      <ReviewFormDialog
+        isOpen={isReviewDialogOpen}
+        onClose={() => setIsReviewDialogOpen(false)}
+        delivery={reviewDelivery}
+        onReviewSubmitted={handleReviewSubmitted}
+      />
+
+      {/* Add Address Dialog */}
+      <AddAddressDialog
+        isOpen={isAddressDialogOpen}
+        onClose={() => {
+          setIsAddressDialogOpen(false);
+          setSelectedDeliveryForAddress(null);
+        }}
+        onSave={handleSaveAddress}
+        isLoading={isAddressLoading}
+        deliveryId={selectedDeliveryForAddress?.id || ''}
       />
     </div>
   );

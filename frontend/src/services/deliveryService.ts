@@ -14,10 +14,12 @@ export interface Delivery {
   notes: string;
   amount: number;
   trackingNumber: string;
+  addressRequested?: boolean;
   createdAt: string;
   updatedAt: string;
   buyerLocation?: string;
-  auctionImage?: string;
+  auctionImage?: string; // First image for backward compatibility
+  auctionImages?: string[]; // All auction images
   auctionCategory?: string;
 }
 
@@ -146,6 +148,17 @@ export const deleteDelivery = async (id: string): Promise<void> => {
     await axiosInstance.delete(`/deliveries/${id}`);
   } catch (error) {
     console.error(`Error deleting delivery ${id}:`, error);
+    throw error;
+  }
+};
+
+// Request address from buyer
+export const requestDeliveryAddress = async (id: string): Promise<Delivery> => {
+  try {
+    const response = await axiosInstance.post(`/deliveries/${id}/request-address`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error requesting address for delivery ${id}:`, error);
     throw error;
   }
 };

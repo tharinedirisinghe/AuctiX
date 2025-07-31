@@ -1,7 +1,9 @@
 package com.helios.auctix.controllers.exception;
 
-import com.helios.auctix.services.fileUpload.UploadedFileCountMaxLimitExceedException;
-import com.helios.auctix.services.fileUpload.UploadedFileSizeMaxLimitExceedException;
+import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
+import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
+import com.helios.auctix.exception.InvalidUserException;
+import com.helios.auctix.exception.PermissionDeniedException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.dao.PermissionDeniedDataAccessException;
@@ -12,6 +14,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import javax.naming.LimitExceededException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +33,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception e) {
         log.error("Error occurred: {}", e.getMessage());
-        // e.printStackTrace();
+         e.printStackTrace();
         return buildErrorResponse("Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -55,13 +58,6 @@ public class GlobalExceptionHandler {
         return buildErrorResponse("Illegal argument", HttpStatus.BAD_REQUEST);
     }
 
-    // handle PermissionDeniedDataAccessException
-    @ExceptionHandler(PermissionDeniedDataAccessException.class)
-    public ResponseEntity<Map<String, Object>> handlePermissionDenied(PermissionDeniedDataAccessException e) {
-        log.error("Permission denied: {}", e.getMessage());
-        return buildErrorResponse("Permission denied", HttpStatus.FORBIDDEN);
-    }
-
     // handle UploadedFileCountMaxLimitExceedException
     @ExceptionHandler(UploadedFileCountMaxLimitExceedException.class)
     public ResponseEntity<Map<String, Object>> handleUploadedFileCountMaxLimitExceedException(UploadedFileCountMaxLimitExceedException e) {
@@ -76,6 +72,26 @@ public class GlobalExceptionHandler {
         return buildErrorResponse("Uploaded file size exceeds maximum limit", HttpStatus.BAD_REQUEST);
     }
 
+    // handle LimitExceededException
+    @ExceptionHandler(LimitExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleLimitExceededException(LimitExceededException e) {
+        log.error("Limit exceeded: {}", e.getMessage());
+        return buildErrorResponse("Limit exceeded", HttpStatus.BAD_REQUEST);
+    }
+
+    // handle InvalidUserException
+    @ExceptionHandler(InvalidUserException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidUserException(InvalidUserException e) {
+        log.error("Invalid user: {}", e.getMessage());
+        return buildErrorResponse("User is invalid. could be suspended account", HttpStatus.FORBIDDEN);
+    }
+
+    // handle PermissionDeniedException
+    @ExceptionHandler(PermissionDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handlePermissionDeniedException(PermissionDeniedException e) {
+        log.error("Permission denied: {}", e.getMessage());
+        return buildErrorResponse("Permission denied", HttpStatus.FORBIDDEN);
+    }
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(String message, HttpStatus status) {
         Map<String, Object> body = new HashMap<>();

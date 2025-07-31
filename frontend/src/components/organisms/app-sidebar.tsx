@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useEffect } from 'react';
 import { Command } from 'lucide-react';
 import { CollapsibleNavItem } from '../molecules/collapsible-navitem';
@@ -21,6 +19,7 @@ import {
 import { IUser } from '@/types/IUser';
 import { useAppSelector } from '@/hooks/hooks';
 import { Link, useLocation } from 'react-router-dom';
+import { title } from 'process';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userData = useAppSelector((state) => state.user as IUser);
@@ -33,25 +32,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         { title: 'Overview', url: '/dashboard', isActive: true },
         {
-          title: 'Auctions',
-          items: [
-            { title: 'Ongoing', url: '/auctions/ongoing' },
-            { title: 'Upcoming', url: '/auctions/upcoming' },
-            { title: 'Closed', url: '/auctions/closed' },
-          ],
+          title: 'My Auctions',
+          url: '/manage-auctions',
+          roles: ['SELLER'],
+        },
+        {
+          title: 'My Bids',
+          url: '/manage-bids',
+          roles: ['BIDDER'],
         },
         {
           title: 'Watch List',
           url: '/watchlist',
           roles: ['BIDDER'],
         },
-
+        {
+          title: 'Chat',
+          url: '/chat',
+          roles: ['BIDDER', 'SELLER'],
+        },
+        {
+          title: 'My Deliveries',
+          url: '/user-delivery',
+          roles: ['BIDDER'],
+        },
         {
           title: 'Management',
           items: [
             {
               title: 'Delivery',
-              url: '/delivery',
+              url: '/seller-delivery',
               roles: ['SELLER'],
             },
             {
@@ -64,6 +74,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: 'Admin Management',
               url: '/admin-management',
               roles: ['SUPER_ADMIN'],
+            },
+            {
+              title: 'Support Chat',
+              url: '/support/admin',
+              roles: ['SUPER_ADMIN', 'ADMIN'],
+            },
+            {
+              title: 'Feedbacks',
+              url: '/manage-feedback',
+              roles: ['ADMIN', 'SUPER_ADMIN'],
+            },
+            {
+              title: 'Seller Verification',
+              url: '/seller-verification-management',
+              roles: ['ADMIN', 'SUPER_ADMIN'],
             },
           ],
         },

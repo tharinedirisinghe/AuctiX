@@ -1,7 +1,8 @@
 export interface IPendingAction {
+  id: string;
   actionType: string | null;
-  title: string;
-  message: string;
-  canSkip: boolean;
-  btnText: string;
+  context: object | null;
+  resolvedAt: Date | string | null;
+  createdAt: Date | string | null;
+  resolved: boolean;
 }

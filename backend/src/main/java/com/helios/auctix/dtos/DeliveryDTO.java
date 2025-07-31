@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -27,9 +28,11 @@ public class DeliveryDTO {
     private String notes;
     private Double amount;
     private String trackingNumber;
+    private Boolean addressRequested;
     private Instant createdAt;
     private Instant updatedAt;
     private String buyerLocation;
-    private String auctionImage;
+    private String auctionImage; // Keep for backward compatibility (first image)
+    private List<String> auctionImages; // All auction images
     private String auctionCategory;
 }

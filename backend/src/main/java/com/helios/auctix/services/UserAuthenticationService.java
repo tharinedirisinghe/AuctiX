@@ -20,17 +20,20 @@ public class UserAuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final UserRoleRepository roleRepository;
+    private final CoinTransactionService coinTransactionService;
 
     private final CustomUserDetailsService userDetailsService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public UserAuthenticationService(JwtService jwtService,
                                      AuthenticationManager authenticationManager,
-                                     UserRepository userRepository, UserRoleRepository roleRepository, CustomUserDetailsService userDetailsService) {
+                                     UserRepository userRepository, UserRoleRepository roleRepository, 
+                                     CoinTransactionService coinTransactionService, CustomUserDetailsService userDetailsService) {
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.coinTransactionService = coinTransactionService;
         this.userDetailsService = userDetailsService;
     }
 
@@ -52,7 +55,12 @@ public class UserAuthenticationService {
                 .passwordHash(encoder.encode(password))
                 .build();
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        
+        // Note: Wallet creation is handled by UserRegisterService for the main registration flow
+        // This register method is for direct API usage only
+        
+        return savedUser;
     }
 
     public String verify(User user, String rawPasswordFromLogin) throws BadCredentialsException {

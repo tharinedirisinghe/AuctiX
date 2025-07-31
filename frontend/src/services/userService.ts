@@ -1,6 +1,5 @@
+import { IUser } from '@/types/IUser';
 import { AxiosInstance } from 'axios';
-
-const baseURL = import.meta.env.VITE_API_URL;
 
 export interface IProfileUpdateData {
   bio: string;
@@ -8,9 +7,12 @@ export interface IProfileUpdateData {
   firstName: string;
   lastName: string;
   address: {
-    number: string;
+    addressNumber: string;
     addressLine1: string;
     addressLine2: string;
+    city: string;
+    state: string;
+    postalCode: string;
     country: string;
   };
 }
@@ -19,10 +21,7 @@ export const updateProfileInfo = async (
   profileData: IProfileUpdateData,
   axiosInstance: AxiosInstance,
 ) => {
-  const response = await axiosInstance.post(
-    `${baseURL}/user/updateProfile`,
-    profileData,
-  );
+  const response = await axiosInstance.post(`/user/updateProfile`, profileData);
   return response.data;
 };
 
@@ -33,7 +32,7 @@ export const updateProfilePhoto = async (
   const formData = new FormData();
   formData.append('file', file);
   const response = await axiosInstance.post(
-    `${baseURL}/user/uploadUserProfilePhoto`,
+    `/user/uploadUserProfilePhoto`,
     formData,
     {
       headers: {
@@ -54,7 +53,7 @@ export const uploadVerificationDocs = async (
   });
 
   const response = await axiosInstance.post(
-    `${baseURL}/user/uploadVerificationDocs`,
+    `/user/uploadVerificationDocs`,
     formData,
     {
       headers: {
@@ -69,14 +68,11 @@ export const deleteProfilePhoto = async (
   username: string,
   axiosInstance: AxiosInstance,
 ) => {
-  const response = await axiosInstance.delete(
-    `${baseURL}/user/deleteUserProfilePhoto`,
-    {
-      params: {
-        username,
-      },
+  const response = await axiosInstance.delete(`/user/deleteUserProfilePhoto`, {
+    params: {
+      username,
     },
-  );
+  });
   return response.data;
 };
 
@@ -87,7 +83,7 @@ export const updateBannerPhoto = async (
   const formData = new FormData();
   formData.append('file', file);
   const response = await axiosInstance.post(
-    `${baseURL}/user/uploadUserBannerPhoto`,
+    `/user/uploadUserBannerPhoto`,
     formData,
     {
       headers: {
@@ -102,13 +98,45 @@ export const deleteBannerPhoto = async (
   username: string,
   axiosInstance: AxiosInstance,
 ) => {
-  const response = await axiosInstance.delete(
-    `${baseURL}/user/deleteBannerPhoto`,
-    {
-      params: {
-        username,
-      },
+  const response = await axiosInstance.delete(`/user/deleteBannerPhoto`, {
+    params: {
+      username,
     },
-  );
+  });
+  return response.data;
+};
+
+export interface IChangePasswordData {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export const changePassword = async (
+  passwordData: IChangePasswordData,
+  axiosInstance: AxiosInstance,
+) => {
+  const formData = new FormData();
+  formData.append('oldPassword', passwordData.oldPassword);
+  formData.append('newPassword', passwordData.newPassword);
+
+  const response = await axiosInstance.post(`/user/changePassword`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export interface IUserStats {
+  totalUsers: number;
+  bidders: number;
+  sellers: number;
+  admins: number;
+}
+
+export const getUserStats = async (
+  axiosInstance: AxiosInstance,
+): Promise<IUserStats> => {
+  const response = await axiosInstance.get(`/user/userStats`);
   return response.data;
 };

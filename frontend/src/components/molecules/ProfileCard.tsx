@@ -1,8 +1,6 @@
-'use client';
-
 import { motion } from 'framer-motion';
-import type { ImageResult } from '../molecules/ImageUploadPopup';
-import ImageUploadPopup from '../molecules/ImageUploadPopup';
+import type { ImageResult } from '../molecules/ImageUploadModal';
+import ImageUploadPopup from '../molecules/ImageUploadModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, Mail, AtSign, Shield } from 'lucide-react';
 import { TooltipBtn } from '../atoms/TooltipBtn';
@@ -45,17 +43,23 @@ export default function ProfileCard({
       .join(' ');
   };
 
-  const editBtnVisibility = useMemo(() => {
-    if (isInEditMode) {
-      if (role != 'SELLER') {
+  const getEditBtnVisibility = (
+    isInEditMode: boolean,
+    image: 'Banner' | 'Profile',
+    userRole: string,
+  ): string => {
+    if (!isInEditMode) return 'hidden';
+
+    if (userRole != 'SELLER') {
+      if (image === 'Banner') {
         return 'hidden';
-      } else {
-        return 'visible';
       }
-    } else {
-      return 'hidden';
     }
-  }, [isInEditMode, role]);
+
+    return 'visible';
+  };
+
+  const editBtnVisibility = useMemo(() => getEditBtnVisibility, []);
 
   return (
     <Card className="overflow-hidden mb-6">
@@ -75,7 +79,7 @@ export default function ProfileCard({
             <img
               src={bannerPhoto || assets.default_banner_image}
               alt="Profile Banner"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
             />
             <div className="absolute top-4 right-4 flex space-x-2">
               <ImageUploadPopup
@@ -83,15 +87,18 @@ export default function ProfileCard({
                 minWidth={800}
                 acceptingHeight={500}
                 acceptingWidth={1500}
-                shape="square"
+                buttonClassName={editBtnVisibility(
+                  isInEditMode,
+                  'Banner',
+                  role,
+                )}
                 onConfirm={onBannerPhotoSet}
-                buttonClassName={editBtnVisibility}
               />
               <TooltipBtn
                 icon={Trash2}
-                text="Remove Banner"
+                className={editBtnVisibility(isInEditMode, 'Banner', role)}
                 onClick={onRemoveBanner}
-                className={editBtnVisibility}
+                text="Remove Banner Image"
               />
             </div>
           </motion.div>
@@ -116,9 +123,12 @@ export default function ProfileCard({
             <div className="absolute -bottom-2 -right-2 flex items-center gap-2">
               <TooltipBtn
                 icon={Trash2}
-                text="Remove Profile Photo"
+                text="Remove Profile"
+                className={
+                  'p-2 mr-14 ' +
+                  editBtnVisibility(isInEditMode, 'Profile', role)
+                }
                 onClick={onProfilePhotoDelete}
-                className={'p-2 mr-14'}
               />
               <ImageUploadPopup
                 minHeight={100}
@@ -127,6 +137,11 @@ export default function ProfileCard({
                 acceptingWidth={500}
                 shape="circle"
                 onConfirm={onProfilePhotoSet}
+                buttonClassName={editBtnVisibility(
+                  isInEditMode,
+                  'Profile',
+                  role,
+                )}
               />
             </div>
           </div>

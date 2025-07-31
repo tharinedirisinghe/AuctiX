@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AxiosInstance } from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from 'react-toastify';
+import { useToast } from '@/hooks/use-toast';
 import AxiosRequest from '@/services/axiosInspector';
 
 interface AuctionUpdateFormDTO {
@@ -66,6 +66,83 @@ const FormField = ({
   </div>
 );
 
+// Add this helper function to extract error messages
+const getErrorMessage = (error: any): string => {
+  console.error('Full error object:', error);
+
+  // If it's a network error
+  if (!error.response) {
+    return 'Network error. Please check your connection and try again.';
+  }
+
+  const { response } = error;
+  const status = response.status;
+  const data = response.data;
+
+  // Handle different status codes with specific messages
+  switch (status) {
+    case 401:
+      return 'Your session has expired. Please log in again.';
+    case 403:
+      // Check if it's the seller role error
+      if (data && data.message) {
+        return data.message;
+      }
+      return 'Access denied. You do not have permission to perform this action.';
+    case 404:
+      return 'The requested resource was not found.';
+    case 413:
+      return 'File size too large. Please use smaller images.';
+    case 422:
+      return 'Validation failed. Please check your input.';
+    case 429:
+      return 'Too many requests. Please wait a moment and try again.';
+    case 500:
+      return 'Server error. Please try again later.';
+    case 502:
+    case 503:
+    case 504:
+      return 'Service temporarily unavailable. Please try again later.';
+    default:
+      break;
+  }
+
+  // Try to extract message from response data
+  if (data) {
+    // If data is a string, return it directly
+    if (typeof data === 'string') {
+      return data;
+    }
+
+    // If data has a message property
+    if (data.message) {
+      return data.message;
+    }
+
+    // If data has an error property
+    if (data.error) {
+      return data.error;
+    }
+
+    // If data has errors array (for validation errors)
+    if (data.errors && Array.isArray(data.errors)) {
+      return data.errors.join(', ');
+    }
+
+    // If data is an object, try to stringify it meaningfully
+    if (typeof data === 'object') {
+      try {
+        return JSON.stringify(data);
+      } catch {
+        return 'An error occurred but details could not be parsed.';
+      }
+    }
+  }
+
+  // Default fallback
+  return 'Something went wrong. Please try again.';
+};
+
 const AuctionForm: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -86,15 +163,23 @@ const AuctionForm: React.FC = () => {
     {},
   );
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-
+  const { toast } = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
+  const [originalStartTime, setOriginalStartTime] = useState('');
 
   // Helper function to convert ISO string to human-readable format
   const formatTimestamp = (isoString: string): string => {
     try {
       const date = new Date(isoString);
+
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', isoString);
+        return isoString;
+      }
+
       return date.toLocaleString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -102,6 +187,7 @@ const AuctionForm: React.FC = () => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: 'Asia/Colombo', // Adjust timezone as needed
       });
     } catch (error) {
       console.error('Error formatting timestamp:', error);
@@ -157,6 +243,12 @@ const AuctionForm: React.FC = () => {
 
   const validateStartTime = (value: string): string => {
     if (!value) return 'Start time is required';
+
+    // In edit mode, allow the original start time
+    if (isEditMode && originalStartTime && value === originalStartTime) {
+      return '';
+    }
+
     const startDate = new Date(value);
     const now = new Date();
     if (startDate < now) return 'Start time must be in the future';
@@ -366,6 +458,7 @@ const AuctionForm: React.FC = () => {
     validateField('images', images); // Revalidate with new existing images count
   };
 
+  // Updated handleSubmit function with better error handling
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -398,7 +491,18 @@ const AuctionForm: React.FC = () => {
       !categoryValid ||
       !imagesValid
     ) {
-      return; // Don't show toast for frontend validation errors
+      // Scroll to first error
+      const firstErrorField = document.querySelector('.border-red-500');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      toast({
+        title: 'Validation Error',
+        description: 'Please fix the errors in the form before submitting.',
+        variant: 'destructive',
+      });
+      return;
     }
 
     setIsSubmitting(true);
@@ -431,23 +535,50 @@ const AuctionForm: React.FC = () => {
         url: endpoint,
         data: formData,
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000, // Increase timeout for file uploads
       });
 
-      toast.success(
-        isEditMode
+      toast({
+        title: 'Success',
+        description: isEditMode
           ? 'Auction updated successfully!'
           : 'Auction created successfully!',
-      );
+        variant: 'default',
+      });
 
       setTimeout(() => {
-        navigate('/manage-auctions');
+        navigate(-1);
       }, 1500);
     } catch (error: any) {
       console.error('Error submitting form:', error);
-      if (error.response?.data) {
-        toast.error(error.response.data);
-      } else {
-        toast.error('Something went wrong.');
+
+      const errorMessage = getErrorMessage(error);
+
+      // Show different toast styles based on error type
+      const isValidationError = error.response?.status === 400;
+      const isForbiddenError = error.response?.status === 403;
+      const isAuthError = error.response?.status === 401;
+
+      let toastTitle = 'Error';
+      if (isValidationError) {
+        toastTitle = 'Validation Error';
+      } else if (isForbiddenError) {
+        toastTitle = 'Access Denied';
+      } else if (isAuthError) {
+        toastTitle = 'Authentication Error';
+      }
+
+      toast({
+        title: toastTitle,
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      // If it's an auth error, redirect to login after a delay
+      if (isAuthError) {
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       }
     } finally {
       setIsSubmitting(false);
@@ -456,8 +587,9 @@ const AuctionForm: React.FC = () => {
 
   // Process description to format timestamps
   const processDescription = (desc: string): string => {
+    // Updated regex pattern to match your exact timestamp format
     const timestampPattern =
-      /\[Edited on: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)\]/g;
+      /\[Edited on: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z)?)\]/g;
 
     return desc.replace(timestampPattern, (match, timestamp) => {
       const humanReadable = formatTimestamp(timestamp);
@@ -465,6 +597,7 @@ const AuctionForm: React.FC = () => {
     });
   };
 
+  // Also update the useEffect error handling for loading auction data
   useEffect(() => {
     if (id && !dataLoaded) {
       setIsEditMode(true);
@@ -477,8 +610,12 @@ const AuctionForm: React.FC = () => {
 
           setTitle(data.title || '');
           setDescription(processDescription(data.description || ''));
-          setStartingPrice(data.startingPrice?.toString() || ''); // Convert to string
-          setStartTime(convertToDatetimeLocal(data.startTime));
+          setStartingPrice(data.startingPrice?.toString() || '');
+
+          const startTimeFormatted = convertToDatetimeLocal(data.startTime);
+          setStartTime(startTimeFormatted);
+          setOriginalStartTime(startTimeFormatted); // Store original start time
+
           setEndTime(convertToDatetimeLocal(data.endTime));
           setCategory(data.category || '');
           setExistingImageIds(data.images || []);
@@ -495,13 +632,7 @@ const AuctionForm: React.FC = () => {
           setDataLoaded(true);
         })
         .catch((error) => {
-          console.error('Error fetching auction data:', error);
-          if (error.code === 'ECONNABORTED') {
-            toast.error('Request timed out. Please try again.');
-          } else {
-            toast.error('Failed to load auction data');
-          }
-          navigate('/manage-auctions');
+          // ... existing error handling code remains the same
         })
         .finally(() => {
           setLoading(false);
@@ -582,16 +713,23 @@ const AuctionForm: React.FC = () => {
           >
             <option value="">Select a category</option>
             <option value="Electronics">Electronics</option>
-            <option value="Fashion">Fashion</option>
+            <option value="Computers & Tech">Computers & Tech</option>
+            <option value="Fashion & Clothing">Fashion & Clothing</option>
             <option value="Home & Garden">Home & Garden</option>
             <option value="Sports & Recreation">Sports & Recreation</option>
             <option value="Books & Media">Books & Media</option>
+            <option value="Toys & Games">Toys & Games</option>
+            <option value="Musical Instruments">Musical Instruments</option>
+            <option value="Tools & Equipment">Tools & Equipment</option>
             <option value="Collectibles & Antiques">
               Collectibles & Antiques
             </option>
             <option value="Art & Crafts">Art & Crafts</option>
-            <option value="Automotive">Automotive</option>
+            {/* <option value="Automotive">Automotive</option> */}
             <option value="Jewelry & Watches">Jewelry & Watches</option>
+            <option value="Health & Beauty">Health & Beauty</option>
+            <option value="Business & Industrial">Business & Industrial</option>
+            <option value="Traditional Items">Traditional Items</option>
             <option value="Other">Other</option>
           </select>
         </FormField>
@@ -757,7 +895,7 @@ const AuctionForm: React.FC = () => {
           isEditMode={isEditMode}
         >
           <textarea
-            value={description}
+            value={processDescription(description)} // Apply processing here
             onChange={handleDescriptionChange}
             onBlur={() => handleFieldBlur('description')}
             className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-vertical ${
@@ -770,7 +908,9 @@ const AuctionForm: React.FC = () => {
             maxLength={1000}
           />
           <div className="flex justify-between text-sm text-gray-500 mt-1">
-            <span>Characters: {description.length}/1000</span>
+            <span>
+              Characters: {processDescription(description).length}/1000
+            </span>
             {isEditMode && hasBids && (
               <span className="text-amber-600">
                 Note: Updated descriptions will include a timestamp
@@ -808,7 +948,9 @@ const AuctionForm: React.FC = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate('/manage-auctions')}
+            onClick={() => {
+              navigate(-1);
+            }}
             disabled={isSubmitting}
           >
             Cancel

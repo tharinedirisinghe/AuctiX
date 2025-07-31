@@ -4,12 +4,10 @@ import com.helios.auctix.domain.auction.Auction;
 import com.helios.auctix.domain.auction.Bid;
 import com.helios.auctix.domain.notification.NotificationCategory;
 import com.helios.auctix.domain.user.User;
-import com.helios.auctix.dtos.BidUpdateMessageDTO;
+import com.helios.auctix.domain.user.UserRoleEnum;
+import com.helios.auctix.dtos.*;
 import com.helios.auctix.events.notification.NotificationEventPublisher;
 import com.helios.auctix.services.user.UserDetailsService;
-import com.helios.auctix.dtos.BidDTO;
-import com.helios.auctix.dtos.PlaceBidRequest;
-import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
 import com.helios.auctix.repositories.AuctionRepository;
 import com.helios.auctix.repositories.BidRepository;
@@ -22,11 +20,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 
 @AllArgsConstructor
@@ -43,6 +39,7 @@ public class BidService {
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationEventPublisher notificationEventPublisher;
     private final WatchListNotifyService watchListNotifyService;
+    private final WatchListService watchListService;
 
     // Get bid history for an auction
     public List<Bid> getBidHistoryForAuction(UUID auctionId) {
@@ -75,7 +72,7 @@ public class BidService {
                 .amount(bid.getAmount())
                 .bidTime(bid.getBidTime())
                 .createdAt(bid.getCreatedAt())
-                .bidder(bidderDto) // ✅ include full bidder
+                .bidder(bidderDto)
                 .build();
     }
 
@@ -99,10 +96,33 @@ public class BidService {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
 
+        UserRoleEnum userRole = bidder.getRoleEnum();
+        if (userRole != UserRoleEnum.BIDDER) {
+            throw new SecurityException("Only registered bidders can place bids on auctions");
+        }
+
+        // Additional check: Prevent sellers from bidding on their own auctions
+        if (auction.getSeller().getId().equals(bidderId)) {
+            throw new SecurityException("You cannot bid on your own auction");
+        }
+
         // Check if auction is active
         Instant now = Instant.now();
-        if (now.isBefore(auction.getStartTime()) || now.isAfter(auction.getEndTime())) {
-            throw new IllegalStateException("Auction is not active");
+        if (now.isBefore(auction.getStartTime())) {
+            throw new IllegalStateException("Auction has not started yet");
+        }
+        if (now.isAfter(auction.getEndTime())) {
+            throw new IllegalStateException("Auction has already ended");
+        }
+
+        // Validate bid amount format and value
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Bid amount must be a positive number");
+        }
+
+        // Check for reasonable bid limits (prevent extremely large bids)
+        if (amount > 100_000_000) { // 100 million limit - adjust as needed
+            throw new IllegalArgumentException("Bid amount exceeds maximum allowed limit");
         }
 
         // Set bidTime server-side
@@ -130,9 +150,19 @@ public class BidService {
         });
 
         if (highestBid.isPresent()) {
-            if (amount <= highestBid.get().getAmount()) {
-                log.warning("Bid too low: " + amount + " <= " + highestBid.get().getAmount());
-                throw new IllegalArgumentException("Bid amount must be higher than current highest bid");
+            double currentHighest = highestBid.get().getAmount();
+            double minimumBid = currentHighest + calculateBidIncrement(currentHighest, auction.getStartingPrice());
+
+            if (amount <= currentHighest) {
+                throw new IllegalArgumentException(
+                        String.format("Bid must be higher than current highest bid of LKR %,.2f", currentHighest)
+                );
+            }
+
+            if (amount < minimumBid) {
+                throw new IllegalArgumentException(
+                        String.format("Bid must be at least LKR %,.2f (minimum increment required)", minimumBid)
+                );
             }
 
             // If a different user previously had the highest bid, unfreeze their amount
@@ -219,6 +249,7 @@ public class BidService {
                 
                 watchListNotifyService.notifySubscribers(
                         auction,
+                        null,
                         excludedFromWatchlistNotify,
                         title,
                         message,
@@ -230,6 +261,9 @@ public class BidService {
         });
 
         Bid savedBid = bidRepository.save(bid);
+
+        // subscribe to watchlist if already not there
+        watchListService.subscribe(bidderId, auctionId);
 
         BidDTO bidDTO = convertToDTO(savedBid);
         List<BidDTO> history = getBidHistoryForAuction(auctionId).stream()
@@ -248,6 +282,40 @@ public class BidService {
 
         return bidDTO;
 
+    }
+
+    public int countTotalBids(UUID userId) {
+
+        return bidRepository.countByBidderId(userId);
+    }
+
+    public int countWonAuctions(UUID userId) {
+
+        return auctionRepository.countAuctionsWonByUser(userId);
+    }
+
+    public int countLeadingBidAuctions(UUID userId) {
+
+        return bidRepository.countActiveAuctionsWhereUserIsHighestBidder(userId);
+    }
+
+    public int countActiveOutbidAuctions(UUID userId) {
+
+        return bidRepository.countActiveAuctionsWhereUserIsOutbid(userId);
+    }
+
+    public int countActiveBids(UUID userId) {
+        // Count bids for auctions that are public and not completed
+        return bidRepository.countActiveBidsByUser(userId);
+    }
+
+
+    // Helper method to calculate minimum increment
+    private double calculateMinimumIncrement(double currentBid) {
+        // Calculate 5% increment with minimum of 100
+        double increment = Math.max(100, currentBid * 0.05);
+        // Round to nearest 100
+        return Math.ceil(increment / 100) * 100;
     }
 
 
@@ -273,6 +341,103 @@ public class BidService {
         }
     }
 
+    public List<MyBidAuctionDTO> getMyBidAuctions(UUID userId, String status) {
+        // Get all bids by user
+        List<Bid> userBids = bidRepository.findByBidderId(userId);
+
+        // Group bids by auction
+        Map<UUID, List<Bid>> bidsByAuction = userBids.stream()
+                .collect(Collectors.groupingBy(bid -> bid.getAuction().getId()));
+
+        return bidsByAuction.entrySet().stream()
+                .map(entry -> {
+                    UUID auctionId = entry.getKey();
+                    List<Bid> auctionBids = entry.getValue();
+                    Auction auction = auctionRepository.findById(auctionId).orElse(null);
+
+                    if (auction == null) return null;
+
+                    // Get user's highest bid for this auction
+                    double highestUserBid = auctionBids.stream()
+                            .mapToDouble(Bid::getAmount)
+                            .max()
+                            .orElse(0.0);
+
+                    // Get current highest bid for auction
+                    Optional<Bid> highestBid = getHighestBidForAuction(auctionId);
+                    double currentHighestBid = highestBid
+                            .map(Bid::getAmount)
+                            .orElse(auction.getStartingPrice());
+
+
+                    // Determine auction status
+                    String auctionStatus = determineAuctionStatus(auction, userId, highestUserBid, currentHighestBid);
+
+                    // Filter based on requested status
+                    if (!status.equalsIgnoreCase("all") && !status.equalsIgnoreCase(auctionStatus)) {
+                        return null;
+                    }
+
+                    return MyBidAuctionDTO.builder()
+                            .auctionId(auctionId)
+                            .title(auction.getTitle())
+                            .currentPrice(currentHighestBid)
+                            .yourHighestBid(highestUserBid)
+                            .status(auctionStatus)
+                            .endTime(auction.getEndTime())
+                            .isLeadingBid(highestUserBid >= currentHighestBid)
+                            .category(auction.getCategory())
+                            .imagePaths(auction.getImagePaths())
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private double calculateBidIncrement(double currentBid, double startingPrice) {
+        double effectiveBid = Math.max(startingPrice, currentBid);
+
+        // Exact same tiered system as frontend
+        if (effectiveBid < 1000) {
+            return 50;
+        } else if (effectiveBid < 5000) {
+            return 100;
+        } else if (effectiveBid < 10000) {
+            return 250;
+        } else if (effectiveBid < 25000) {
+            return 500;
+        } else if (effectiveBid < 50000) {
+            return 1000;
+        } else if (effectiveBid < 100000) {
+            return 2500;
+        } else if (effectiveBid < 250000) {
+            return 5000;
+        } else if (effectiveBid < 500000) {
+            return 10000;
+        } else if (effectiveBid < 1000000) {
+            return 25000;
+        } else if (effectiveBid < 2500000) {
+            return 50000;
+        } else {
+            return 100000;
+        }
+    }
+
+    private String determineAuctionStatus(Auction auction, UUID userId, double userHighestBid, double currentHighestBid) {
+        Instant now = Instant.now();
+
+        if (auction.getEndTime().isAfter(now)) {
+            return "active";
+        }
+
+        if (userHighestBid >= currentHighestBid) {
+            return "won";
+        }
+
+        return "lost";
+    }
+
+
     // Add these methods to your existing BidService
 
     /**
@@ -294,5 +459,72 @@ public class BidService {
      */
     public List<UUID> getBiddersForAuction(UUID auctionId) {
         return bidRepository.findDistinctBidderIdsByAuctionId(auctionId);
+    }
+
+    /**
+     * Unfreeze the highest bid amount for a deleted auction and notify the bidder
+     * Only the highest bidder has frozen funds at any given time
+     */
+    @Transactional
+    public void unfreezeAllBidsForAuction(UUID auctionId) {
+        log.info("Unfreezing highest bid for deleted auction: " + auctionId);
+        
+        // Get the highest bid for this auction
+        Optional<Bid> highestBid = getHighestBidForAuction(auctionId);
+        
+        if (highestBid.isEmpty()) {
+            log.info("No bids found for auction " + auctionId);
+            return;
+        }
+
+        Bid bid = highestBid.get();
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Auction not found"));
+        
+        try {
+            // Unfreeze the highest bid amount
+            transactionService.unfreezeAmount(
+                    bid.getBidderId(),
+                    bid.getAmount(),
+                    "Auction cancelled/deleted: " + auction.getTitle()
+            );
+            
+            log.info("Unfroze " + bid.getAmount() + " for highest bidder " + bid.getBidderId());
+            
+            // Send notification to the highest bidder about auction cancellation
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        User bidder = userDetailsService.getUserById(bid.getBidderId());
+                        
+                        String title = "Auction Cancelled - Funds Refunded";
+                        String message = String.format(
+                                "The auction \"%s\" has been cancelled by the seller. Your bid of LKR %,.2f has been refunded to your wallet.",
+                                auction.getTitle(),
+                                bid.getAmount()
+                        );
+                        
+                        notificationEventPublisher.publishNotificationEvent(
+                                title,
+                                message,
+                                NotificationCategory.AUCTION_CANCELED,
+                                bidder,
+                                null
+                        );
+                        
+                        log.info("Sent cancellation notification to highest bidder " + bid.getBidderId());
+                    } catch (Exception e) {
+                        log.warning("Failed to send cancellation notification to bidder " + bid.getBidderId() + ": " + e.getMessage());
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            log.severe("Failed to unfreeze bid amount for bidder " + bid.getBidderId() + ": " + e.getMessage());
+            throw new IllegalStateException("Failed to unfreeze bid for bidder " + bid.getBidderId() + ": " + e.getMessage());
+        }
+        
+        log.info("Successfully unfroze bid amount for highest bidder on auction " + auctionId);
     }
 }

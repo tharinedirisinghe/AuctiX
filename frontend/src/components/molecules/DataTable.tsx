@@ -51,14 +51,9 @@ export function DataTable<TData, TValue>({
   searchPlaceholderText,
 }: DataTableProps<TData, TValue>) {
   const currentPageHandler = React.useCallback(
-    (page: number) => {
-      console.log('[DataTableForServerSideFiltering]: currentPageHandler');
-      setCurrentPage(page);
-    },
+    (page: number) => setCurrentPage(page),
     [setCurrentPage],
   );
-
-  console.log('[DataTableForServerSideFiltering]:');
 
   const memoizedData = React.useMemo(() => data || [], [data]);
   const memoizedColumns = React.useMemo(() => columns, [columns]);
@@ -82,15 +77,8 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  React.useEffect(() => {
-    console.log('DataTableForServerSideFiltering mounted');
-    return () => {
-      console.log('DataTableForServerSideFiltering unmounted');
-    };
-  }, []);
-
   return (
-    <div className="w-full p-4">
+    <div className="w-full ">
       <div className="flex items-center py-4">
         <Input
           placeholder={searchPlaceholderText || 'Search...'}
@@ -108,20 +96,16 @@ export function DataTable<TData, TValue>({
             {table
               .getAllColumns()
               .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                >
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -130,18 +114,16 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -183,7 +165,7 @@ export function DataTable<TData, TValue>({
       </div>
       <div className="flex items-center justify-between py-4">
         <PaginationNav
-          currentPage={currentPage ? currentPage + 1 : 1}
+          currentPage={currentPage ?? 0}
           pages={pageCount ?? 1}
           handlePage={currentPageHandler}
         />

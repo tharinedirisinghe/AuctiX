@@ -1,17 +1,13 @@
 // File: components/delivery/seller/DeliveryFilter.tsx
-import { Filter, Plus, Search } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DeliveryFilterProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
-  setShowNewDeliveryModal: (show: boolean) => void;
   isLoading: boolean;
   typeFilter: string;
   setTypeFilter: (filter: string) => void;
@@ -23,13 +19,10 @@ interface DeliveryFilterProps {
 }
 
 export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
-  activeTab,
-  setActiveTab,
   searchTerm,
   setSearchTerm,
   showFilters,
   setShowFilters,
-  setShowNewDeliveryModal,
   isLoading,
   typeFilter,
   setTypeFilter,
@@ -42,39 +35,6 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-        <Tabs
-          defaultValue="all"
-          className="w-full md:w-auto"
-          onValueChange={(value) => setActiveTab(value)}
-          value={activeTab}
-        >
-          <TabsList className="grid grid-cols-4 w-full md:w-auto bg-gray-100 p-1">
-            <TabsTrigger
-              value="all"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              All
-            </TabsTrigger>
-            <TabsTrigger
-              value="packing"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              Packing
-            </TabsTrigger>
-            <TabsTrigger
-              value="shipping"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              Shipping
-            </TabsTrigger>
-            <TabsTrigger
-              value="delivered"
-              className="data-[state=active]:bg-amber-300 data-[state=active]:text-gray-900"
-            >
-              Delivered
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         <div className="flex w-full md:w-auto gap-2">
           <div className="relative flex-grow md:w-64">
@@ -84,23 +44,17 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               className="pl-8 border-gray-300 focus-visible:ring-amber-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={isLoading}
             />
           </div>
           <Button
             variant="outline"
             className="flex items-center gap-1 border-amber-300 text-amber-600 hover:bg-amber-50"
             onClick={() => setShowFilters(!showFilters)}
+            disabled={isLoading}
           >
             <Filter className="h-4 w-4" />
             <span>Filter</span>
-          </Button>
-          <Button
-            className="bg-amber-300 hover:bg-amber-400 text-gray-900 flex items-center"
-            onClick={() => setShowNewDeliveryModal(true)}
-            disabled={isLoading}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            New Delivery
           </Button>
         </div>
       </div>
@@ -115,6 +69,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+              disabled={isLoading}
             >
               <option value="all">All Categories</option>
               <option value="furniture">Furniture</option>
@@ -131,6 +86,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+              disabled={isLoading}
             >
               <option value="all">All Statuses</option>
               <option value="packing">Packing</option>
@@ -146,6 +102,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-amber-500"
+              disabled={isLoading}
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
@@ -159,6 +116,7 @@ export const DeliveryFilter: React.FC<DeliveryFilterProps> = ({
               onClick={resetFilters}
               variant="link"
               className="text-amber-600 hover:text-amber-700 text-sm p-0"
+              disabled={isLoading}
             >
               Reset Filters
             </Button>

@@ -23,6 +23,8 @@ import {
   fetchUnreadCount,
   markNotificationReadThunk,
 } from '@/store/slices/notificationSlice';
+import AuctionSearchBar from '../molecules/AuctionSearchBar';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
 export function Navbar() {
   const userData = useAppSelector((state) => state.user as IUser);
@@ -120,9 +122,9 @@ export function Navbar() {
                 </Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link to="/dashboard">
+                <Link to="/feedback">
                   <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                    Dashboard
+                    Feedback
                   </NavigationMenuLink>
                 </Link>
               </NavigationMenuItem>
@@ -141,11 +143,12 @@ export function Navbar() {
         <div className="hidden lg:block w-full max-w-md mx-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
+            {/* <Input
               type="search"
               placeholder="Search auctions"
               className="w-full pl-10"
-            />
+            /> */}
+            <AuctionSearchBar />
           </div>
         </div>
 
@@ -162,47 +165,76 @@ export function Navbar() {
                 }}
               >
                 <NavigationMenuList>
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="hidden md:inline-flex relative p-0">
-                      <Bell className="h-5 w-5" />
-                      {notificationState.unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] flex items-center justify-center">
-                          {notificationState.unreadCount}
-                        </span>
-                      )}
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent className="w-80 p-0">
-                      <div className="max-h-96 min-w-[320px] overflow-y-auto divide-y">
-                        {notificationState.latestItems &&
-                        notificationState.latestItems.length > 0 ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="relative">
+                        <Bell className="h-5 w-5" />
+                        {notificationState.unreadCount > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] flex items-center justify-center">
+                            {notificationState.unreadCount > 99
+                              ? '99+'
+                              : notificationState.unreadCount}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+
+                    <PopoverContent
+                      align="end"
+                      className="w-[340px] p-0 overflow-hidden shadow-xl border bg-background"
+                      onOpenAutoFocus={() => {
+                        dispatch(fetchUnreadCount());
+                        dispatch(fetchLatestNotifications());
+                      }}
+                    >
+                      <div className="max-h-96 overflow-y-auto divide-y divide-muted/30">
+                        {notificationState.latestItems?.length ? (
                           notificationState.latestItems.map(
-                            (notification: Notification, idx: number) => (
-                              <NotificationWrapper
-                                key={notification.id || idx}
-                                notification={notification}
-                              >
-                                <div className="flex items-center gap-1 text-sm font-medium">
-                                  {notification.title || 'Notification'}
-                                  {notification.partialUrl && (
-                                    <ExternalLink
-                                      className="w-3 h-3 text-muted-foreground"
-                                      aria-label="Link available"
-                                    />
-                                  )}{' '}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {notification.content}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground mt-1">
-                                  {new Date(
-                                    notification.createdAt,
-                                  ).toLocaleString(undefined, {
-                                    dateStyle: 'medium',
-                                    timeStyle: 'short',
-                                  })}
-                                </div>
-                              </NotificationWrapper>
-                            ),
+                            (notification: Notification, idx: number) => {
+                              const Wrapper = notification.partialUrl
+                                ? Link
+                                : 'div';
+                              const wrapperProps = notification.partialUrl
+                                ? { to: notification.partialUrl }
+                                : {};
+
+                              const baseClasses =
+                                'block px-3 py-2 transition-colors truncate';
+                              const hoverClasses = notification.partialUrl
+                                ? 'hover:bg-muted/10 hover:shadow-sm hover:scale-[1.01] cursor-pointer'
+                                : '';
+
+                              return (
+                                <Wrapper
+                                  key={notification.id || idx}
+                                  {...wrapperProps}
+                                  className={`${baseClasses} ${hoverClasses}`}
+                                >
+                                  <div className="flex justify-between items-start gap-1">
+                                    <p className="text-sm font-medium truncate max-w-[250px]">
+                                      {notification.title || 'Notification'}
+                                    </p>
+                                    {notification.partialUrl && (
+                                      <ExternalLink
+                                        className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5"
+                                        aria-label="External link"
+                                      />
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {notification.content}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {new Date(
+                                      notification.createdAt,
+                                    ).toLocaleString(undefined, {
+                                      dateStyle: 'medium',
+                                      timeStyle: 'short',
+                                    })}
+                                  </p>
+                                </Wrapper>
+                              );
+                            },
                           )
                         ) : (
                           <div className="p-4 text-center text-muted-foreground text-sm">
@@ -210,17 +242,19 @@ export function Navbar() {
                           </div>
                         )}
                       </div>
-                      <div className="border-t p-2 flex justify-center">
-                        <Link to="/notifications" className="w-full">
-                          <Button variant="ghost" className="w-full">
+
+                      <div className="border-t p-2 text-center">
+                        <Link to="/notifications">
+                          <Button variant="ghost" className="w-full text-sm">
                             View all notifications
                           </Button>
                         </Link>
                       </div>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
+                    </PopoverContent>
+                  </Popover>
                 </NavigationMenuList>
               </NavigationMenu>
+
               <Link to="/dashboard" className="flex items-center gap-2">
                 <Avatar className="hidden md:inline-flex h-8 w-8">
                   <AvatarImage
@@ -265,14 +299,15 @@ export function Navbar() {
                     Aucti<span className="text-orange-500">X</span>
                   </span>
                 </div>
-                <div className="relative mb-4">
+                {/* <div className="relative mb-4">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
                     placeholder="Type a command or search..."
                     className="pl-10"
                   />
-                </div>
+                </div> */}
+                <AuctionSearchBar />
                 <nav className="flex flex-col gap-4">
                   <Link to="/">
                     <Button variant="ghost" className="justify-start w-full">

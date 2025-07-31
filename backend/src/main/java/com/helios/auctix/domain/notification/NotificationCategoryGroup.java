@@ -15,7 +15,10 @@ public enum NotificationCategoryGroup {
     PROMO(Set.of(UserRoleEnum.BIDDER, UserRoleEnum.SELLER)),
     AUCTION,
     SYSTEM,
-    WALLET(Set.of(UserRoleEnum.BIDDER, UserRoleEnum.SELLER));
+    WALLET(Set.of(UserRoleEnum.BIDDER, UserRoleEnum.SELLER)),
+    CHAT,
+    SUPPORT;
+
 
     private final Set<UserRoleEnum> allowedRoles;
 

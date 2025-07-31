@@ -17,8 +17,16 @@ const ManageAuctions = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterKey>('total');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    auctionId: '',
+    auctionTitle: '',
+    hasBids: false,
+  });
+  const [deletionReason, setDeletionReason] = useState('');
 
   // Map frontend filter keys to backend filter values
   const filterMap: Record<FilterKey, string> = {
@@ -43,6 +51,88 @@ const ManageAuctions = () => {
     DELETED: 'Deleted',
   };
 
+  // Helper function to determine auction status based on dates
+  const getAuctionStatus = (auction: any) => {
+    const now = new Date();
+    const startTime = new Date(auction.startTime);
+    const endTime = new Date(auction.endTime);
+
+    // Check for deletion status first
+    if (
+      auction.deletionStatus === 'PENDING_ADMIN_APPROVAL' ||
+      auction.status === 'PENDING_ADMIN_APPROVAL'
+    ) {
+      return 'PENDING_ADMIN_APPROVAL';
+    }
+
+    if (auction.deleted || auction.status?.toLowerCase() === 'deleted') {
+      return 'deleted';
+    }
+
+    if (auction.status?.toLowerCase() === 'unlisted') {
+      return 'unlisted';
+    }
+
+    // Determine status based on time
+    if (now < startTime) {
+      return 'upcoming';
+    } else if (now >= startTime && now <= endTime) {
+      return 'active';
+    } else {
+      return 'ended';
+    }
+  };
+
+  // Helper function to get current bid amount
+  const getCurrentBidAmount = (auction: any) => {
+    // Check if currentHighestBid exists and has amount
+    if (auction.currentHighestBid && auction.currentHighestBid.amount) {
+      return auction.currentHighestBid.amount;
+    }
+
+    // Fall back to currentBid if it exists
+    if (auction.currentBid && auction.currentBid > 0) {
+      return auction.currentBid;
+    }
+
+    // No bids yet
+    return null;
+  };
+
+  // Helper function to check if auction has bids
+  const hasBids = (auction: any) => {
+    return (
+      (auction.currentHighestBid && auction.currentHighestBid.amount) ||
+      (auction.bidHistory && auction.bidHistory.length > 0) ||
+      (auction.currentBid && auction.currentBid > 0)
+    );
+  };
+
+  const isPendingDeletion = (auction: any) => {
+    return (
+      auction.status === 'PENDING_ADMIN_APPROVAL' ||
+      (auction.status === 'unlisted' && auction.pendingDeletion === true) ||
+      auction.deletionStatus === 'PENDING_ADMIN_APPROVAL'
+    );
+  };
+
+  const isDeletedOrPending = (auction: any) =>
+    isPendingDeletion(auction) || auction.status?.toLowerCase() === 'deleted';
+
+  const isAuctionEndingSoon = (auction: any) => {
+    const endTime = new Date(auction.endTime || auction.end);
+    const now = new Date();
+    const diffInMs = endTime.getTime() - now.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    return diffInHours <= 1 && diffInHours > 0;
+  };
+
+  const isAuctionEnded = (auction: any) => {
+    const endTime = new Date(auction.endTime || auction.end);
+    const now = new Date();
+    return endTime < now;
+  };
+
   const itemsPerPage = 10;
   const axiosInstance = AxiosRequest().axiosInstance;
   const [allAuctions, setAllAuctions] = useState<any[]>([]);
@@ -51,10 +141,27 @@ const ManageAuctions = () => {
   const token = userData?.token;
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (!userData?.isUserLoggedIn || userData.role !== 'SELLER') {
+      toast.error('Access denied. Seller account required.');
+      navigate('/login', { replace: true });
+    }
+  }, [userData, navigate]);
+
+  if (!userData?.isUserLoggedIn || userData.role !== 'SELLER') {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-500">
+        Access denied. Only sellers can view this page.
+      </div>
+    );
+  }
+
   // Fetch auctions based on filter and search
   const fetchAuctions = async (
     filter: FilterKey = 'total',
     search: string = '',
+    page: number = currentPage,
+    size: number = itemsPerPage,
   ) => {
     if (!token) {
       toast.error('User not authenticated');
@@ -65,39 +172,43 @@ const ManageAuctions = () => {
     try {
       const params = new URLSearchParams();
 
-      // Map frontend filter to backend filter
       let backendFilter = filterMap[filter];
-      if (filter === 'active') {
-        backendFilter = 'ongoing';
-      } else if (filter === 'ended') {
-        backendFilter = 'completed';
-      }
+      if (filter === 'active') backendFilter = 'ongoing';
+      else if (filter === 'ended') backendFilter = 'completed';
 
       params.append('filter', backendFilter);
-      if (search) {
-        params.append('search', search);
-      }
+      params.append('page', (page - 1).toString());
+      params.append('size', size.toString());
+      if (search) params.append('search', search);
 
       const url = `/auctions/seller/auctions?${params.toString()}`;
-      console.log('Fetching from URL:', url);
-
       const response = await axiosInstance.get(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('API Response:', response.data);
-      setAllAuctions(response.data);
-    } catch (error: any) {
-      console.error('Failed to fetch auctions:', error);
-      if (error.response?.status === 401) {
-        toast.error('Session expired. Please log in again.');
-      } else if (error.response?.status === 403) {
-        toast.error('Access denied. Only sellers can view auctions.');
-      } else {
-        toast.error('Failed to load auctions');
+      // FIX: Handle your specific API response structure
+      const responseData = response.data;
+
+      // Your API structure: { content: [...], page: { totalElements: X } }
+      if (responseData.content && responseData.page) {
+        setAllAuctions(responseData.content);
+        setTotalCount(responseData.page.totalElements);
       }
+      // Fallback for simple array responses
+      else if (Array.isArray(responseData)) {
+        setAllAuctions(responseData);
+        setTotalCount(responseData.length);
+      }
+      // Another fallback
+      else {
+        setAllAuctions(responseData.content || responseData);
+        setTotalCount(
+          responseData.totalElements ||
+            (responseData.content || responseData).length,
+        );
+      }
+    } catch (error) {
+      toast.error('Failed to load auctions');
     } finally {
       setLoading(false);
     }
@@ -127,6 +238,10 @@ const ManageAuctions = () => {
     }
   }, [token]);
 
+  useEffect(() => {
+    fetchAuctions(selectedFilter, searchTerm, currentPage);
+  }, [currentPage]);
+
   // Refetch when filter or search changes
   useEffect(() => {
     if (token) {
@@ -140,12 +255,9 @@ const ManageAuctions = () => {
   }, [allAuctions]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredAuctions.length / itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedAuctions = filteredAuctions.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  const paginatedAuctions = allAuctions;
 
   // Reset to first page when filter or search changes
   useEffect(() => {
@@ -187,45 +299,85 @@ const ManageAuctions = () => {
   ];
 
   const handleAuctionAction = async (
-    action: 'update' | 'delete',
+    action: 'update' | 'delete' | 'view',
     auctionId: string,
   ) => {
-    if (action === 'update') {
-      // Fixed: Navigate to the correct update route
-      navigate(`/auctions/update/${auctionId}`);
+    if (action === 'view') {
+      navigate(`/auction-details/${auctionId}`);
+      setShowDropdown(null);
+      return;
     }
+
+    if (action === 'update') {
+      navigate(`/auctions/update/${auctionId}`);
+      setShowDropdown(null);
+      return;
+    }
+
     if (action === 'delete') {
-      const confirmed = window.confirm(
-        'Are you sure you want to delete this auction?',
-      );
-      if (!confirmed) return;
+      const auction = allAuctions.find((a) => a.id === auctionId);
+      const auctionHasBids = hasBids(auction);
 
-      try {
-        await axiosInstance.delete(`/auctions/delete/${auctionId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        toast.success('Auction deleted successfully');
-
-        // Refresh the auctions list
-        fetchAuctions(selectedFilter, searchTerm);
-        fetchStats();
-      } catch (error: any) {
-        if (error.response?.status === 400) {
-          toast.error(error.response.data || 'Cannot delete auction');
-        } else {
-          toast.error('Failed to delete auction');
-        }
-        console.error(error);
-      }
+      setDeleteModal({
+        isOpen: true,
+        auctionId: auctionId,
+        auctionTitle: auction?.title || auction?.name || 'Unknown Auction',
+        hasBids: auctionHasBids,
+      });
+      setDeletionReason('');
     }
 
     setShowDropdown(null);
   };
 
-  const getStatusBadgeColor = (status: string) => {
+  const handleDeleteConfirm = async () => {
+    if (deleteModal.hasBids && !deletionReason.trim()) {
+      toast.error(
+        'Please provide a reason for deleting this auction with bids',
+      );
+      return;
+    }
+
+    try {
+      const requestBody = deleteModal.hasBids ? { reason: deletionReason } : {};
+
+      await axiosInstance.delete(`/auctions/delete/${deleteModal.auctionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        data: requestBody,
+      });
+
+      toast.success('Auction deleted successfully');
+
+      setDeleteModal({
+        isOpen: false,
+        auctionId: '',
+        auctionTitle: '',
+        hasBids: false,
+      });
+      setDeletionReason('');
+
+      fetchAuctions(selectedFilter, searchTerm);
+      fetchStats();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data ||
+        'Failed to delete auction';
+      toast.error(errorMessage);
+    }
+  };
+
+  const getStatusBadgeColor = (status: string, auction?: any) => {
     const normalizedStatus = status?.toLowerCase();
+
+    if (isPendingDeletion(auction)) {
+      return 'bg-orange-100 text-orange-800 border border-orange-300';
+    }
+
     switch (normalizedStatus) {
       case 'ongoing':
       case 'active':
@@ -282,7 +434,7 @@ const ManageAuctions = () => {
           <ChevronLeft className="h-4 w-4" />
           <span>Back</span>
         </button>
-        <h1 className="text-2xl font-bold mb-2">Auctions</h1>
+        <h1 className="text-2xl font-bold mb-2">My Auctions</h1>
         <p className="text-gray-600">
           You can view and manage your auctions here
         </p>
@@ -324,32 +476,41 @@ const ManageAuctions = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <div className="relative dropdown-container">
-            <button
-              className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              onClick={() =>
-                setShowDropdown(showDropdown === 'columns' ? null : 'columns')
-              }
-            >
-              Columns
-            </button>
-            {showDropdown === 'columns' && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                <div className="py-1">
-                  <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                    Show All Columns
-                  </div>
-                  <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                    Hide Start Price
-                  </div>
-                  <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                    Hide Current Bid
+        </div>
+
+        {selectedFilter === 'unlisted' &&
+          paginatedAuctions.some((auction) => isPendingDeletion(auction)) && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-orange-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-orange-800">
+                    Pending Deletion Requests
+                  </h3>
+                  <div className="mt-2 text-sm text-orange-700">
+                    <p>
+                      Auctions marked as "Pending Admin Approval" have deletion
+                      requests that require admin review. These auctions cannot
+                      be updated or deleted until the admin processes the
+                      request.
+                    </p>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
         {loading ? (
           <div className="flex justify-center items-center py-8">
@@ -357,7 +518,7 @@ const ManageAuctions = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-visible">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -396,77 +557,149 @@ const ManageAuctions = () => {
                       </td>
                     </tr>
                   ) : (
-                    paginatedAuctions.map((auction, idx) => (
-                      <tr
-                        key={idx}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="py-3 px-4">{auction.id}</td>
-                        <td className="py-3 px-4">
-                          {auction.title || auction.name}
-                        </td>
-                        <td className="py-3 px-4">
-                          {formatDate(auction.startTime || auction.start)}
-                        </td>
-                        <td className="py-3 px-4">
-                          {formatDate(auction.endTime || auction.end)}
-                        </td>
-                        <td className="py-3 px-4">
-                          {formatPrice(auction.startingPrice)}
-                        </td>
-                        <td className="py-3 px-4">
-                          {auction.currentBid
-                            ? formatPrice(auction.currentBid)
-                            : '-'}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(auction.status)}`}
-                          >
-                            {statusDisplayMap[auction.status?.toLowerCase()] ||
-                              auction.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 relative">
-                          <div className="dropdown-container">
-                            <button
-                              className="p-1 hover:bg-gray-200 rounded"
-                              onClick={() =>
-                                setShowDropdown(
-                                  showDropdown === auction.id
-                                    ? null
-                                    : auction.id,
-                                )
-                              }
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
-                            {showDropdown === auction.id && (
-                              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                                <div className="py-1">
-                                  <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                    onClick={() =>
-                                      handleAuctionAction('update', auction.id)
-                                    }
-                                  >
-                                    Update Auction
-                                  </div>
-                                  <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
-                                    onClick={() =>
-                                      handleAuctionAction('delete', auction.id)
-                                    }
-                                  >
-                                    Delete Auction
+                    paginatedAuctions.map((auction, idx) => {
+                      const currentBidAmount = getCurrentBidAmount(auction);
+                      const auctionStatus = getAuctionStatus(auction);
+
+                      return (
+                        <tr
+                          key={idx}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          <td className="py-3 px-4">{auction.id}</td>
+                          <td className="py-3 px-4">
+                            {auction.title || auction.name}
+                          </td>
+                          <td className="py-3 px-4">
+                            {formatDate(auction.startTime || auction.start)}
+                          </td>
+                          <td className="py-3 px-4">
+                            {formatDate(auction.endTime || auction.end)}
+                          </td>
+                          <td className="py-3 px-4">
+                            {formatPrice(auction.startingPrice)}
+                          </td>
+                          <td className="py-3 px-4">
+                            {currentBidAmount ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium text-green-600">
+                                  {formatPrice(currentBidAmount)}
+                                </span>
+                                {auction.bidHistory &&
+                                  auction.bidHistory.length > 0 && (
+                                    <span className="text-xs text-gray-500">
+                                      {auction.bidHistory.length} bid
+                                      {auction.bidHistory.length !== 1
+                                        ? 's'
+                                        : ''}
+                                    </span>
+                                  )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">No bids yet</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-col">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(auctionStatus, auction)}`}
+                              >
+                                {isPendingDeletion(auction)
+                                  ? 'Pending Admin Approval'
+                                  : statusDisplayMap[auctionStatus] ||
+                                    auctionStatus}
+                              </span>
+                              {isPendingDeletion(auction) && (
+                                <span className="text-xs text-orange-600 mt-1">
+                                  Deletion Request Submitted
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4 relative">
+                            <div className="dropdown-container">
+                              <button
+                                className="p-1 hover:bg-gray-200 rounded"
+                                onClick={() =>
+                                  setShowDropdown(
+                                    showDropdown === auction.id
+                                      ? null
+                                      : auction.id,
+                                  )
+                                }
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                              {showDropdown === auction.id && (
+                                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                                  <div className="py-1">
+                                    {isDeletedOrPending(auction) ||
+                                    auction.status?.toLowerCase() ===
+                                      'deleted' ||
+                                    auction.deleted ||
+                                    isAuctionEnded(auction) ? (
+                                      <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() =>
+                                          navigate(
+                                            `/auction-details/${auction.id}`,
+                                          )
+                                        }
+                                      >
+                                        View Auction Details
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div
+                                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                          onClick={() =>
+                                            handleAuctionAction(
+                                              'view',
+                                              auction.id,
+                                            )
+                                          }
+                                        >
+                                          View Auction Details
+                                        </div>
+                                        <div
+                                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                          onClick={() =>
+                                            handleAuctionAction(
+                                              'update',
+                                              auction.id,
+                                            )
+                                          }
+                                        >
+                                          Update Auction
+                                        </div>
+                                        {!isAuctionEndingSoon(auction) ? (
+                                          <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                            onClick={() =>
+                                              handleAuctionAction(
+                                                'delete',
+                                                auction.id,
+                                              )
+                                            }
+                                          >
+                                            Delete Auction
+                                          </div>
+                                        ) : (
+                                          <div className="px-4 py-2 text-gray-400 cursor-not-allowed">
+                                            Cannot Delete (Last Hour)
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
                                   </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -475,8 +708,8 @@ const ManageAuctions = () => {
             <div className="flex justify-between items-center mt-4">
               <span className="text-sm text-gray-500">
                 Showing {startIndex + 1} to{' '}
-                {Math.min(startIndex + itemsPerPage, filteredAuctions.length)}{' '}
-                of {filteredAuctions.length} auctions
+                {Math.min(startIndex + allAuctions.length, totalCount)} of{' '}
+                {totalCount} auctions
               </span>
               <div className="flex items-center space-x-2">
                 <button
@@ -507,6 +740,68 @@ const ManageAuctions = () => {
           </>
         )}
       </div>
+
+      {/* Delete Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Auction</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete "{deleteModal.auctionTitle}"?
+            </p>
+
+            {deleteModal.hasBids && (
+              <div className="mb-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+                  <p className="text-orange-800 text-sm">
+                    ⚠️ This auction has bids. Deleting will immediately unfreeze
+                    all bid amounts and remove the auction permanently.
+                  </p>
+                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for deletion *
+                </label>
+                <textarea
+                  value={deletionReason}
+                  onChange={(e) => setDeletionReason(e.target.value)}
+                  placeholder="Please explain why you need to delete this auction..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  required
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setDeleteModal({
+                    isOpen: false,
+                    auctionId: '',
+                    auctionTitle: '',
+                    hasBids: false,
+                  });
+                  setDeletionReason('');
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={deleteModal.hasBids && !deletionReason.trim()}
+                className={`px-4 py-2 text-white rounded ${
+                  deleteModal.hasBids && !deletionReason.trim()
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                Delete Auction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

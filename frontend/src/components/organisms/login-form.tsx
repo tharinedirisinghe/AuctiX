@@ -87,6 +87,7 @@ export function LoginForm({
         message={msg}
         continueBtn="Ok"
         cancelBtn={null}
+        timeoutSeconds={4}
       />
       <form
         onSubmit={(e) => handleSubmit(e)}
@@ -114,7 +115,7 @@ export function LoginForm({
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
               <a
-                href="/forgot-password"
+                href="/password-reset"
                 className="ml-auto text-sm underline-offset-4 hover:underline"
               >
                 Forgot your password?
@@ -161,7 +162,7 @@ export function LoginForm({
             Or continue with
           </span>
         </div> */}
-          <Button variant="outline" className="w-full">
+          {/* <Button variant="outline" className="w-full">
             <svg
               viewBox="-0.5 0 48 48"
               version="1.1"
@@ -219,7 +220,7 @@ export function LoginForm({
               </g>
             </svg>
             Login with Google
-          </Button>
+          </Button> */}
         </div>
         <div className="text-center text-sm">
           Don&apos;t have an account?

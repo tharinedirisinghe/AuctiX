@@ -1,10 +1,8 @@
-'use client';
-
 import type React from 'react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ZodError, z } from 'zod';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -25,6 +23,7 @@ import type { AxiosInstance } from 'axios';
 import AxiosRequest from '@/services/axiosInspector';
 import { useAppDispatch } from '@/hooks/hooks';
 import { fetchPendingRequiredActions } from '@/store/slices/requiredActionsSlice';
+import { getServerErrorMessage, SectionEnum } from '@/lib/errorMsg';
 
 const passwordUpdateSchema = z
   .object({
@@ -109,21 +108,15 @@ export function PasswordUpdateForm() {
         dispatch(fetchPendingRequiredActions());
       })
       .catch((error) => {
-        if (error.response?.status === 500) {
-          toast({
-            title: 'Error',
-            description:
-              'An unexpected error occurred. Please try again later.',
-            variant: 'destructive',
-          });
-        } else {
-          toast({
-            title: 'Error',
-            description:
-              error.response?.data?.message || 'Failed to update password.',
-            variant: 'destructive',
-          });
-        }
+        const errorMessage = getServerErrorMessage(
+          error,
+          SectionEnum.PASSWORD_UPDATE,
+        );
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
       })
       .finally(() => {
         setIsLoading(false);

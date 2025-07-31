@@ -18,7 +18,7 @@ import { ApproveDocumentModal } from '../molecules/ApproveDocumentModal';
 import { RejectDocumentModal } from '../molecules/RejectDocumentModal';
 import { AddNoteModal } from '../molecules/AddNoteModal';
 
-const PREVIEW_INNER_HEIGHT = 'h-[calc(60vh-150px)]';
+const PREVIEW_INNER_HEIGHT = 'h-48 sm:h-64 lg:h-[calc(60vh-150px)]';
 
 const DocumentPreviewViewer = ({
   document,
@@ -63,9 +63,9 @@ const DocumentPreviewViewer = ({
   if (isLoading) {
     return (
       <div
-        className={`flex items-center justify-center text-gray-500 ${PREVIEW_INNER_HEIGHT}`}
+        className={`flex items-center justify-center text-gray-500 ${PREVIEW_INNER_HEIGHT} px-4`}
       >
-        <p>Loading preview...</p>
+        <p className="text-sm sm:text-base">Loading preview...</p>
       </div>
     );
   }
@@ -73,9 +73,11 @@ const DocumentPreviewViewer = ({
   if (error || !previewUrl) {
     return (
       <div
-        className={`flex items-center justify-center text-gray-500 ${PREVIEW_INNER_HEIGHT}`}
+        className={`flex items-center justify-center text-gray-500 ${PREVIEW_INNER_HEIGHT} px-4`}
       >
-        <p>{error || 'Preview not available'}</p>
+        <p className="text-center text-sm sm:text-base">
+          {error || 'Preview not available'}
+        </p>
       </div>
     );
   }
@@ -105,8 +107,10 @@ const DocumentPreviewViewer = ({
 
   // For other file types
   return (
-    <div className="flex items-center justify-center text-gray-500 h-64">
-      <p>Preview not available for this file type ({contentType})</p>
+    <div className="flex items-center justify-center text-gray-500 h-32 sm:h-48 lg:h-64 px-4">
+      <p className="text-center text-sm sm:text-base">
+        Preview not available for this file type ({contentType})
+      </p>
     </div>
   );
 };
@@ -134,23 +138,23 @@ export function DocumentPreviewCard({
   // Show skeleton loading when sellerUserName is null
   if (sellerUserName === null) {
     return (
-      <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
-        <CardHeader>
+      <Card className="border-l-2 border-yellow-500 bg-gray-50 min-h-[500px] sm:min-h-[600px] lg:h-[calc(100vh-80px)]">
+        <CardHeader className="pb-3 sm:pb-6">
           <div className="space-y-2">
-            <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+            <div className="h-5 sm:h-6 bg-gray-200 rounded animate-pulse w-3/4"></div>
+            <div className="h-3 sm:h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 h-[calc(100%-140px)]">
+        <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
           {/* Skeleton Preview Section */}
-          <div className="border rounded-lg p-4 bg-white">
+          <div className="border rounded-lg p-2 sm:p-4 bg-white">
             <div
               className={`bg-gray-200 animate-pulse rounded ${PREVIEW_INNER_HEIGHT}`}
             ></div>
           </div>
 
           {/* Skeleton Document Details */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
               <div className="h-3 bg-gray-200 rounded animate-pulse mb-2 w-1/2"></div>
               <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
@@ -171,11 +175,13 @@ export function DocumentPreviewCard({
           </div>
 
           {/* Skeleton Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
-            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+          <div className="p-3 bg-white rounded-lg border border-l-4 border-l-gray-300">
+            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
+              <div className="h-9 sm:h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-9 sm:h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-9 sm:h-8 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-9 sm:h-8 bg-gray-200 rounded animate-pulse"></div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -184,18 +190,20 @@ export function DocumentPreviewCard({
 
   if (!document) {
     return (
-      <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
-        <CardHeader>
-          <CardTitle className="text-lg font-medium text-gray-900">
+      <Card className="border-l-2 border-yellow-500 bg-gray-50 min-h-[400px] sm:min-h-[500px] lg:h-[calc(100vh-5px)]">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-base sm:text-lg font-medium text-gray-900">
             Document Preview
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm sm:text-base">
             Select a document from the submission list to preview
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 h-[calc(100%-140px)] flex items-center justify-center">
+        <CardContent className="space-y-3 sm:space-y-4 flex items-center justify-center min-h-[200px] px-4 sm:px-6">
           <div className="text-center">
-            <p className="text-gray-500">No document selected</p>
+            <p className="text-gray-500 text-sm sm:text-base">
+              No document selected
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -209,22 +217,22 @@ export function DocumentPreviewCard({
   };
 
   return (
-    <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
-      <CardHeader>
-        <CardTitle className="text-lg font-medium text-gray-900">
+    <Card className="border-0 border-l-2 border-yellow-500 bg-gray-50 min-h-[500px] sm:min-h-[600px] lg:h-[calc(100vh-5px)]">
+      <CardHeader className="pb-3 sm:pb-6">
+        <CardTitle className="text-base sm:text-lg font-medium text-gray-900">
           Document Preview
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm break-words">
           {document.docTitle} • {formatFileSize(document.docSize)} •{' '}
           {document.docType}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4 h-[calc(100%-140px)]">
+      <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
         {/* Preview Section */}
-        <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-white">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="border rounded-lg p-2 sm:p-4 bg-white">
             <div
-              className={`bg-gray-100 flex items-center justify-center ${PREVIEW_INNER_HEIGHT}`}
+              className={`bg-gray-100 flex items-center justify-center ${PREVIEW_INNER_HEIGHT} rounded`}
             >
               <DocumentPreviewViewer document={document} />
             </div>
@@ -232,10 +240,10 @@ export function DocumentPreviewCard({
         </div>
 
         {/* Document Details Section */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
             <p className="text-xs text-gray-600">File Type</p>
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-gray-900 break-words">
               {document.docType}
             </p>
           </div>
@@ -250,7 +258,7 @@ export function DocumentPreviewCard({
         {/* Notes Section */}
         <div className="p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
           <p className="text-xs text-gray-600 mb-2">Review Notes</p>
-          <div className="text-xs text-gray-800 max-h-16 overflow-y-auto">
+          <div className="text-xs text-gray-800 max-h-12 sm:max-h-16 overflow-y-auto break-words">
             {document.description === 'no review notes'
               ? 'No review notes available'
               : document.description}
@@ -258,46 +266,48 @@ export function DocumentPreviewCard({
         </div>
 
         {/* Action Buttons Section */}
-        <div className="grid grid-cols-2 gap-2 p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1 border-yellow-500 text-gray-800 bg-brandGoldYellow hover:bg-yellow-300"
-            onClick={() => downloadAndOpenFile(document.docId, axiosInstance)}
-          >
-            <Download className="h-3 w-3" />
-            Download
-          </Button>
+        <div className="p-3 bg-white rounded-lg border border-l-4 border-l-yellow-500">
+          <div className="flex flex-col sm:grid sm:grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-1 border-yellow-500 text-gray-800 bg-brandGoldYellow hover:bg-yellow-300 h-9 sm:h-8"
+              onClick={() => downloadAndOpenFile(document.docId, axiosInstance)}
+            >
+              <Download className="h-3 w-3" />
+              Download
+            </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1 border-yellow-500 text-gray-800 bg-brandGoldYellow hover:bg-yellow-300"
-            onClick={() => setIsAddNoteModalOpen(true)}
-          >
-            <MessageSquare className="h-3 w-3" />
-            Edit Note
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-1 border-yellow-500 text-gray-800 bg-brandGoldYellow hover:bg-yellow-300 h-9 sm:h-8"
+              onClick={() => setIsAddNoteModalOpen(true)}
+            >
+              <MessageSquare className="h-3 w-3" />
+              Edit Note
+            </Button>
 
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 gap-1"
-            onClick={() => setIsApproveModalOpen(true)}
-          >
-            <Check className="h-3 w-3" />
-            Approve
-          </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full bg-green-600 hover:bg-green-700 gap-1 h-9 sm:h-8"
+              onClick={() => setIsApproveModalOpen(true)}
+            >
+              <Check className="h-3 w-3" />
+              Approve
+            </Button>
 
-          <Button
-            variant="destructive"
-            size="sm"
-            className="gap-1"
-            onClick={() => setIsRejectModalOpen(true)}
-          >
-            <X className="h-3 w-3" />
-            Reject
-          </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-full gap-1 h-9 sm:h-8"
+              onClick={() => setIsRejectModalOpen(true)}
+            >
+              <X className="h-3 w-3" />
+              Reject
+            </Button>
+          </div>
         </div>
       </CardContent>
 

@@ -51,7 +51,7 @@ export function VerificationSubmissionList({
   };
 
   return (
-    <Card className="border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-80px)]">
+    <Card className="border-0 border-l-2 border-yellow-500 bg-gray-50 h-[calc(100vh-5px)]">
       <CardHeader>
         <CardTitle className="text-lg font-medium text-gray-900">
           Verification Submissions

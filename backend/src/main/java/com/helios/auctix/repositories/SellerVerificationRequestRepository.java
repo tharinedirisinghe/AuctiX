@@ -55,15 +55,14 @@ public interface SellerVerificationRequestRepository extends JpaRepository<Selle
 
     @Query("""
     SELECT new com.helios.auctix.dtos.SellerVerificationStatsDTO(
-        COUNT(CASE WHEN r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED THEN 1 END) AS approvedCount,
-        COUNT(CASE WHEN r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.PENDING THEN 1 END) AS pendingCount,
-        COUNT(CASE WHEN r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.REJECTED THEN 1 END) AS rejectedCount,
-        COUNT(DISTINCT r.seller.id) AS verifiedSellersCount
+        (SELECT COUNT(r1) FROM SellerVerificationRequest r1 WHERE r1.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED),
+        (SELECT COUNT(r2) FROM SellerVerificationRequest r2 WHERE r2.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.PENDING),
+        (SELECT COUNT(r3) FROM SellerVerificationRequest r3 WHERE r3.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.REJECTED),
+        (SELECT COUNT(DISTINCT r4.seller.id) FROM SellerVerificationRequest r4 WHERE r4.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED)
     )
-    FROM SellerVerificationRequest r
-    WHERE r.verificationStatus = com.helios.auctix.domain.user.SellerVerificationStatusEnum.APPROVED
-    """)
+""")
     SellerVerificationStatsDTO getSellerVerificationStats();
+
 
     SellerVerificationRequest findByIdAndSellerId(UUID requestId, UUID sellerId);
 }

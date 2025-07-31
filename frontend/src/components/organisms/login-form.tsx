@@ -162,7 +162,7 @@ export function LoginForm({
             Or continue with
           </span>
         </div> */}
-          <Button variant="outline" className="w-full">
+          {/* <Button variant="outline" className="w-full">
             <svg
               viewBox="-0.5 0 48 48"
               version="1.1"
@@ -220,7 +220,7 @@ export function LoginForm({
               </g>
             </svg>
             Login with Google
-          </Button>
+          </Button> */}
         </div>
         <div className="text-center text-sm">
           Don&apos;t have an account?

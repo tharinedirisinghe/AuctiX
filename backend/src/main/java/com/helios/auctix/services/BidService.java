@@ -304,6 +304,12 @@ public class BidService {
         return bidRepository.countActiveAuctionsWhereUserIsOutbid(userId);
     }
 
+    public int countActiveBids(UUID userId) {
+        // Count bids for auctions that are public and not completed
+        return bidRepository.countActiveBidsByUser(userId);
+    }
+
+
     // Helper method to calculate minimum increment
     private double calculateMinimumIncrement(double currentBid) {
         // Calculate 5% increment with minimum of 100

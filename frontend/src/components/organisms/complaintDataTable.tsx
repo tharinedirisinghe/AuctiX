@@ -28,6 +28,7 @@ interface IComplaint {
   reason: string;
   dateReported: string;
   status: string;
+  assignedTo?: string | null; // uuid or null
 }
 
 export default function ComplaintDataTable({
@@ -49,6 +50,9 @@ export default function ComplaintDataTable({
   const [searchText, setSearchText] = useState<string>('');
   const [searchDebounced, setSearchDebounced] = useState<string>('');
   const [statusTrigger, setStatusTrigger] = useState(0);
+  const [assignedUsernames, setAssignedUsernames] = useState<
+    Record<string, string>
+  >({});
 
   // Debounce search input
   useEffect(() => {
@@ -58,6 +62,7 @@ export default function ComplaintDataTable({
     return () => clearTimeout(handler);
   }, [searchText]);
 
+  // Fetch complaints data
   useEffect(() => {
     setIsLoading(true);
     axiosInstance
@@ -88,6 +93,25 @@ export default function ComplaintDataTable({
     selectedStatus,
     statusTrigger,
   ]);
+
+  // Fetch usernames for assignedTo UUIDs
+  useEffect(() => {
+    const uuids = complaints
+      .map((c) => c.assignedTo)
+      .filter(
+        (uuid) => uuid && typeof uuid === 'string' && !assignedUsernames[uuid],
+      ) as string[];
+    if (uuids.length === 0) return;
+    uuids.forEach(async (uuid) => {
+      try {
+        const res = await axiosInstance.get(`/user/getUser?userId=${uuid}`);
+        const username = res.data.user?.username || res.data.username || uuid;
+        setAssignedUsernames((prev) => ({ ...prev, [uuid]: username }));
+      } catch {
+        setAssignedUsernames((prev) => ({ ...prev, [uuid]: uuid }));
+      }
+    });
+  }, [complaints, assignedUsernames, axiosInstance]);
 
   const complaintsColumns: ColumnDef<IComplaint>[] = [
     {
@@ -186,6 +210,27 @@ export default function ComplaintDataTable({
       },
       enableHiding: true,
       enableGrouping: true,
+    },
+    {
+      accessorKey: 'assignedTo',
+      header: 'Assigned To',
+      cell: ({ row }) => {
+        const assigned = row.original.assignedTo;
+        if (!assigned) {
+          return <span className="text-gray-400 italic">Unassigned</span>;
+        }
+        const username = assignedUsernames[assigned];
+        return (
+          <span>
+            {username ? (
+              username
+            ) : (
+              <span className="text-gray-400 italic">Loading...</span>
+            )}
+          </span>
+        );
+      },
+      enableHiding: true,
     },
     {
       id: 'actions',

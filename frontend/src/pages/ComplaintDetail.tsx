@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { openTool } from '@/store/slices/adminToolsSlice';
 import { AdminToolsEnum } from '@/components/organisms/AdminTools';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 interface User {
   username: string;
@@ -44,6 +44,7 @@ interface Complaint {
   targetId?: string;
   dateReported: string;
   status: string;
+  assignedTo?: User | null; // Add assignedTo field
 }
 
 interface TimelineEntry {
@@ -77,7 +78,10 @@ export default function ComplaintDetail() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [targetAuction, setTargetAuction] = useState<Auction | null>(null);
   const [targetUser, setTargetUser] = useState<User | null>(null);
+  const [assignedAdmin, setAssignedAdmin] = useState<User | null>(null);
   const appDispatch = useDispatch();
+  // Get current user info from userSlice
+  const currentUser = useSelector((state: any) => state.user);
 
   // Move fetchTargetDetails here so it's available to both effects
   const fetchTargetDetails = async () => {
@@ -145,6 +149,26 @@ export default function ComplaintDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [complaint]);
 
+  // Fetch assigned admin details if assignedTo is present
+  useEffect(() => {
+    const fetchAssignedAdmin = async () => {
+      if (complaint?.assignedTo) {
+        try {
+          const res = await axiosInstance.get(
+            `/user/getUser?userId=${complaint.assignedTo}`,
+          );
+          setAssignedAdmin(res.data.user || res.data);
+        } catch {
+          setAssignedAdmin(null);
+        }
+      } else {
+        setAssignedAdmin(null);
+      }
+    };
+    fetchAssignedAdmin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [complaint?.assignedTo]);
+
   const handleStatusChange = async (newStatus: string) => {
     if (!complaint) return;
 
@@ -191,6 +215,30 @@ export default function ComplaintDetail() {
       setTimelineActivities(response.data);
     } catch (err) {
       setError('Failed to add comment.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handler for "Assign to Me"
+  const handleAssignToMe = async () => {
+    if (!complaint) return;
+    setUpdating(true);
+    try {
+      const response = await axiosInstance.put(`/complaints/${id}/assign`);
+      setComplaint((prev) =>
+        prev
+          ? {
+              ...prev,
+              assignedTo: response.data.assignedTo,
+            }
+          : null,
+      );
+      // Fetch timeline after assigning
+      const timelineRes = await axiosInstance.get(`/complaints/${id}/timeline`);
+      setTimelineActivities(timelineRes.data);
+    } catch (err) {
+      setError('Failed to assign complaint.');
     } finally {
       setUpdating(false);
     }
@@ -294,6 +342,7 @@ export default function ComplaintDetail() {
                   {complaint.reason}
                 </h2>
                 <StatusBadge status={complaint.status} />
+                {/* Remove assigned admin display from here */}
               </div>
               {complaint.description && complaint.description.trim() && (
                 <div className="mb-4">
@@ -596,106 +645,93 @@ export default function ComplaintDetail() {
                   <Button
                     variant="default"
                     className="bg-yellow-400 hover:bg-yellow-500 text-black"
-                    onClick={() => handleStatusChange('UNDER_REVIEW')}
+                    onClick={handleAssignToMe}
                     disabled={updating}
                   >
                     Assign to Me
                   </Button>
                 ) : (
-                  <>
-                    <Button
-                      variant="default"
-                      className="justify-start text-gray-700 border-gray-300 bg-gray-50 hover:bg-gray-100"
-                      onClick={() => {
-                        if (complaint.reportedBy?.email) {
-                          window.location.href = `mailto:${complaint.reportedBy.email}`;
-                        }
-                      }}
-                      disabled={!complaint.reportedBy?.email}
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Email Reporter
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="justify-start text-green-700 border-green-300 bg-green-50 hover:bg-green-100"
-                      onClick={() => handleStatusChange('RESOLVED')}
-                      disabled={
-                        updating ||
-                        complaint.status === 'RESOLVED' ||
-                        complaint.status === 'REJECTED'
-                      }
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Mark as Solved
-                    </Button>
-                    <Button
-                      variant="default"
-                      className="justify-start text-red-700 border-red-300 bg-red-50 hover:bg-red-100"
-                      onClick={() => handleStatusChange('REJECTED')}
-                      disabled={
-                        updating ||
-                        complaint.status === 'RESOLVED' ||
-                        complaint.status === 'REJECTED'
-                      }
-                    >
-                      <ChevronDown className="h-4 w-4 mr-2" />
-                      Reject Complaint
-                    </Button>
-                    {/* Ban User Button */}
-                    {targetUser && (
+                  assignedAdmin &&
+                  currentUser &&
+                  assignedAdmin.username &&
+                  currentUser.username &&
+                  assignedAdmin.username.trim().toLowerCase() ===
+                    currentUser.username.trim().toLowerCase() && (
+                    <>
                       <Button
-                        variant="destructive"
-                        className="justify-start"
-                        onClick={() =>
-                          appDispatch(
-                            openTool({
-                              user: targetUser.username,
-                              tool: AdminToolsEnum.BAN_USER,
-                            }),
-                          )
+                        variant="default"
+                        className="justify-start text-gray-700 border-gray-300 bg-gray-50 hover:bg-gray-100"
+                        onClick={() => {
+                          if (complaint.reportedBy?.email) {
+                            window.location.href = `mailto:${complaint.reportedBy.email}`;
+                          }
+                        }}
+                        disabled={!complaint.reportedBy?.email}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Email Reporter
+                      </Button>
+                      <Button
+                        variant="default"
+                        className="justify-start text-green-700 border-green-300 bg-green-50 hover:bg-green-100"
+                        onClick={() => handleStatusChange('RESOLVED')}
+                        disabled={
+                          updating ||
+                          complaint.status === 'RESOLVED' ||
+                          complaint.status === 'REJECTED'
                         }
                       >
-                        Ban User
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Mark as Solved
                       </Button>
-                    )}
-                  </>
+                      <Button
+                        variant="default"
+                        className="justify-start text-red-700 border-red-300 bg-red-50 hover:bg-red-100"
+                        onClick={() => handleStatusChange('REJECTED')}
+                        disabled={
+                          updating ||
+                          complaint.status === 'RESOLVED' ||
+                          complaint.status === 'REJECTED'
+                        }
+                      >
+                        <ChevronDown className="h-4 w-4 mr-2" />
+                        Reject Complaint
+                      </Button>
+                      {/* Ban User Button */}
+                      {targetUser && (
+                        <Button
+                          variant="destructive"
+                          className="justify-start"
+                          onClick={() =>
+                            appDispatch(
+                              openTool({
+                                user: targetUser.username,
+                                tool: AdminToolsEnum.BAN_USER,
+                              }),
+                            )
+                          }
+                          disabled={
+                            updating ||
+                            complaint.status === 'RESOLVED' ||
+                            complaint.status === 'REJECTED'
+                          }
+                        >
+                          Ban User
+                        </Button>
+                      )}
+                    </>
+                  )
                 )}
               </div>
             </div>
 
-            {/* Manage Complaint */}
-            <div className="rounded-lg border border-gray-200 p-6">
-              <h3 className="text-base font-bold text-gray-700 mb-3">
-                Manage Complaint
-              </h3>
-              <div className="mb-3">
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Status
-                </label>
-                <select
-                  className="w-full border border-amber-300 rounded-md px-3 py-2 bg-white text-gray-700 font-semibold shadow focus:ring-amber-400 focus:border-amber-400 transition"
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  disabled={updating}
-                >
-                  <option value="PENDING">Pending</option>
-                  <option value="UNDER_REVIEW">Under Review</option>
-                  <option value="RESOLVED">Resolved</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
+            {assignedAdmin && assignedAdmin.username && (
+              <div className="rounded-lg border border-gray-200 p-6">
+                <div className="text-sm font-semibold">
+                  Assigned to: {assignedAdmin.username}
+                </div>
               </div>
-              <Button
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold px-6 py-2 shadow"
-                disabled={updating}
-                onClick={() => handleStatusChange(selectedStatus)}
-              >
-                {updating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : null}
-                Update Complaint
-              </Button>
-            </div>
+            )}
           </aside>
         </div>
       </div>

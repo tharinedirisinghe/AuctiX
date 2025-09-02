@@ -12,6 +12,7 @@ import com.helios.auctix.repositories.ComplaintActivityRepository;
 import com.helios.auctix.repositories.ComplaintRepository;
 import com.helios.auctix.repositories.UserRepository;
 import com.helios.auctix.services.user.UserDetailsService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.websocket.AuthenticationException;
@@ -80,6 +81,24 @@ public class ComplaintService {
         return savedComplaint;
     }
 
+    public Complaint assignToMe(UUID complaintId) throws AuthenticationException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User adminUser = userDetailsService.getAuthenticatedUser(authentication);
+        Complaint complaint = complaintRepository.findById(complaintId)
+                .orElseThrow(() -> new EntityNotFoundException("Complaint not found"));
+        complaint.setAssignedTo(adminUser.getId());
+
+        // Log assignment activity
+        logActivity(complaint, ActivityType.STATUS_CHANGE, "Assigned to admin: " + adminUser.getUsername(), adminUser.getUsername());
+
+        // Change status from PENDING to UNDER_REVIEW without logging
+        if (complaint.getStatus() == ComplaintStatus.PENDING) {
+            complaint.setStatus(ComplaintStatus.UNDER_REVIEW);
+        }
+
+        return complaintRepository.save(complaint);
+    }
+
     public Page<Complaint> getAllComplaints(Integer page, Integer size, String sortBy, String order, String search, ComplaintStatus status) {
         Sort.Direction direction = order.equalsIgnoreCase("asc") ? Sort.Direction.DESC : Sort.Direction.ASC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
@@ -127,11 +146,12 @@ public class ComplaintService {
     public Complaint updateComplaintStatus(UUID id, ComplaintStatus newStatus) throws AuthenticationException {
         Complaint complaint = getComplaintById(id);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(complaint.getStatus() == ComplaintStatus.PENDING && newStatus == ComplaintStatus.UNDER_REVIEW)) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User currentUser = userDetailsService.getAuthenticatedUser(authentication);
+            logActivity(complaint, ActivityType.STATUS_CHANGE, "changed status from " + complaint.getStatus() + " to " + newStatus, currentUser.getUsername());
+        }
 
-        User currentUser = userDetailsService.getAuthenticatedUser(authentication);
-
-        logActivity(complaint, ActivityType.STATUS_CHANGE, "changed status from " + complaint.getStatus() + " to " + newStatus, currentUser.getUsername());
         complaint.setStatus(newStatus);
         return complaintRepository.save(complaint);
     }

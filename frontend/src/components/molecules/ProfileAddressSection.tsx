@@ -255,7 +255,10 @@ export function AddressSection({ form }: AddressSectionProps) {
           name="address.addressNumber"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>House/Building Number</FormLabel>
+              <FormLabel>
+                House/Building Number
+                <span className="text-red-400 inline ml-1">*</span>
+              </FormLabel>
               <FormControl>
                 <Input placeholder="123" {...field} />
               </FormControl>
@@ -269,7 +272,10 @@ export function AddressSection({ form }: AddressSectionProps) {
           name="address.country"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Country</FormLabel>
+              <FormLabel>
+                Country
+                <span className="text-red-400 inline ml-1">*</span>
+              </FormLabel>
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -332,7 +338,10 @@ export function AddressSection({ form }: AddressSectionProps) {
           name="address.addressLine1"
           render={({ field }) => (
             <FormItem className="col-span-1 md:col-span-2">
-              <FormLabel>Address Line 1</FormLabel>
+              <FormLabel>
+                Address Line 1
+                <span className="text-red-400 inline ml-1">*</span>
+              </FormLabel>
               <FormControl>
                 <Input placeholder="Street address" {...field} />
               </FormControl>

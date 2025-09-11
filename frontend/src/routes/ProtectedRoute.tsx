@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { ReactNode, useEffect } from 'react';
-import { useAppSelector } from '@/hooks/hooks';
+import { useAppDispatch, useAppSelector } from '@/hooks/hooks';
+import { setIgnoreRedirects } from '@/store/slices/requiredActionsSlice';
 import ForceRedirect from '@/components/atoms/ForceRedirect';
+import { useSelector } from 'react-redux';
 
 const ProtectedRoute = ({
   children,
@@ -17,9 +19,13 @@ const ProtectedRoute = ({
   const navigate = useNavigate();
   const authUser = useAppSelector((state) => state.auth);
   const user = useAppSelector((state) => state.user);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     console.log('ProtectedRoute called');
+    dispatch(
+      setIgnoreRedirects({ ignoreRedirects: ignorePendingForceRedirects }),
+    );
     if (
       authUser?.role &&
       !allowedUsers.includes(authUser.role) &&
@@ -51,6 +57,8 @@ const ProtectedRoute = ({
     redirectPath,
     navigate,
     user.loading,
+    ignorePendingForceRedirects,
+    location.pathname,
   ]);
 
   const checkIsAuthorized = () => {
@@ -60,12 +68,7 @@ const ProtectedRoute = ({
     );
   };
 
-  return (
-    <>
-      {!ignorePendingForceRedirects ? <ForceRedirect /> : null}
-      {checkIsAuthorized() ? children : null}
-    </>
-  );
+  return <>{checkIsAuthorized() ? children : null}</>;
 };
 
 export default ProtectedRoute;

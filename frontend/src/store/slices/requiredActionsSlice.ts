@@ -7,12 +7,18 @@ import { IPendingAction } from '@/types/IPendingAction';
 interface PendingActionState {
   loading: boolean;
   error: string | null;
+  lastRedirectAt: number;
+  lastRedirectTo: string | null;
+  ignoreRedirects: boolean;
   pendingActions: IPendingAction[];
 }
 
 const initialState: PendingActionState = {
   loading: true,
   error: null,
+  lastRedirectAt: 0,
+  lastRedirectTo: null,
+  ignoreRedirects: false,
   pendingActions: [],
 };
 
@@ -97,7 +103,15 @@ export const markAsResolved = createAsyncThunk(
 const requiredActionsSlice = createSlice({
   name: 'requiredActions',
   initialState,
-  reducers: {},
+  reducers: {
+    markLastRedirect: (state, action) => {
+      state.lastRedirectAt = Date.now();
+      state.lastRedirectTo = action.payload.path || null;
+    },
+    setIgnoreRedirects: (state, action) => {
+      state.ignoreRedirects = action.payload.ignoreRedirects;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchPendingRequiredActions.pending, (state) => {
@@ -138,4 +152,6 @@ const requiredActionsSlice = createSlice({
   },
 });
 
+export const { markLastRedirect, setIgnoreRedirects } =
+  requiredActionsSlice.actions;
 export default requiredActionsSlice.reducer;

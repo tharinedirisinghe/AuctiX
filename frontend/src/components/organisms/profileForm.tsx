@@ -337,6 +337,7 @@ export function ProfileForm() {
           title: 'Profile updated successfully',
           description: 'Your profile details have been updated.',
         });
+        dispatch(fetchCurrentUser());
         dispatch(fetchPendingRequiredActions());
       })
       .catch((err) => {
@@ -408,8 +409,12 @@ export function ProfileForm() {
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
           <CardDescription>
-            Update your personal details and contact information
+            Update your personal details and contact information <br />
           </CardDescription>
+          <p className="text-xs text-gray-400">
+            All the required fields are mark by a{' '}
+            <span className="text-red-400">*</span>
+          </p>
         </CardHeader>
         <CardContent>
           <Form {...form}>

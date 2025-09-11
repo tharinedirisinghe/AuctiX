@@ -1,8 +1,7 @@
-import React from 'react';
 import { useAppSelector } from '@/hooks/hooks';
 import BidderDashboard from '@/components/organisms/BidderDashboard';
 import SellerDashboard from '@/components/organisms/SellerDashboard';
-import AdminDashboard from '@/components/organisms/AdminDashboard';
+import AdminDashboard from '@/pages/AdminDashboard';
 
 export default function Dashboard() {
   const userData = useAppSelector((state) => state.user);

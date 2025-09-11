@@ -1,8 +1,8 @@
 import React, { act, useEffect } from 'react';
-import { useAppSelector } from '../../hooks/hooks';
+import { useAppSelector, useAppDispatch } from '../../hooks/hooks';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useDispatch } from 'react-redux';
+import { markLastRedirect } from '../../store/slices/requiredActionsSlice';
 
 // Action types for pending actions
 export enum ActionType {
@@ -17,14 +17,37 @@ export default function ForceRedirect() {
   const navigate = useNavigate();
   const location = useLocation();
   const authUser = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
   const { toast } = useToast();
 
+  // Log the mounted state
+  useEffect(() => {
+    console.log('mounted');
+  }, []);
+
+  // unmount log
+  useEffect(() => {
+    return () => {
+      console.log('unmounted');
+    };
+  }, []);
+
   // Redirect control logic
-  const forceNavigate = (path: string, msg: string) => {
+  const forceNavigate = async (path: string, msg: string) => {
     if (path !== location.pathname) {
-      navigate(path);
-      showRedirectInfoMessage(msg);
+      dispatch(markLastRedirect({ path }));
+
+      const timeDiff = Date.now() - pendingActions.lastRedirectAt;
+      const shouldShowToast =
+        timeDiff > 1000 || pendingActions.lastRedirectTo !== path;
+
+      if (shouldShowToast) {
+        showRedirectInfoMessage(msg);
+      }
+
+      console.log('time diff:', timeDiff);
       console.log(`Redirecting to ${path} with message: ${msg}`);
+      navigate(path);
     }
   };
 
@@ -41,9 +64,13 @@ export default function ForceRedirect() {
   };
 
   useEffect(() => {
-    // Redirect Conditions
+    // Check Redirect Conditions and Perform Redirection
     console.log('Checking pending actions for redirection...');
-    if (!pendingActions.loading && authUser.token) {
+    if (
+      !pendingActions.loading &&
+      authUser.token &&
+      !pendingActions.ignoreRedirects
+    ) {
       pendingActions.pendingActions.forEach((action) => {
         if (action.resolved) return;
         if (action.actionType === ActionType.ANNOUNCEMENT_READ) {
@@ -72,7 +99,15 @@ export default function ForceRedirect() {
         }
       });
     }
-  }, [authUser.token, pendingActions.loading, navigate, location.pathname]);
+  }, [
+    authUser.token,
+    authUser.isUserLoggedIn,
+    pendingActions.loading,
+    pendingActions.lastRedirectAt,
+    pendingActions.lastRedirectTo,
+    location.pathname,
+    pendingActions.ignoreRedirects,
+  ]);
 
   return <></>;
 }

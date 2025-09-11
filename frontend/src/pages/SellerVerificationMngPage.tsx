@@ -55,8 +55,8 @@ export default function SellerVerificationMngPage() {
         </header>
 
         {isLoading ? (
-          <div className="grid grid-cols-4 gap-4 mb-8">
-            {[...Array(4)].map((_, i) => (
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {[...Array(3)].map((_, i) => (
               <Card key={i} className="p-4 shadow-none">
                 <div className="h-10 bg-gray-200 rounded animate-pulse mb-2"></div>
                 <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
@@ -64,30 +64,26 @@ export default function SellerVerificationMngPage() {
             ))}
           </div>
         ) : verificationStats ? (
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-4 mb-8">
             <Card className="p-4 border-none shadow-none bg-gray-100">
               <div className="text-4xl font-bold">
-                {verificationStats?.pendingVerifications}
+                {verificationStats?.verifiedSellers}
               </div>
-              <div className="text-sm font-semibold text-gray-500">PENDING</div>
+              <div className="text-sm font-semibold text-gray-500">
+                VERIFIED SELLERS
+              </div>
             </Card>
             <Card className="p-4 shadow-none">
               <div className="text-4xl font-bold">
                 {verificationStats?.approvedVerifications}
               </div>
-              <div className="text-sm text-gray-500">APPROVED</div>
+              <div className="text-sm text-gray-500">APPROVED REQUESTS</div>
             </Card>
             <Card className="p-4 shadow-none">
               <div className="text-4xl font-bold">
                 {verificationStats?.rejectedVerifications}
               </div>
-              <div className="text-sm text-gray-500">REJECTED</div>
-            </Card>
-            <Card className="p-4 shadow-none">
-              <div className="text-4xl font-bold">
-                {verificationStats?.verifiedSellers}
-              </div>
-              <div className="text-sm text-gray-500">VERIFIED SELLERS</div>
+              <div className="text-sm text-gray-500">REJECTED REQUESTS</div>
             </Card>
           </div>
         ) : (

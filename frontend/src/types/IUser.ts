@@ -7,6 +7,7 @@ export interface IUser {
   banner_photo: string;
   role?: string | null;
   bio?: string | null;
+  isSuspended: boolean;
   address?: {
     addressNumber?: string;
     addressLine1?: string;
@@ -14,5 +15,5 @@ export interface IUser {
     country?: string;
   };
   urls?: string[];
-  isVerified?: boolean;
+  isVerified: boolean;
 }

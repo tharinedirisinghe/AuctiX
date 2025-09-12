@@ -28,6 +28,7 @@ const initialState: UserState = {
   },
   urls: [],
   isVerified: false,
+  isSuspended: false,
   loading: true,
   error: null,
 };
@@ -57,6 +58,7 @@ export const fetchCurrentUser = createAsyncThunk(
         email: response.data.email,
         firstName: response.data.firstName || null,
         lastName: response.data.lastName || null,
+        isSuspended: response.data.suspended || false,
 
         profile_photo: response.data.profilePicture?.id
           ? `${baseURL}/user/getUserProfilePhoto?file_uuid=${response.data.profilePicture.id}`
@@ -110,6 +112,7 @@ const userSlice = createSlice({
         state.email = action.payload.email;
         state.firstName = action.payload.firstName;
         state.lastName = action.payload.lastName;
+        state.isSuspended = action.payload.isSuspended;
         state.bio = action.payload.bio || '';
         state.urls = action.payload.urls || [];
         state.profile_photo =

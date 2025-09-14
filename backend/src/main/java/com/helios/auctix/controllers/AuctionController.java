@@ -669,7 +669,6 @@ public class AuctionController {
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             String mappedFilter = mapFrontendFilterToBackend(filter);
 
-            // ✅ Directly get detailed page from service
             Page<AuctionDetailsDTO> detailedPage = auctionService.getDetailedSellerAuctions(id, mappedFilter, searchTerm, pageable);
 
             return ResponseEntity.ok(detailedPage);

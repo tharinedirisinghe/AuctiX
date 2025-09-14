@@ -3,6 +3,7 @@ package com.helios.auctix.controllers;
 import com.azure.core.util.BinaryData;
 import com.helios.auctix.domain.user.SellerVerificationStatusEnum;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.dtos.SellerPublicProfileDTO;
 import com.helios.auctix.dtos.SellerVerificationStatsDTO;
 import com.helios.auctix.dtos.VerificationStatusDTO;
 import com.helios.auctix.services.fileUpload.FileUploadResponse;
@@ -94,4 +95,10 @@ public class SellerController {
         SellerVerificationStatsDTO stats = sellerService.sellerVerificationStats();
         return ResponseEntity.ok(stats);
     }
+
+    @GetMapping("/{id}/profile")
+    public ResponseEntity<SellerPublicProfileDTO> getSellerPublicProfile(@PathVariable UUID id) {
+        return ResponseEntity.ok(sellerService.getSellerPublicProfile(id));
+    }
+
 }

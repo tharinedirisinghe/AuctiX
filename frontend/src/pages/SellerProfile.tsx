@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import AuctionCard from '../components/molecules/auctionCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ export default function SellerProfile() {
   const [auctions, setAuctions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sellerInfo, setSellerInfo] = useState<any>(null);
+  const [SellerProfile, setSellerProfile] = useState<any>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
@@ -35,6 +36,22 @@ export default function SellerProfile() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [currentReviewPage, setCurrentReviewPage] = useState(0);
   const [activeTab, setActiveTab] = useState('All');
+
+  useEffect(() => {
+    if (id) {
+      // Fetch seller basic info
+      const fetchSellerProfile = async () => {
+        try {
+          const response = await axiosInstance.get(`/seller/${id}/profile`);
+          setSellerProfile(response.data);
+        } catch (error) {
+          console.error('Error fetching seller profile:', error);
+        }
+      };
+
+      fetchSellerProfile();
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -102,13 +119,18 @@ export default function SellerProfile() {
 
   const getSellerProfileImage = () =>
     sellerInfo?.profilePicture?.id
-      ? `${import.meta.env.VITE_API_URL}/user/getUserProfilePhoto?file_uuid=${sellerInfo.profilePicture.id}`
+      ? `${import.meta.env.VITE_API_URL}/user/getUserProfilePhoto?file_uuid=${SellerProfile.profilePictureId}`
       : '/defaultProfilePhoto.jpg';
 
   const getBannerPhotoUrl = () =>
     sellerInfo?.seller?.bannerId
-      ? `${import.meta.env.VITE_API_URL}/user/getUserBannerPhoto?file_uuid=${sellerInfo.seller.bannerId}`
+      ? `${import.meta.env.VITE_API_URL}/user/getUserBannerPhoto?file_uuid=${SellerProfile.bannerId}`
       : assets.default_banner_image;
+
+  const navigate = useNavigate();
+  const handleCardClick = (auctionId: string) => {
+    navigate(`/auction-details/${auctionId}`);
+  };
 
   const handleReportSubmit = async (
     itemId: string,
@@ -125,7 +147,7 @@ export default function SellerProfile() {
       toast({
         title: 'Report Submitted',
         description: `Your report for this seller has been submitted.`,
-        variant: 'success',
+        variant: 'default',
       });
     } catch {
       toast({
@@ -138,7 +160,7 @@ export default function SellerProfile() {
 
   return (
     <div>
-      <section className="relative w-full mb-5">
+      <section className="relative w-full">
         {/* Banner image without padding */}
         <div className="relative h-64 w-full">
           <img
@@ -162,9 +184,9 @@ export default function SellerProfile() {
                   <div className="flex flex-col items-start ml-4 md:ml-6 ">
                     <div className="flex items-center">
                       <h3 className="font-manrope font-bold text-2xl md:text-4xl text-white">
-                        {sellerInfo?.firstName && sellerInfo?.lastName
-                          ? `${sellerInfo.firstName} ${sellerInfo.lastName}`
-                          : 'Loading...'}
+                        {SellerProfile
+                          ? `${SellerProfile.firstName} ${SellerProfile.lastName}`
+                          : 'Seller Name'}
                       </h3>
                       {/*<svg
                         className="ml-3 w-5 h-5 p-0.5 rounded-full bg-white text-gray-700 font-bold"
@@ -181,7 +203,7 @@ export default function SellerProfile() {
                       </svg>*/}
                     </div>
                     <p className="text-sm md:text-base text-gray-300">
-                      @{sellerInfo?.username}
+                      @{SellerProfile?.username || 'username'}
                     </p>
                   </div>
                 </div>
@@ -197,11 +219,34 @@ export default function SellerProfile() {
           </div>
         </div>
       </section>
-      <div className="min-h-screen mx-auto  sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl">
-        <div className="text-xl sm:text-4xl font-semibold mt-6 sm:mt-10">
-          Seller Information
-        </div>
+      {/* Seller Bio & Social Media Section */}
+      <div className="bg-white py-8">
+        <div className="mx-auto sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl">
+          <div>
+            <h2 className="text-xl font-semibold mb-1">About Seller</h2>
+            <div className="text-gray-600 whitespace-pre-wrap break-words">
+              {SellerProfile?.bio ?? 'No bio available.'}
+            </div>
+            {/* Social Media Links */}
 
+            <div className="flex flex-col mt-4">
+              {SellerProfile?.links?.map((link: string, idx: number) => (
+                <div className="flex flex-col" key={link}>
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-900 text-sm hover:text-blue-600 transition-colors break-all"
+                  >
+                    {link}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="min-h-screen mx-auto sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-7xl">
         {/* Filters */}
         <Tabs
           value={filter}
@@ -231,23 +276,29 @@ export default function SellerProfile() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {auctions.map((auction, index) => (
-                  <AuctionCard
+                  <div
+                    onClick={() => handleCardClick(auction.id)}
                     key={auction.id || index}
-                    imageUrl={getAuctionImageUrl(auction)}
-                    productName={auction.title}
-                    category={auction.category}
-                    sellerName={
-                      auction.seller?.firstName && auction.seller?.lastName
-                        ? `${auction.seller.firstName} ${auction.seller.lastName}`
-                        : 'Unknown Seller'
-                    }
-                    sellerAvatar={getSellerAvatarUrl(auction)}
-                    startingPrice={
-                      auction.startingPrice?.toLocaleString() || 'N/A'
-                    }
-                    startTime={auction.startTime}
-                    endTime={auction.endTime}
-                  />
+                    className="cursor-pointer"
+                  >
+                    <AuctionCard
+                      key={auction.id || index}
+                      imageUrl={getAuctionImageUrl(auction)}
+                      productName={auction.title}
+                      category={auction.category}
+                      sellerName={
+                        auction.seller?.firstName && auction.seller?.lastName
+                          ? `${auction.seller.firstName} ${auction.seller.lastName}`
+                          : 'Unknown Seller'
+                      }
+                      sellerAvatar={getSellerAvatarUrl(auction)}
+                      startingPrice={
+                        auction.startingPrice?.toLocaleString() || 'N/A'
+                      }
+                      startTime={auction.startTime}
+                      endTime={auction.endTime}
+                    />
+                  </div>
                 ))}
               </div>
             )}

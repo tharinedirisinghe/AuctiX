@@ -11,6 +11,7 @@ import com.helios.auctix.services.AuctionSchedulerService;
 import com.helios.auctix.services.fileUpload.FileUploadResponse;
 import com.helios.auctix.services.user.*;
 import jakarta.validation.constraints.Null;
+import lombok.extern.log4j.Log4j2;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,15 +29,14 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Logger;
 
+@Log4j2
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
 
     private final AuctionSchedulerService auctionSchedulerService;
     private final UserDetailsService userDetailsService;
-    private static final Logger logger = Logger.getLogger(AdminController.class.getName());
     private final UserUploadsService userUploadsService;
     private final AdminActionService adminActionService;
     private final UserRepository userRepository;
@@ -63,7 +63,7 @@ public class AdminController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = userDetailsService.getAuthenticatedUser(authentication);
 
-            logger.info("Admin " + currentUser.getUsername() + " is manually completing auction: " + auctionId);
+            log.info("Admin " + currentUser.getUsername() + " is manually completing auction: " + auctionId);
 
             auctionSchedulerService.manuallyCompleteAuction(auctionId);
 
@@ -71,7 +71,7 @@ public class AdminController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
-            logger.severe("Error completing auction: " + e.getMessage());
+            log.error("Error completing auction: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error completing auction: " + e.getMessage());
         }
@@ -88,13 +88,13 @@ public class AdminController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User currentUser = userDetailsService.getAuthenticatedUser(authentication);
 
-            logger.info("Admin " + currentUser.getUsername() + " is manually processing completed auctions");
+            log.info("Admin " + currentUser.getUsername() + " is manually processing completed auctions");
 
             auctionSchedulerService.processCompletedAuctions();
 
             return ResponseEntity.ok().body("Completed auctions processed successfully");
         } catch (Exception e) {
-            logger.severe("Error processing completed auctions: " + e.getMessage());
+            log.error("Error processing completed auctions: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error processing completed auctions: " + e.getMessage());
         }
@@ -106,7 +106,7 @@ public class AdminController {
         // Authenticate user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
-        logger.info("File upload by user " + currentUser.getEmail());
+        log.info("File upload by user " + currentUser.getEmail());
 
         if(!(currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN))) {
             throw new AuthenticationException("Invalid role");
@@ -140,7 +140,7 @@ public class AdminController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
 
-        logger.info("Retrieving admin actions log");
+        log.info("Retrieving admin actions log");
         if (!currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN)) {
             throw new AuthenticationException("Invalid role");
         }
@@ -160,7 +160,7 @@ public class AdminController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
 
-        logger.info("Retrieving filtered admin actions log");
+        log.info("Retrieving filtered admin actions log");
         if (!currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN)) {
             throw new AuthenticationException("Invalid role");
         }
@@ -177,7 +177,7 @@ public class AdminController {
         // Authenticate user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
-        logger.info("Ban request by user " + currentUser.getEmail()+" for user "+targetUserUsername);
+        log.info("Ban request by user " + currentUser.getEmail()+" for user "+targetUserUsername);
 
 
         if (reason == null || reason.isEmpty()) {
@@ -207,7 +207,7 @@ public class AdminController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
 
-        logger.info("Retrieving sellers verification summary");
+        log.info("Retrieving sellers verification summary");
         if (!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
             throw new InvalidUserException("Invalid role");
         }
@@ -261,7 +261,7 @@ public class AdminController {
         // Authenticate user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
-        logger.info("Approve seller verification request by admin " + currentUser.getUsername());
+        log.info("Approve seller verification request by admin " + currentUser.getUsername());
 
         if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
             throw new AuthenticationException("Invalid role");
@@ -286,7 +286,7 @@ public class AdminController {
         // Authenticate user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
-        logger.info("Reject seller verification request by admin " + currentUser.getUsername());
+        log.info("Reject seller verification request by admin " + currentUser.getUsername());
 
         if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
             throw new AuthenticationException("Invalid role");
@@ -311,7 +311,7 @@ public class AdminController {
         // Authenticate user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = userDetailsService.getAuthenticatedUser(authentication);
-        logger.info("Update seller verification note by admin " + currentUser.getUsername());
+        log.info("Update seller verification note by admin " + currentUser.getUsername());
 
         if(!(currentUser.getRoleEnum().equals(UserRoleEnum.SUPER_ADMIN) || currentUser.getRoleEnum().equals(UserRoleEnum.ADMIN))) {
             throw new AuthenticationException("Invalid role");

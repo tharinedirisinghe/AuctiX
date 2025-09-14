@@ -7,6 +7,7 @@ import com.helios.auctix.domain.user.*;
 import com.helios.auctix.domain.user.UserRequiredAction;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.*;
+import com.helios.auctix.exception.LimitExceededException;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
 import com.helios.auctix.mappers.impl.UserSocialMediaLinkMapperImpl;
@@ -28,7 +29,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.naming.LimitExceededException;
 import java.security.InvalidParameterException;
 import java.time.Instant;
 import java.util.Arrays;

@@ -6,6 +6,7 @@ import com.helios.auctix.dtos.ProfileUpdateDataDTO;
 import com.helios.auctix.dtos.UserDTO;
 import com.helios.auctix.dtos.UserStatsDTO;
 import com.helios.auctix.dtos.UserAddressDTO;
+import com.helios.auctix.exception.LimitExceededException;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
@@ -14,6 +15,7 @@ import com.helios.auctix.services.fileUpload.*;
 import com.helios.auctix.services.user.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.PermissionDeniedDataAccessException;
@@ -25,20 +27,19 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.resource.HttpResource;
 
-import javax.naming.LimitExceededException;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.logging.Logger;
 
+@Log4j2
 @RestController
 @RequestMapping("api/user")
 @AllArgsConstructor
 public class UserController {
 
     private final UserRegisterService userRegisterService;
-    private final Logger log = Logger.getLogger(UserController.class.getName());
     private final FileUploadService uploader;
     private final UserUploadsService userUploadsService;
     private final FileUploadService fileUploadService;
@@ -264,12 +265,12 @@ public class UserController {
             if (res.isSuccess()) {
                 return ResponseEntity.ok().body("Profile photo uploaded successfully " + res.getUser().getUpload().getId());
             } else {
-                log.warning(res.getMessage());
+                log.warn(res.getMessage());
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("File upload data saving failed");
             }
 
         } else {
-            log.warning(uploadRes.getMessage());
+            log.warn(uploadRes.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("File upload failed");
         }
 
@@ -300,7 +301,7 @@ public class UserController {
             return ResponseEntity.ok().body("Banner photo uploaded successfully " + uploadRes.getUpload().getId());
 
         } else {
-            log.warning(uploadRes.getMessage());
+            log.warn(uploadRes.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("File upload failed");
         }
     }
@@ -519,7 +520,7 @@ public class UserController {
             
             return ResponseEntity.ok(userAddress);
         } catch (Exception e) {
-            log.warning("Error fetching user address: " + e.getMessage());
+            log.warn("Error fetching user address: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error fetching user address: " + e.getMessage());
         }
@@ -534,7 +535,7 @@ public class UserController {
             UserAddress savedAddress = userDetailsService.saveUserAddress(currentUser, addressDTO);
             return ResponseEntity.ok(savedAddress);
         } catch (Exception e) {
-            log.warning("Error saving user address: " + e.getMessage());
+            log.warn("Error saving user address: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error saving user address: " + e.getMessage());
         }
@@ -549,7 +550,7 @@ public class UserController {
             UserAddress updatedAddress = userDetailsService.saveUserAddress(currentUser, addressDTO);
             return ResponseEntity.ok(updatedAddress);
         } catch (Exception e) {
-            log.warning("Error updating user address: " + e.getMessage());
+            log.warn("Error updating user address: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error updating user address: " + e.getMessage());
         }

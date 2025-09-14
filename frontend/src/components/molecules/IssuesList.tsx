@@ -7,9 +7,10 @@ import { VerificationStatus } from '../organisms/VerificationForm';
 interface IssuesListProps {
   issues: VerificationSubmission[];
   onBack: () => void;
+  onResubmit: () => void;
 }
 
-export function IssuesList({ issues, onBack }: IssuesListProps) {
+export function IssuesList({ issues, onBack, onResubmit }: IssuesListProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case VerificationStatus.REJECTED:
@@ -108,7 +109,7 @@ export function IssuesList({ issues, onBack }: IssuesListProps) {
         className="space-y-3"
       >
         <ActionButton
-          onClick={() => console.log('Resubmit documents')}
+          onClick={onResubmit}
           className="bg-red-600 hover:bg-red-700 text-white"
         >
           Resubmit Documents

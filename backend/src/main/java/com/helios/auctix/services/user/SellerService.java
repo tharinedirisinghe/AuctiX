@@ -13,10 +13,7 @@ import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
 import com.helios.auctix.mappers.impl.VerificationRequestMapperImpl;
 import com.helios.auctix.mappers.impl.VerificationStatusMapperImpl;
-import com.helios.auctix.repositories.NotificationRepository;
-import com.helios.auctix.repositories.SellerRepository;
-import com.helios.auctix.repositories.SellerVerificationRequestRepository;
-import com.helios.auctix.repositories.UserRepository;
+import com.helios.auctix.repositories.*;
 import com.helios.auctix.services.fileUpload.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +46,8 @@ public class SellerService {
     private final UserDetailsService userDetailsService;
     private final NotificationRepository notificationRepository;
     private final AdminActionService adminActionService;
+    private final UserRequiredActionRepository userRequiredActionRepository;
+
 
     public SellerVerificationStatusEnum submitSellerVerifications(User user, MultipartFile[] files) {
         if (user == null) {
@@ -317,6 +316,25 @@ public class SellerService {
 
         adminActionService.logAdminAction(currentUser,seller.getUser(),AdminActionsEnum.VERIFICATION_DOCS_REJECT,
                 "seller :"+sellerUserName+" verification submission was rejected by admin: "+currentUser.getUsername());
+
+        UserRequiredActionContext userRequiredActionContext = UserRequiredActionContext.builder()
+                .title("Your verification request was rejected.")
+                .canResolve(true)
+                .severityLevel(UserRequiredActionSeverityLevelEnum.MEDIUM)
+                .content("check the reasons provided by the admin and resubmit a new verification document.")
+                .continueUrl("/seller-verification-submit")
+                .build();
+
+        UserRequiredAction useRreqAction = UserRequiredAction.builder()
+                .actionType(UserRequiredActionEnum.ANNOUNCEMENT_READ)
+                .user(seller.getUser())
+                .isResolved(false)
+                .context(userRequiredActionContext.toMap())
+                .build();
+
+
+        userRequiredActionRepository.save(useRreqAction);
+
     }
 
     public void updateVerificationRequestNote(UUID requestId, String sellerUserName, String note, User currentUser) {

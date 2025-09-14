@@ -68,9 +68,8 @@ export default function ComplaintReports() {
 
   return (
     <div className="bg-white">
-      <header className="relative h-28 w-full bg-yellow-400">
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-        <h1 className="text-4xl font-bold text-white absolute bottom-0 left-0 right-0 px-6 md:px-8 mb-4">
+      <header className="relative h-28 w-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#ffcc5f] via-[#eedca6] to-[#f1f1ec]">
+        <h1 className="text-4xl font-semibold text-gray-800 absolute bottom-0 left-0 right-0 px-6 md:px-8 mb-4">
           Complaints
         </h1>
       </header>

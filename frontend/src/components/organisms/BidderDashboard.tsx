@@ -396,7 +396,7 @@ export default function BidderDashboard() {
 
   return (
     <div className="bg-white">
-      <section className="relative w-full mb-5">
+      {/*<section className="relative w-full mb-5">
         <div className="relative h-64 w-full">
           <img
             src={userData.banner_photo}
@@ -433,10 +433,102 @@ export default function BidderDashboard() {
             </div>
           </div>
         </div>
-      </section>
+      </section>*/}
       <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
+        <div className="flex gap-6 mb-8">
+          <div className="hidden md:block w-3/5 border border-gray-200 rounded-lg">
+            <div className="w-full">
+              <Card className="text-gray-800 border-none relative p-0 overflow-hidden">
+                <div className="relative w-full h-64">
+                  <img
+                    src={userData.banner_photo}
+                    alt="cover-image"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                    <div className="w-full max-w-7xl mx-auto">
+                      <div className="flex items-end justify-between">
+                        <div className="flex items-end">
+                          <img
+                            src={userData.profile_photo}
+                            alt="user-avatar-image"
+                            className="rounded-md w-20 h-20 object-cover"
+                          />
+                          <div className="flex flex-col items-start ml-4 md:ml-6 mb-2">
+                            <div className="text-white/80 font-medium leading-none text-sm">
+                              Hello,
+                            </div>
+                            <h3 className="font-manrope font-bold text-2xl md:text-4xl text-white">
+                              {userData.username || 'Guest'}
+                            </h3>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate('/settings')}
+                        >
+                          Go to Settings
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+          <div className="w-full md:w-2/5">
+            <Card className="bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#ffeaa3] via-[#f2ecda] to-[#fefefe] p-6 rounded-lg h-full shadow-none border-none flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="text-gray-600 text-md font-medium">
+                    Wallet
+                  </div>
+                  <div className="text-gray-800 text-4xl ">
+                    Aucti<span className="text-[#eaac26]">X</span>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="text-gray-500 text-lg mb-1">
+                    Available Balance
+                  </div>
+                  <div className="text-4xl font-bold tracking-wider text-gray-900">
+                    {loading
+                      ? 'Loading...'
+                      : walletInfo?.amount !== undefined
+                        ? `LKR ${walletInfo.amount.toLocaleString()}`
+                        : 'LKR 0'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-end mt-auto">
+                <div>
+                  <div className="text-gray-500 text-md">Frozen</div>
+                  <div className="text-sm font-semibold text-orange-600">
+                    {walletInfo?.freezeAmount !== undefined
+                      ? `LKR ${walletInfo.freezeAmount.toLocaleString()}`
+                      : 'LKR 0'}
+                  </div>
+                </div>
+                <div>
+                  <Button
+                    variant="secondary"
+                    className="text-xs px-3 py-1 text-gray-700 hover:text-gray-900"
+                    onClick={() => navigate('/wallet')}
+                  >
+                    Go to Wallet
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+
         {/* Bidder Analytics Graphs - Shadcn Pie Chart style */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-8 border border-gray-200 rounded-lg p-4">
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-8 border-none bg-gray-50 rounded-lg p-4">
           {/* All Bids: Active vs Ended */}
           <Card className="flex flex-col shadow-none border-none">
             <CardHeader className="items-center pb-0">
@@ -522,7 +614,7 @@ export default function BidderDashboard() {
 
         <div className="flex gap-6 mb-8">
           <div className="w-full md:w-2/5">
-            <Card className="bg-gradient-to-br from-gray-50 to-zinc-300 text-gray-800 p-6 rounded-lg h-full shadow-sm border-none flex flex-col justify-between">
+            <Card className="bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#ffeaa3] via-[#f2ecda] to-[#fefefe] p-6 rounded-lg h-full shadow-sm border-none flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start mb-4">
                   <div className="text-gray-600 text-md font-medium">

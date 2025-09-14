@@ -4,10 +4,7 @@ import com.helios.auctix.domain.notification.Notification;
 import com.helios.auctix.domain.notification.NotificationCategory;
 import com.helios.auctix.domain.notification.NotificationCategoryGroup;
 import com.helios.auctix.domain.user.*;
-import com.helios.auctix.dtos.SellerVerificationRequestSummaryDTO;
-import com.helios.auctix.dtos.SellerVerificationStatsDTO;
-import com.helios.auctix.dtos.VerificationRequestDTO;
-import com.helios.auctix.dtos.VerificationStatusDTO;
+import com.helios.auctix.dtos.*;
 import com.helios.auctix.exception.InvalidUserException;
 import com.helios.auctix.exception.UploadedFileCountMaxLimitExceedException;
 import com.helios.auctix.exception.UploadedFileSizeMaxLimitExceedException;
@@ -21,6 +18,7 @@ import com.helios.auctix.services.fileUpload.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.velocity.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -361,4 +359,25 @@ public class SellerService {
 
         return req;
     }
+
+    public SellerPublicProfileDTO getSellerPublicProfile(UUID sellerId) {
+        Seller seller = sellerRepository.getSellerById(sellerId);
+        if (seller == null) {
+            throw new ResourceNotFoundException("Seller not found");
+        }
+
+        User user = seller.getUser();
+        return SellerPublicProfileDTO.builder()
+                .id(seller.getId())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .bio(user.getBio())
+                .links(user.getSocialMediaLinks().stream().map(UserSocialMediaLink::getLink).toList())
+                .profilePictureId(String.valueOf(user.getUpload().getId()))
+                .bannerId(String.valueOf(seller.getBannerId()))
+                .isVerified(seller.isVerified())
+                .build();
+    }
+
 }

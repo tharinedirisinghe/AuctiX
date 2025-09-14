@@ -425,320 +425,316 @@ const ManageAuctions = () => {
   }, [showDropdown]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="mb-4">
-        <button
-          onClick={() => window.history.back()}
-          className="mb-4 flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-gray-200 rounded"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>Back</span>
-        </button>
-        <h1 className="text-2xl font-bold mb-2">My Auctions</h1>
-        <p className="text-gray-600">
-          You can view and manage your auctions here
-        </p>
-      </div>
+    <div className="min-h-screen bg-white">
+      <header className="relative h-28 w-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#ffcc5f] via-[#eedca6] to-[#f1f1ec]">
+        <h1 className="text-4xl font-semibold text-gray-800 absolute bottom-0 left-0 right-0 px-6 md:px-8 mb-4">
+          My Auctions
+        </h1>
+      </header>
 
-      <div className="grid grid-cols-6 gap-4 mb-6">
-        {calculatedStats.map((item, idx) => (
-          <div
-            key={idx}
-            className={`p-4 text-center cursor-pointer transition-all rounded-lg border ${
-              selectedFilter === item.key
-                ? 'bg-blue-50 border-blue-300 shadow-md'
-                : 'bg-white hover:bg-gray-50 border-gray-200'
-            }`}
-            onClick={() => setSelectedFilter(item.key)}
-          >
-            <h2 className="text-2xl font-bold">{item.count}</h2>
-            <p className="text-sm text-gray-500">{item.title}</p>
+      <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
+        <div className="grid grid-cols-6 gap-4 mb-6">
+          {calculatedStats.map((item, idx) => (
+            <div
+              key={idx}
+              className={`p-4 border border-gray-200 rounded-lg shadow-none cursor-pointer hover:border-yellow-300 hover:shadow-lg hover:shadow-yellow-100 transition-all ${
+                selectedFilter === item.key
+                  ? 'border-2 border-yellow-300 shadow-xl shadow-yellow-100'
+                  : ''
+              }`}
+              onClick={() => setSelectedFilter(item.key)}
+            >
+              <h2 className="text-3xl font-bold">{item.count}</h2>
+              <p className="text-sm text-gray-500">{item.title}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Manage Auctions</h2>
+            <button
+              className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+              onClick={() => navigate('/auctions/new')}
+            >
+              Add Auction +
+            </button>
           </div>
-        ))}
-      </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Manage Auctions</h2>
-          <button
-            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
-            onClick={() => navigate('/auctions/new')}
-          >
-            Add Auction +
-          </button>
-        </div>
+          <div className="flex justify-between mb-4">
+            <input
+              type="text"
+              placeholder="Search by name or ID..."
+              className="w-1/3 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-        <div className="flex justify-between mb-4">
-          <input
-            type="text"
-            placeholder="Search by name or ID..."
-            className="w-1/3 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {selectedFilter === 'unlisted' &&
-          paginatedAuctions.some((auction) => isPendingDeletion(auction)) && (
-            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-orange-400"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-orange-800">
-                    Pending Deletion Requests
-                  </h3>
-                  <div className="mt-2 text-sm text-orange-700">
-                    <p>
-                      Auctions marked as "Pending Admin Approval" have deletion
-                      requests that require admin review. These auctions cannot
-                      be updated or deleted until the admin processes the
-                      request.
-                    </p>
+          {selectedFilter === 'unlisted' &&
+            paginatedAuctions.some((auction) => isPendingDeletion(auction)) && (
+              <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-orange-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-orange-800">
+                      Pending Deletion Requests
+                    </h3>
+                    <div className="mt-2 text-sm text-orange-700">
+                      <p>
+                        Auctions marked as "Pending Admin Approval" have
+                        deletion requests that require admin review. These
+                        auctions cannot be updated or deleted until the admin
+                        processes the request.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
+            )}
+
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-gray-500">Loading auctions...</div>
             </div>
-          )}
-
-        {loading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="text-gray-500">Loading auctions...</div>
-          </div>
-        ) : (
-          <>
-            <div className="relative overflow-visible">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      Auction ID
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      Name
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      Start
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      End
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      Start Price
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      Current Bid
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">
-                      Status
-                    </th>
-                    <th className="w-12 py-3 px-4"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedAuctions.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        No auctions found
-                      </td>
+          ) : (
+            <>
+              <div className="relative overflow-visible">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        Auction ID
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        Name
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        Start
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        End
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        Start Price
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        Current Bid
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700">
+                        Status
+                      </th>
+                      <th className="w-12 py-3 px-4"></th>
                     </tr>
-                  ) : (
-                    paginatedAuctions.map((auction, idx) => {
-                      const currentBidAmount = getCurrentBidAmount(auction);
-                      const auctionStatus = getAuctionStatus(auction);
-
-                      return (
-                        <tr
-                          key={idx}
-                          className="border-b border-gray-100 hover:bg-gray-50"
+                  </thead>
+                  <tbody>
+                    {paginatedAuctions.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="text-center py-8 text-gray-500"
                         >
-                          <td className="py-3 px-4">{auction.id}</td>
-                          <td className="py-3 px-4">
-                            {auction.title || auction.name}
-                          </td>
-                          <td className="py-3 px-4">
-                            {formatDate(auction.startTime || auction.start)}
-                          </td>
-                          <td className="py-3 px-4">
-                            {formatDate(auction.endTime || auction.end)}
-                          </td>
-                          <td className="py-3 px-4">
-                            {formatPrice(auction.startingPrice)}
-                          </td>
-                          <td className="py-3 px-4">
-                            {currentBidAmount ? (
-                              <div className="flex flex-col">
-                                <span className="font-medium text-green-600">
-                                  {formatPrice(currentBidAmount)}
-                                </span>
-                                {auction.bidHistory &&
-                                  auction.bidHistory.length > 0 && (
-                                    <span className="text-xs text-gray-500">
-                                      {auction.bidHistory.length} bid
-                                      {auction.bidHistory.length !== 1
-                                        ? 's'
-                                        : ''}
-                                    </span>
-                                  )}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">No bids yet</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex flex-col">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(auctionStatus, auction)}`}
-                              >
-                                {isPendingDeletion(auction)
-                                  ? 'Pending Admin Approval'
-                                  : statusDisplayMap[auctionStatus] ||
-                                    auctionStatus}
-                              </span>
-                              {isPendingDeletion(auction) && (
-                                <span className="text-xs text-orange-600 mt-1">
-                                  Deletion Request Submitted
+                          No auctions found
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedAuctions.map((auction, idx) => {
+                        const currentBidAmount = getCurrentBidAmount(auction);
+                        const auctionStatus = getAuctionStatus(auction);
+
+                        return (
+                          <tr
+                            key={idx}
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="py-3 px-4">{auction.id}</td>
+                            <td className="py-3 px-4">
+                              {auction.title || auction.name}
+                            </td>
+                            <td className="py-3 px-4">
+                              {formatDate(auction.startTime || auction.start)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {formatDate(auction.endTime || auction.end)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {formatPrice(auction.startingPrice)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {currentBidAmount ? (
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-green-600">
+                                    {formatPrice(currentBidAmount)}
+                                  </span>
+                                  {auction.bidHistory &&
+                                    auction.bidHistory.length > 0 && (
+                                      <span className="text-xs text-gray-500">
+                                        {auction.bidHistory.length} bid
+                                        {auction.bidHistory.length !== 1
+                                          ? 's'
+                                          : ''}
+                                      </span>
+                                    )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">
+                                  No bids yet
                                 </span>
                               )}
-                            </div>
-                          </td>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-col">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(auctionStatus, auction)}`}
+                                >
+                                  {isPendingDeletion(auction)
+                                    ? 'Pending Admin Approval'
+                                    : statusDisplayMap[auctionStatus] ||
+                                      auctionStatus}
+                                </span>
+                                {isPendingDeletion(auction) && (
+                                  <span className="text-xs text-orange-600 mt-1">
+                                    Deletion Request Submitted
+                                  </span>
+                                )}
+                              </div>
+                            </td>
 
-                          <td className="py-3 px-4 relative">
-                            <div className="dropdown-container">
-                              <button
-                                className="p-1 hover:bg-gray-200 rounded"
-                                onClick={() =>
-                                  setShowDropdown(
-                                    showDropdown === auction.id
-                                      ? null
-                                      : auction.id,
-                                  )
-                                }
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
-                              {showDropdown === auction.id && (
-                                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                                  <div className="py-1">
-                                    {isDeletedOrPending(auction) ||
-                                    auction.status?.toLowerCase() ===
-                                      'deleted' ||
-                                    auction.deleted ||
-                                    isAuctionEnded(auction) ? (
-                                      <div
-                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                        onClick={() =>
-                                          navigate(
-                                            `/auction-details/${auction.id}`,
-                                          )
-                                        }
-                                      >
-                                        View Auction Details
-                                      </div>
-                                    ) : (
-                                      <>
+                            <td className="py-3 px-4 relative">
+                              <div className="dropdown-container">
+                                <button
+                                  className="p-1 hover:bg-gray-200 rounded"
+                                  onClick={() =>
+                                    setShowDropdown(
+                                      showDropdown === auction.id
+                                        ? null
+                                        : auction.id,
+                                    )
+                                  }
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </button>
+                                {showDropdown === auction.id && (
+                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                                    <div className="py-1">
+                                      {isDeletedOrPending(auction) ||
+                                      auction.status?.toLowerCase() ===
+                                        'deleted' ||
+                                      auction.deleted ||
+                                      isAuctionEnded(auction) ? (
                                         <div
                                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                                           onClick={() =>
-                                            handleAuctionAction(
-                                              'view',
-                                              auction.id,
+                                            navigate(
+                                              `/auction-details/${auction.id}`,
                                             )
                                           }
                                         >
                                           View Auction Details
                                         </div>
-                                        <div
-                                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                          onClick={() =>
-                                            handleAuctionAction(
-                                              'update',
-                                              auction.id,
-                                            )
-                                          }
-                                        >
-                                          Update Auction
-                                        </div>
-                                        {!isAuctionEndingSoon(auction) ? (
+                                      ) : (
+                                        <>
                                           <div
-                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                                             onClick={() =>
                                               handleAuctionAction(
-                                                'delete',
+                                                'view',
                                                 auction.id,
                                               )
                                             }
                                           >
-                                            Delete Auction
+                                            View Auction Details
                                           </div>
-                                        ) : (
-                                          <div className="px-4 py-2 text-gray-400 cursor-not-allowed">
-                                            Cannot Delete (Last Hour)
+                                          <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                            onClick={() =>
+                                              handleAuctionAction(
+                                                'update',
+                                                auction.id,
+                                              )
+                                            }
+                                          >
+                                            Update Auction
                                           </div>
-                                        )}
-                                      </>
-                                    )}
+                                          {!isAuctionEndingSoon(auction) ? (
+                                            <div
+                                              className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                              onClick={() =>
+                                                handleAuctionAction(
+                                                  'delete',
+                                                  auction.id,
+                                                )
+                                              }
+                                            >
+                                              Delete Auction
+                                            </div>
+                                          ) : (
+                                            <div className="px-4 py-2 text-gray-400 cursor-not-allowed">
+                                              Cannot Delete (Last Hour)
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-between items-center mt-4">
-              <span className="text-sm text-gray-500">
-                Showing {startIndex + 1} to{' '}
-                {Math.min(startIndex + allAuctions.length, totalCount)} of{' '}
-                {totalCount} auctions
-              </span>
-              <div className="flex items-center space-x-2">
-                <button
-                  className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span>Previous</span>
-                </button>
-                <span className="text-sm text-gray-500">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  <span>Next</span>
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          </>
-        )}
+
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-sm text-gray-500">
+                  Showing {startIndex + 1} to{' '}
+                  {Math.min(startIndex + allAuctions.length, totalCount)} of{' '}
+                  {totalCount} auctions
+                </span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>Previous</span>
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Delete Modal */}

@@ -1,5 +1,6 @@
 package com.helios.auctix.services.user;
 
+import com.fasterxml.classmate.Filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helios.auctix.domain.notification.Notification;
 import com.helios.auctix.domain.notification.NotificationCategory;
@@ -7,6 +8,7 @@ import com.helios.auctix.domain.user.*;
 import com.helios.auctix.domain.user.UserRequiredAction;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.*;
+import com.helios.auctix.exception.LimitExceededException;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.UserMapperImpl;
 import com.helios.auctix.mappers.impl.UserSocialMediaLinkMapperImpl;
@@ -28,10 +30,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.naming.LimitExceededException;
 import java.security.InvalidParameterException;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -352,6 +354,14 @@ private final UserRepository userRepository;
         UserRequiredAction requiredAction = userRequiredActionRepository.findByUserIdAndId(user.getId(),id);
         if(requiredAction == null) {
             log.info("No required action {} found for user: {}", id, user.getUsername());
+            return;
+        }
+        List<UserRequiredActionEnum> userUnresolvables = List.of(
+                UserRequiredActionEnum.ACCOUNT_BANNED_ANNOUNCEMENT,
+                UserRequiredActionEnum.COMPLETE_PROFILE
+        );
+        if(userUnresolvables.contains(requiredAction.getActionType())){
+            log.info("user unresolvable action triggered");
             return;
         }
         requiredAction.setResolved(true);

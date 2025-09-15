@@ -205,7 +205,7 @@ public class AdminActionService {
                 .continueUrl(null)
                 .build();
 
-        userDetailsService.registerUserRequiredAction(targetUser, UserRequiredActionEnum.ANNOUNCEMENT_READ, userRequiredActionContext);
+        userDetailsService.registerUserRequiredAction(targetUser, UserRequiredActionEnum.ACCOUNT_BANNED_ANNOUNCEMENT, userRequiredActionContext);
     }
 
 }

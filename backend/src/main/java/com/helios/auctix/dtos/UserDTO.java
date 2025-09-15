@@ -20,6 +20,7 @@ public class UserDTO {
     private String email;
     private String firstName;
     private String lastName;
+    private boolean isSuspended;
 
     private UserRoleDTO userRole;
     private UploadDTO profilePicture;

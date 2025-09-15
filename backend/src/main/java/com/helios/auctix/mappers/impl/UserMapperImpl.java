@@ -35,6 +35,7 @@ public class UserMapperImpl implements Mapper<User, UserDTO> {
         userDTO.setEmail(user.getEmail());
         userDTO.setFirstName(user.getFirstName());
         userDTO.setLastName(user.getLastName());
+        userDTO.setSuspended(user.isSuspended());
 //        userDTO.setProfileComplete(user.isProfileComplete());
 
         UserRole userRole = user.getRole();
@@ -110,6 +111,7 @@ public class UserMapperImpl implements Mapper<User, UserDTO> {
                 .lastName(userDTO.getLastName())
                 .bio(userDTO.getBio())
                 .emailVerified(userDTO.isEmailVerified())
+                .isSuspended(userDTO.isSuspended())
                 // Social media links mapping from DTO to entity is not handled here (requires user context)
                 .role(userRole)
                 .admin(admin)

@@ -39,7 +39,10 @@ export function PersonalBasicInfoSection({
             name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name</FormLabel>
+                <FormLabel>
+                  First Name
+                  <span className="text-red-400 inline ml-1">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input placeholder="John" {...field} />
                 </FormControl>
@@ -56,7 +59,10 @@ export function PersonalBasicInfoSection({
             name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Last Name</FormLabel>
+                <FormLabel>
+                  Last Name
+                  <span className="text-red-400 inline ml-1">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input placeholder="Doe" {...field} />
                 </FormControl>
@@ -74,7 +80,10 @@ export function PersonalBasicInfoSection({
           name="bio"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Bio</FormLabel>
+              <FormLabel>
+                Bio
+                <span className="text-red-400 inline ml-1">*</span>
+              </FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Tell us a little bit about yourself"

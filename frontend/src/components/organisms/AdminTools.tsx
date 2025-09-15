@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { RemoveProfilePictureModal } from './RemoveProfilePictureModal';
 import { BanUserModal } from '../molecules/BanUserModal';
 import AxiosRequest from '@/services/axiosInspector';
-import { getServerErrorMessage } from '@/lib/errorMsg';
+import { getServerErrorMessage, SectionEnum } from '@/lib/errorMsg';
 import { banUser, deleteProfilePhoto } from '@/services/adminService';
 import { useToast } from '@/hooks/use-toast';
 import { useAppSelector } from '@/store/hooks';
+import { useDispatch } from 'react-redux';
+import { closeTool } from '@/store/slices/adminToolsSlice';
 
 export enum AdminToolsEnum {
   BAN_USER = 'banUser',
@@ -13,12 +15,10 @@ export enum AdminToolsEnum {
 }
 
 export default function AdminTools() {
-  const [isBanUserModalOpen, setIsBanUserModalOpen] = useState(false);
-  const [isRemoveProfilePictureModalOpen, setIsRemoveProfilePictureModalOpen] =
-    useState(false);
   const axiosInstance = AxiosRequest().axiosInstance;
   const { toast } = useToast();
   const adminTools = useAppSelector((state) => state.adminTools);
+  const dispatch = useDispatch();
 
   const banUserHandler = (reason: string, duration: string) => {
     console.log(
@@ -44,12 +44,9 @@ export default function AdminTools() {
         console.error('Error banning user:', error);
         toast({
           title: 'Error',
-          description: getServerErrorMessage(error),
+          description: getServerErrorMessage(error, SectionEnum.DEFAULT),
           variant: 'destructive',
         });
-      })
-      .finally(() => {
-        setIsBanUserModalOpen(false);
       });
   };
 
@@ -69,56 +66,37 @@ export default function AdminTools() {
         console.error('Error removing profile picture:', error);
         toast({
           title: 'Error',
-          description: getServerErrorMessage(error),
+          description: getServerErrorMessage(error, SectionEnum.DEFAULT),
           variant: 'destructive',
         });
-      })
-      .finally(() => {
-        setIsRemoveProfilePictureModalOpen(false);
       });
   };
 
-  useEffect(() => {
-    if (!adminTools?.ready) return;
-    console.log('AdminTools useEffect triggered');
-    if (adminTools?.activeTool?.includes(AdminToolsEnum.BAN_USER)) {
-      console.log('Opening Ban User Modal');
-      setIsBanUserModalOpen(true);
-    } else if (
-      adminTools?.activeTool?.includes(AdminToolsEnum.REMOVE_PROFILE_PICTURE)
-    ) {
-      console.log('Opening Remove Profile Picture Modal');
-      setIsRemoveProfilePictureModalOpen(true);
-    } else {
-      console.log('Closing modals');
-      setIsRemoveProfilePictureModalOpen(false);
-      setIsBanUserModalOpen(false);
-    }
-  }, [adminTools.activeTool, adminTools.ready, adminTools.selectedUsername]);
-
   return (
     <>
-      {adminTools?.selectedUsername &&
-        adminTools?.activeTool?.includes(AdminToolsEnum.BAN_USER) && (
-          <BanUserModal
-            isOpen={isBanUserModalOpen}
-            onClose={() => setIsBanUserModalOpen(false)}
-            onConfirm={banUserHandler}
-            username={adminTools.selectedUsername}
-          />
-        )}
+      {adminTools?.selectedUsername && (
+        <BanUserModal
+          isOpen={
+            adminTools.activeTool === AdminToolsEnum.BAN_USER &&
+            adminTools.ready
+          }
+          onClose={() => dispatch(closeTool())}
+          onConfirm={banUserHandler}
+          username={adminTools.selectedUsername}
+        />
+      )}
 
-      {adminTools?.selectedUsername &&
-        adminTools?.activeTool?.includes(
-          AdminToolsEnum.REMOVE_PROFILE_PICTURE,
-        ) && (
-          <RemoveProfilePictureModal
-            isOpen={isRemoveProfilePictureModalOpen}
-            onClose={() => setIsRemoveProfilePictureModalOpen(false)}
-            username={adminTools.selectedUsername}
-            onRemove={() => handleRemoveProfilePicture()}
-          />
-        )}
+      {adminTools?.selectedUsername && (
+        <RemoveProfilePictureModal
+          isOpen={
+            adminTools.activeTool === AdminToolsEnum.REMOVE_PROFILE_PICTURE &&
+            adminTools.ready
+          }
+          onClose={() => dispatch(closeTool())}
+          username={adminTools.selectedUsername}
+          onRemove={() => handleRemoveProfilePicture()}
+        />
+      )}
     </>
   );
 }

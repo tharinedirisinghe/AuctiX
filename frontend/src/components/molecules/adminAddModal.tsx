@@ -187,7 +187,7 @@ export function AdminAddModal({ isOpen, onConfirm, close }: AdminModalProps) {
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="********"
+                              placeholder="password"
                               {...field}
                             />
                           </FormControl>
@@ -211,7 +211,7 @@ export function AdminAddModal({ isOpen, onConfirm, close }: AdminModalProps) {
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="********"
+                              placeholder="repeat password"
                               {...field}
                             />
                           </FormControl>

@@ -7,12 +7,18 @@ import { IPendingAction } from '@/types/IPendingAction';
 interface PendingActionState {
   loading: boolean;
   error: string | null;
+  lastRedirectAt: number;
+  lastRedirectTo: string | null;
+  ignoreRedirects: boolean;
   pendingActions: IPendingAction[];
 }
 
 const initialState: PendingActionState = {
   loading: true,
   error: null,
+  lastRedirectAt: 0,
+  lastRedirectTo: null,
+  ignoreRedirects: false,
   pendingActions: [],
 };
 
@@ -97,7 +103,15 @@ export const markAsResolved = createAsyncThunk(
 const requiredActionsSlice = createSlice({
   name: 'requiredActions',
   initialState,
-  reducers: {},
+  reducers: {
+    markLastRedirect: (state, action) => {
+      state.lastRedirectAt = Date.now();
+      state.lastRedirectTo = action.payload.path || null;
+    },
+    setIgnoreRedirects: (state, action) => {
+      state.ignoreRedirects = action.payload.ignoreRedirects;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchPendingRequiredActions.pending, (state) => {
@@ -126,16 +140,25 @@ const requiredActionsSlice = createSlice({
         state.error = action.payload as string;
         console.error('Error fetching pending actions:', action.payload);
       })
+      .addCase(markAsResolved.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        console.log('Marking action as resolved dispatched...');
+      })
+      .addCase(markAsResolved.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        console.log('Action marked as resolved:', action.payload);
+      })
       .addCase(markAsResolved.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-        console.error(
-          'Error marking action as resolved locally handled event"):',
-          action.payload,
-        );
+        console.error('Error marking action as resolved."):', action.payload);
         state.pendingActions = [];
       });
   },
 });
 
+export const { markLastRedirect, setIgnoreRedirects } =
+  requiredActionsSlice.actions;
 export default requiredActionsSlice.reducer;

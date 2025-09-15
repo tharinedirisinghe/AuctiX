@@ -41,6 +41,7 @@ import SellerVerificationMngPage from '@/pages/SellerVerificationMngPage';
 import { SellerVerificationEvaluationPage } from '@/pages/SellerVerificationEvaluationPage';
 import UserChatManager from '@/pages/UserChatManager';
 import ManageBids from '@/pages/ManageBids';
+import ForceRedirect from '@/components/atoms/ForceRedirect';
 
 export default function AppRouter() {
   useNotificationRegistration();
@@ -256,6 +257,7 @@ export default function AppRouter() {
         <Route path="/403" element={<h2>403 Unauthorized</h2>} />
         <Route path="*" element={<h2>404 Not Found</h2>} />
       </Routes>
+      <ForceRedirect />
     </BrowserRouter>
   );
 }

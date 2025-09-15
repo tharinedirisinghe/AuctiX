@@ -11,7 +11,7 @@ import com.helios.auctix.services.fileUpload.FileUploadService;
 import com.helios.auctix.services.user.SellerService;
 import com.helios.auctix.services.user.UserDetailsService;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
-@Slf4j
+@Log4j2
 @RestController
 @RequestMapping("/api/seller")
 @AllArgsConstructor

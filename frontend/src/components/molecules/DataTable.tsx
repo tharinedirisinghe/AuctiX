@@ -3,6 +3,8 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  Row,
+  RowData,
   useReactTable,
 } from '@tanstack/react-table';
 import { ChevronDown } from 'lucide-react';
@@ -36,6 +38,7 @@ interface DataTableProps<TData, TValue> {
   setSearchText: (searchText: string) => void;
   searchText: string | null;
   searchPlaceholderText?: string;
+  rowStyler?: (rowId: number, isSelected: boolean) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -49,6 +52,7 @@ export function DataTable<TData, TValue>({
   setSearchText,
   searchText,
   searchPlaceholderText,
+  rowStyler,
 }: DataTableProps<TData, TValue>) {
   const currentPageHandler = React.useCallback(
     (page: number) => setCurrentPage(page),
@@ -76,6 +80,17 @@ export function DataTable<TData, TValue>({
       pagination: paginationState,
     },
   });
+
+  const _rowStyler = (rowId: number, isSelected: boolean) => {
+    if (rowStyler instanceof Function) {
+      return rowStyler(rowId, isSelected);
+    } else {
+      return (
+        'w-full h-full text-gray-600 hover:bg-gray-100 focus:bg-gray-100 ' +
+        (isSelected ? 'bg-gray-200' : '')
+      );
+    }
+  };
 
   return (
     <div className="w-full ">
@@ -132,6 +147,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
+                  className={_rowStyler(row.index, row.getIsSelected())}
                   data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (

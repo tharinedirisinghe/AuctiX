@@ -29,6 +29,8 @@ export function VerificationForm() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [originalVerificationStatus, setOriginalVerificationStatus] =
+    useState<VerificationStatus>(VerificationStatus.NO_VERIFICATION_REQUESTED);
   const navigate = useNavigate();
 
   const axiosInstance: AxiosInstance = AxiosRequest().axiosInstance;
@@ -77,11 +79,17 @@ export function VerificationForm() {
       verificationStatus === VerificationStatus.PENDING
     ) {
       navigate('/dashboard');
-    } else if (verificationStatus === VerificationStatus.REJECTED) {
-      setVerificationStatus(VerificationStatus.NO_VERIFICATION_REQUESTED);
-      setVerificationSubmissions([]);
-      setSelectedFiles([]);
+    } else if (
+      verificationStatus === VerificationStatus.NO_VERIFICATION_REQUESTED
+    ) {
+      setVerificationStatus(originalVerificationStatus);
     }
+  };
+
+  const onBackToResubmit = () => {
+    setVerificationStatus(VerificationStatus.NO_VERIFICATION_REQUESTED);
+    setVerificationSubmissions([]);
+    setSelectedFiles([]);
   };
 
   useEffect(() => {
@@ -92,6 +100,7 @@ export function VerificationForm() {
     getSellerVerificationStatus(axiosInstance)
       .then((status) => {
         if (status) {
+          setOriginalVerificationStatus(status.status);
           setVerificationStatus(status.status);
           setVerificationSubmissions(status.submissions);
         } else {
@@ -141,6 +150,7 @@ export function VerificationForm() {
               status={verificationStatus}
               submissions={verificationSubmissions}
               onBack={handleBack}
+              onBackToResubmit={onBackToResubmit}
             />
           )}
         </motion.div>

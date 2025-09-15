@@ -10,6 +10,8 @@ import { Skeleton } from '../ui/skeleton';
 import { assets } from '@/config/assets';
 import RoleFilterDropdown from '../molecules/RoleFilterDropdown';
 import AdminActionsDropDown from '../molecules/AdminActionsDropDown';
+import { array } from 'zod';
+import { useAppSelector } from '@/hooks/hooks';
 
 interface IProfilePhoto {
   category: string;
@@ -26,6 +28,7 @@ export interface ITableUser {
   email: string;
   role: string;
   profilePicture: IProfilePhoto;
+  isSuspended: boolean;
 }
 
 export default function UserDataTable() {
@@ -46,9 +49,16 @@ export default function UserDataTable() {
   const [pageSize, setPageSize] = useState<number>(10);
   const [isInSearchDelay, setIsInSearchDelay] = useState<boolean>(false);
 
+  const adminTools = useAppSelector((state) => state.adminTools);
+
   useEffect(() => {
     setIsLoading(true);
-    if (!isInSearchDelay) {
+    // admin tools does not be in opened. if opened we can wait until they are closed to refetch users.
+    if (
+      !isInSearchDelay &&
+      !adminTools.ready &&
+      adminTools.selectedUsername === null
+    ) {
       axiosInstance
         .get('/user/getUsers', {
           params: {
@@ -72,6 +82,7 @@ export default function UserDataTable() {
                 email: user.email,
                 role: user.userRole?.userRole,
                 profilePicture: user.profilePicture,
+                isSuspended: user.suspended,
               };
             },
           );
@@ -88,7 +99,17 @@ export default function UserDataTable() {
           setIsLoading(false);
         });
     }
-  }, [sortBy, order, limit, offset, filterBy, filterValue, isInSearchDelay]);
+  }, [
+    sortBy,
+    order,
+    limit,
+    offset,
+    filterBy,
+    filterValue,
+    isInSearchDelay,
+    adminTools.ready,
+    adminTools.selectedUsername,
+  ]);
 
   // remove later
   useEffect(() => {
@@ -103,11 +124,10 @@ export default function UserDataTable() {
     console.log('userDataTable updated');
   }, [users, sortBy, order, limit, offset]);
 
-  let delay = null;
   useEffect(() => {
     if (!isInSearchDelay) {
       setIsInSearchDelay(true);
-      delay = setTimeout(() => {
+      setTimeout(() => {
         setOffset(0);
         setCurrentPage(0);
         setIsInSearchDelay(false);
@@ -176,6 +196,20 @@ export default function UserDataTable() {
       return isApplied;
     },
     [filterBy, filterValue],
+  );
+
+  const rowColor = useCallback(
+    (rowId: number, isSelected: boolean) => {
+      console.log('user:', users instanceof Array ? users[rowId] : null);
+      const isSuspended =
+        users instanceof Array ? users[rowId]?.isSuspended : false;
+      return (
+        'bg-gray-0 hover:bg-blue-100 focus:bg-blue-300 ' +
+        (isSelected ? 'bg-blue-200' : '') +
+        (isSuspended ? 'opacity-50 bg-red-100 hover:bg-red-200' : '')
+      );
+    },
+    [users],
   );
 
   const ProfilePhoto = (id: string | null) => {
@@ -356,7 +390,7 @@ export default function UserDataTable() {
       id: 'actions',
       enableHiding: false,
       cell: ({ row }) => {
-        return <AdminActionsDropDown username={row.getValue('username')} />;
+        return <AdminActionsDropDown user={row.original} />;
       },
     },
   ];
@@ -397,6 +431,7 @@ export default function UserDataTable() {
         setPageSize={pageSizeHandler}
         setSearchText={searchHandler}
         searchText={search}
+        rowStyler={rowColor}
       />
     </>
   );

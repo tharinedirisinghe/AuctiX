@@ -21,12 +21,14 @@ interface VerificationStatusContentProps {
   status: VerificationStatus;
   submissions: VerificationSubmission[];
   onBack: () => void;
+  onBackToResubmit: () => void;
 }
 
 export function VerificationStatusContent({
   status,
   submissions,
   onBack,
+  onBackToResubmit,
 }: VerificationStatusContentProps) {
   const [currentView, setCurrentView] = useState<'status' | 'files' | 'issues'>(
     'status',
@@ -65,6 +67,7 @@ export function VerificationStatusContent({
             key="issues"
             issues={submissions}
             onBack={handleBackToStatus}
+            onResubmit={onBackToResubmit}
           />
         )}
       </AnimatePresence>

@@ -126,7 +126,7 @@ public class AdminController {
                     .severityLevel(UserRequiredActionSeverityLevelEnum.MEDIUM)
                     .canResolve(true)
                     .build();
-            userDetailsService.registerUserRequiredAction(targetUser,UserRequiredActionEnum.ANNOUNCEMENT_READ,context);
+            userDetailsService.registerUserRequiredAction(targetUser,UserRequiredActionEnum.PROFILE_PHOTO_REMOVED_ANNOUNCEMENT,context);
             return ResponseEntity.ok().body("Profile photo deleted successfully");
         } else {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res.getMessage());

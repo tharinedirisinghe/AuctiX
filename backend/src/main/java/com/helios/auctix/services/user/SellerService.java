@@ -261,7 +261,7 @@ public class SellerService {
                     .continueUrl("/seller-verification-submit")
                     .canResolve(true)
                     .build();
-        userDetailsService.registerUserRequiredAction(seller.getUser(),UserRequiredActionEnum.ANNOUNCEMENT_READ, context);
+        userDetailsService.registerUserRequiredAction(seller.getUser(),UserRequiredActionEnum.SELLER_VERIFIED_ANNOUNCEMENT, context);
         }
 
         Notification notification = Notification.builder()
@@ -326,7 +326,7 @@ public class SellerService {
                 .build();
 
         UserRequiredAction useRreqAction = UserRequiredAction.builder()
-                .actionType(UserRequiredActionEnum.ANNOUNCEMENT_READ)
+                .actionType(UserRequiredActionEnum.SELLER_VERIFICATION_REJECT_ANNOUNCEMENT)
                 .user(seller.getUser())
                 .isResolved(false)
                 .context(userRequiredActionContext.toMap())

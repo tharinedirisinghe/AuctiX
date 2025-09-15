@@ -8,9 +8,19 @@ import { markLastRedirect } from '../../store/slices/requiredActionsSlice';
 export enum ActionType {
   COMPLETE_PROFILE = 'COMPLETE_PROFILE',
   SELLER_VERIFICATION_DOCUMENT_SUBMISSION = 'SELLER_VERIFICATION_DOCUMENT_SUBMISSION',
-  ANNOUNCEMENT_READ = 'ANNOUNCEMENT_READ',
+  ACCOUNT_BANNED_ANNOUNCEMENT = 'ACCOUNT_BANNED_ANNOUNCEMENT',
+  SELLER_VERIFIED_ANNOUNCEMENT = 'SELLER_VERIFIED_ANNOUNCEMENT',
+  SELLER_VERIFICATION_REJECT_ANNOUNCEMENT = 'SELLER_VERIFICATION_REJECT_ANNOUNCEMENT',
+  PROFILE_PHOTO_REMOVED_ANNOUNCEMENT = 'PROFILE_PHOTO_REMOVED_ANNOUNCEMENT',
   FIRST_LOGIN_CHANGE_PASSWORD = 'FIRST_LOGIN_CHANGE_PASSWORD',
 }
+
+export const announcementActions = [
+  ActionType.ACCOUNT_BANNED_ANNOUNCEMENT,
+  ActionType.SELLER_VERIFIED_ANNOUNCEMENT,
+  ActionType.SELLER_VERIFICATION_REJECT_ANNOUNCEMENT,
+  ActionType.PROFILE_PHOTO_REMOVED_ANNOUNCEMENT,
+];
 
 export default function ForceRedirect() {
   const pendingActions = useAppSelector((state) => state.pendingActions);
@@ -72,8 +82,9 @@ export default function ForceRedirect() {
       !pendingActions.ignoreRedirects
     ) {
       pendingActions.pendingActions.forEach((action) => {
-        if (action.resolved) return;
-        if (action.actionType === ActionType.ANNOUNCEMENT_READ) {
+        if (action.resolved || action.actionType === null) return;
+
+        if (announcementActions.includes(action.actionType as ActionType)) {
           console.log('Notice', action);
           forceNavigate('/notice', 'You have a new important update');
         } else if (

@@ -10,6 +10,10 @@ import {
   fetchPendingRequiredActions,
   markAsResolved,
 } from '@/store/slices/requiredActionsSlice';
+import {
+  ActionType,
+  announcementActions,
+} from '@/components/atoms/ForceRedirect';
 
 interface INoticeData {
   id: string;
@@ -34,15 +38,16 @@ export function NoticePage() {
   const [allNoticeData, setAllNoticeData] = useState<INoticeData | null>(null);
 
   const dispatch = useAppDispatch();
+  announcementActions;
 
   useEffect(() => {
     if (pendingActions.loading) return;
 
-    const pendingActionsData: IPendingAction | undefined =
-      pendingActions.pendingActions.find(
-        (r) => r.actionType === 'ANNOUNCEMENT_READ',
+    const extractedNoticeData: IPendingAction | undefined =
+      pendingActions.pendingActions.find((r) =>
+        announcementActions.includes(r.actionType as ActionType),
       );
-    const NoticeData = pendingActionsData?.context as INoticeData;
+    const NoticeData = extractedNoticeData?.context as INoticeData;
 
     if (NoticeData) {
       console.log('Notice data found:', NoticeData);
@@ -61,8 +66,9 @@ export function NoticePage() {
   useEffect(() => {
     console.log('Required action:', id);
     if (id) {
-      dispatch(markAsResolved({ id }));
-      dispatch(fetchPendingRequiredActions());
+      dispatch(markAsResolved({ id })).then(() => {
+        dispatch(fetchPendingRequiredActions());
+      });
     }
   }, [id, dispatch]);
 

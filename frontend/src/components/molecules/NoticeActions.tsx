@@ -15,7 +15,6 @@ export function NoticeActions({
   severity,
 }: NoticeActionsProps) {
   const navigate = useNavigate();
-
   const handleContinue = () => {
     if (continueUrl) {
       navigate(continueUrl);

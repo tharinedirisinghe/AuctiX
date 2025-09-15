@@ -8,15 +8,12 @@ import {
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { MoreHorizontal } from 'lucide-react';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { AdminToolsEnum } from '../organisms/AdminTools';
 import { openTool } from '@/store/slices/adminToolsSlice';
+import { ITableUser } from '../organisms/UserDataTable';
 
-export default function AdminActionsDropDown({
-  username,
-}: {
-  username: string;
-}) {
+export default function AdminActionsDropDown({ user }: { user: ITableUser }) {
   const appDispatch = useAppDispatch();
 
   return (
@@ -29,17 +26,21 @@ export default function AdminActionsDropDown({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
         <DropdownMenuItem
-          onClick={() => navigator.clipboard.writeText(username)}
+          onClick={() =>
+            user?.username && navigator.clipboard.writeText(user.username)
+          }
         >
           Copy Username
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+
         <DropdownMenuItem
           onClick={() =>
             appDispatch(
               openTool({
-                user: username,
+                user: user,
                 tool: AdminToolsEnum.REMOVE_PROFILE_PICTURE,
               }),
             )
@@ -47,11 +48,12 @@ export default function AdminActionsDropDown({
         >
           Remove Profile Picture
         </DropdownMenuItem>
+
         <DropdownMenuItem
           onClick={() =>
             appDispatch(
               openTool({
-                user: username,
+                user: user,
                 tool: AdminToolsEnum.BAN_USER,
               }),
             )

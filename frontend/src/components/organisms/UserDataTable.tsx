@@ -11,6 +11,7 @@ import { assets } from '@/config/assets';
 import RoleFilterDropdown from '../molecules/RoleFilterDropdown';
 import AdminActionsDropDown from '../molecules/AdminActionsDropDown';
 import { array } from 'zod';
+import { useAppSelector } from '@/hooks/hooks';
 
 interface IProfilePhoto {
   category: string;
@@ -48,9 +49,16 @@ export default function UserDataTable() {
   const [pageSize, setPageSize] = useState<number>(10);
   const [isInSearchDelay, setIsInSearchDelay] = useState<boolean>(false);
 
+  const adminTools = useAppSelector((state) => state.adminTools);
+
   useEffect(() => {
     setIsLoading(true);
-    if (!isInSearchDelay) {
+    // admin tools does not be in opened. if opened we can wait until they are closed to refetch users.
+    if (
+      !isInSearchDelay &&
+      !adminTools.ready &&
+      adminTools.selectedUsername === null
+    ) {
       axiosInstance
         .get('/user/getUsers', {
           params: {
@@ -91,7 +99,17 @@ export default function UserDataTable() {
           setIsLoading(false);
         });
     }
-  }, [sortBy, order, limit, offset, filterBy, filterValue, isInSearchDelay]);
+  }, [
+    sortBy,
+    order,
+    limit,
+    offset,
+    filterBy,
+    filterValue,
+    isInSearchDelay,
+    adminTools.ready,
+    adminTools.selectedUsername,
+  ]);
 
   // remove later
   useEffect(() => {
@@ -372,7 +390,7 @@ export default function UserDataTable() {
       id: 'actions',
       enableHiding: false,
       cell: ({ row }) => {
-        return <AdminActionsDropDown username={row.getValue('username')} />;
+        return <AdminActionsDropDown user={row.original} />;
       },
     },
   ];

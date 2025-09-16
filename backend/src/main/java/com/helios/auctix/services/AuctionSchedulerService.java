@@ -5,6 +5,7 @@ import com.helios.auctix.domain.auction.Bid;
 import com.helios.auctix.domain.notification.AuctionNotificationLog;
 import com.helios.auctix.domain.notification.NotificationCategory;
 import com.helios.auctix.domain.user.User;
+import com.helios.auctix.dtos.DeliveryDTO;
 import com.helios.auctix.events.notification.NotificationEventPublisher;
 import com.helios.auctix.repositories.*;
 import lombok.extern.slf4j.Slf4j;
@@ -126,9 +127,19 @@ public class AuctionSchedulerService {
             // Find auctions that have ended but haven't been processed yet
             List<Auction> completedAuctions = auctionRepository.findByEndTimeBeforeAndCompletedFalse(now);
 
-            // Only log when there are auctions to process (reduce log noise)
+            // ALWAYS log to debug the issue
+            logger.info("=== SCHEDULER CHECK AT " + now + " ===");
+            logger.info("Found " + completedAuctions.size() + " auctions that need completion processing");
+            
             if (!completedAuctions.isEmpty()) {
-                logger.info("Found " + completedAuctions.size() + " completed auctions to process at " + now);
+                for (Auction auction : completedAuctions) {
+                    logger.info("- Auction ID: " + auction.getId() + 
+                               ", Title: " + auction.getTitle() + 
+                               ", End Time: " + auction.getEndTime() + 
+                               ", Completed: " + auction.getCompleted());
+                }
+            } else {
+                logger.info("No auctions found that need completion processing");
             }
 
             for (Auction auction : completedAuctions) {
@@ -166,31 +177,34 @@ public class AuctionSchedulerService {
 
                 // Complete the transaction - transfer from frozen funds to seller
                 try {
+                    final Double bidAmount = winningBid.getAmount();
+                    if (bidAmount == null) {
+                        throw new IllegalStateException("Winning bid amount is null for auction: " + auctionId);
+                    }
+                    
+                    logger.info("Processing financial transactions with amount: " + bidAmount);
+                    
                     // 1. Complete the bidder's transaction (unfreeze and deduct funds)
                     transactionService.completeBidTransaction(
                             winningBid.getBidderId(),
                             auctionId,
-                            winningBid.getAmount()
+                            bidAmount.doubleValue()  // Convert Double to double
                     );
+                    logger.info("Completed bid transaction for buyer");
 
                     // 2. Credit the seller's wallet
                     transactionService.creditSellerForAuction(
                             seller.getId(),
                             auctionId,
-                            winningBid.getAmount()
+                            bidAmount.doubleValue()  // Convert Double to double
                     );
+                    logger.info("Credited seller wallet");
 
-                    // 3. Automatically create delivery
-                    try {
-                        deliveryService.createAutomaticDelivery(
-                                auctionId,
-                                winningBid.getBidderId(),
-                                winningBid.getAmount()
-                        );
-                        logger.info("Successfully created automatic delivery for auction: " + auctionId);
-                    } catch (Exception e) {
-                        logger.warning("Failed to create automatic delivery for auction " + auctionId + ": " + e.getMessage());
-                    }
+                    // 3. Mark auction as completed IMMEDIATELY after financial transactions
+                    auction.setCompleted(true);
+                    auction.setWinningBidId(winningBid.getId());
+                    auctionRepository.save(auction);
+                    logger.info("Auction marked as completed after financial transactions");
 
                     // 4. Send notifications
                     if (bidder != null) {
@@ -243,6 +257,27 @@ public class AuctionSchedulerService {
                                             NotificationCategory.AUCTION_COMPLETED,
                                             auctionUrl
                                     );
+
+                                    // 5. Create delivery AFTER transaction is fully committed
+                                    try {
+                                        logger.info("=== CREATING DELIVERY AFTER TRANSACTION COMMIT ===");
+                                        logger.info("Auction ID: " + auctionId);
+                                        logger.info("Buyer ID: " + winningBid.getBidderId());
+                                        logger.info("Bid Amount: " + bidAmount);
+                                        
+                                        DeliveryDTO createdDelivery = deliveryService.createAutomaticDelivery(
+                                                auctionId,
+                                                winningBid.getBidderId(),
+                                                bidAmount  // Use the validated Double value
+                                        );
+                                        
+                                        logger.info("✅ Successfully created automatic delivery with ID: " + createdDelivery.getId() + " for auction: " + auctionId);
+                                    } catch (Exception deliveryError) {
+                                        logger.severe("❌ Failed to create automatic delivery for auction " + auctionId + ": " + deliveryError.getMessage());
+                                        logger.severe("Full stack trace:");
+                                        deliveryError.printStackTrace();
+                                        // Delivery failure doesn't affect completed financial transactions
+                                    }
                                 }
                             });
 
@@ -251,11 +286,6 @@ public class AuctionSchedulerService {
                         }
                     }
 
-                    // 5. Mark the auction as completed
-                    auction.setCompleted(true);
-                    auction.setWinningBidId(winningBid.getId());
-                    auctionRepository.save(auction);
-
                     // add them to a chat
                     chatService.getOrCreateWinnerSellerChat(bidder, seller, auction);
 
@@ -263,7 +293,19 @@ public class AuctionSchedulerService {
 
                 } catch (Exception e) {
                     logger.severe("Error processing transaction for auction " + auctionId + ": " + e.getMessage());
-                    throw e; // Re-throw to trigger transaction rollback
+                    e.printStackTrace();
+                    
+                    // If we reach here, financial transactions may have failed
+                    // Mark auction as completed anyway to prevent infinite retries
+                    try {
+                        auction.setCompleted(true);
+                        auctionRepository.save(auction);
+                        logger.warning("Marked auction " + auctionId + " as completed despite error to prevent infinite retries");
+                    } catch (Exception markingError) {
+                        logger.severe("Failed to mark auction as completed: " + markingError.getMessage());
+                    }
+                    
+                    // Don't re-throw - this prevents transaction rollback of any successful operations
                 }
             } else {
                 // No bids were placed

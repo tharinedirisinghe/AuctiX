@@ -36,15 +36,46 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
   // Image gallery state
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Gallery control functions
+  const handlePreviousImage = (e: React.MouseEvent) => {
+    console.log('Previous image button clicked!');
+    e.stopPropagation();
+    e.preventDefault();
+    setCurrentImageIndex((prev) => (prev === 0 ? (selectedDelivery?.auctionImages?.length || 1) - 1 : prev - 1));
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    console.log('Next image button clicked!');
+    e.stopPropagation();
+    e.preventDefault();
+    setCurrentImageIndex((prev) => (prev === (selectedDelivery?.auctionImages?.length || 1) - 1 ? 0 : prev + 1));
+  };
+
+  const handleCloseGallery = (e: React.MouseEvent) => {
+    console.log('Close gallery button clicked!');
+    e.stopPropagation();
+    e.preventDefault();
+    setIsGalleryOpen(false);
+  };
   
   // Handle opening image gallery
   const openImageGallery = () => {
+    console.log('openImageGallery called');
+    console.log('selectedDelivery:', selectedDelivery);
     if (selectedDelivery) {
       const images = selectedDelivery.auctionImages || (selectedDelivery.auctionImage ? [selectedDelivery.auctionImage] : []);
+      console.log('images found:', images);
+      console.log('images length:', images.length);
       if (images.length > 0) {
+        console.log('Setting gallery open to true');
         setCurrentImageIndex(0);
         setIsGalleryOpen(true);
+      } else {
+        console.log('No images found, gallery not opened');
       }
+    } else {
+      console.log('No selectedDelivery found');
     }
   };
 
@@ -68,10 +99,11 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
   };
 
   return (
-    <Dialog
-      open={!!selectedDelivery}
-      onOpenChange={(open) => !open && setSelectedDelivery(null)}
-    >
+    <>
+      <Dialog
+        open={!!selectedDelivery}
+        onOpenChange={(open) => !open && setSelectedDelivery(null)}
+      >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Delivery Details</DialogTitle>
@@ -237,78 +269,91 @@ export const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
           </div>
         </DialogFooter>
       </DialogContent>
-
-      {/* Image Gallery Modal */}
-      {isGalleryOpen && selectedDelivery && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]" onClick={() => setIsGalleryOpen(false)}>
-          <div className="max-w-4xl max-h-screen w-full h-full flex flex-col items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-            {(() => {
-              const images = selectedDelivery.auctionImages || (selectedDelivery.auctionImage ? [selectedDelivery.auctionImage] : []);
-              return images.length > 0 ? (
-                <>
-                  <div className="relative">
-                    <img
-                      src={images[currentImageIndex]}
-                      alt={`${selectedDelivery.auctionTitle} - Image ${currentImageIndex + 1}`}
-                      className="max-w-full max-h-[80vh] object-contain"
-                    />
-                    
-                    {/* Navigation buttons */}
-                    {images.length > 1 && (
-                      <>
-                        <button
-                          onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
-                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
-                        >
-                          ←
-                        </button>
-                        <button
-                          onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
-                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
-                        >
-                          →
-                        </button>
-                      </>
-                    )}
-                    
-                    {/* Close button */}
-                    <button
-                      onClick={() => setIsGalleryOpen(false)}
-                      className="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  
-                  {/* Image counter */}
-                  {images.length > 1 && (
-                    <div className="mt-4 text-white text-center">
-                      {currentImageIndex + 1} of {images.length}
-                    </div>
-                  )}
-                  
-                  {/* Thumbnail strip */}
-                  {images.length > 1 && (
-                    <div className="flex gap-2 mt-4 max-w-full overflow-x-auto">
-                      {images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`Thumbnail ${index + 1}`}
-                          className={`w-16 h-16 object-cover cursor-pointer rounded ${
-                            index === currentImageIndex ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
-                          }`}
-                          onClick={() => setCurrentImageIndex(index)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : null;
-            })()}
-          </div>
-        </div>
-      )}
     </Dialog>
+
+    {/* Image Gallery Modal - Outside Dialog */}
+    {isGalleryOpen && selectedDelivery && (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]" onClick={() => setIsGalleryOpen(false)}>
+        <div className="max-w-4xl max-h-screen w-full h-full flex flex-col items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+          {(() => {
+            const images = selectedDelivery.auctionImages || (selectedDelivery.auctionImage ? [selectedDelivery.auctionImage] : []);
+            return images.length > 0 ? (
+              <>
+                <div className="relative">
+                  <img
+                    src={images[currentImageIndex]}
+                    alt={`${selectedDelivery.auctionTitle} - Image ${currentImageIndex + 1}`}
+                    className="max-w-full max-h-[80vh] object-contain"
+                  />
+
+                  {/* Navigation buttons */}
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                        }}
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-75 text-white p-3 rounded-full hover:bg-opacity-90 z-[110] text-xl font-bold"
+                        aria-label="Previous image"
+                      >
+                        ←
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                        }}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-75 text-white p-3 rounded-full hover:bg-opacity-90 z-[110] text-xl font-bold"
+                        aria-label="Next image"
+                      >
+                        →
+                      </button>
+                    </>
+                  )}
+
+                  {/* Close button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsGalleryOpen(false);
+                    }}
+                    className="absolute top-4 right-4 bg-black bg-opacity-75 text-white p-2 rounded-full hover:bg-opacity-90 z-[110] text-xl font-bold leading-none"
+                    aria-label="Close image gallery"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {/* Image counter */}
+                {images.length > 1 && (
+                  <div className="mt-4 text-white text-center">
+                    {currentImageIndex + 1} of {images.length}
+                  </div>
+                )}
+
+                {/* Thumbnail strip */}
+                {images.length > 1 && (
+                  <div className="flex gap-2 mt-4 max-w-full overflow-x-auto">
+                    {images.map((image, index) => (
+                      <img
+                        key={index}
+                        src={image}
+                        alt={`Thumbnail ${index + 1}`}
+                        className={`w-16 h-16 object-cover cursor-pointer rounded ${
+                          index === currentImageIndex ? 'ring-2 ring-white' : 'opacity-60 hover:opacity-100'
+                        }`}
+                        onClick={() => setCurrentImageIndex(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : null;
+          })()}
+        </div>
+      </div>
+    )}
+    </>
   );
 };

@@ -378,7 +378,7 @@ public class CoinTransactionService {
                 .build();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransactionResponseDTO completeBidTransaction(UUID userId, UUID auctionId, double amount) {
         log.info("Completing transaction for " + amount + " for user " + userId + " on auction " + auctionId);
 
@@ -424,7 +424,7 @@ public class CoinTransactionService {
                 .build();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransactionResponseDTO creditSellerForAuction(UUID sellerId, UUID auctionId, double amount) {
         log.info("Crediting seller " + sellerId + " with " + amount + " for auction " + auctionId);
 

@@ -24,13 +24,13 @@ messaging.onBackgroundMessage((payload) => {
     payload,
   );
 
-  const notificationTitle = payload.notification?.title || 'New Notification';
-  const notificationOptions = {
-    body: payload.notification?.body || 'You have a new message',
-    icon: payload.notification?.image,
-  };
+  // const notificationTitle = payload.data?.title || 'New Notification';
+  // const notificationOptions = {
+  //   body: payload.data?.body || 'You have a new message',
+  //   icon: payload.data?.image,
+  // };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 // might be needed later on overriding the default behavior  for bg notifications

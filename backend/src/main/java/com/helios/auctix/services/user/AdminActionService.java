@@ -1,8 +1,10 @@
 package com.helios.auctix.services.user;
 
+import com.helios.auctix.domain.notification.NotificationCategory;
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.AdminActionDTO;
+import com.helios.auctix.events.notification.NotificationEventPublisher;
 import com.helios.auctix.exception.InvalidUserException;
 import com.helios.auctix.exception.PermissionDeniedException;
 import com.helios.auctix.mappers.impl.AdminActionMapperImpl;
@@ -35,16 +37,18 @@ public class AdminActionService {
     private final SuspendedUserRepository suspendedUserRepository;
     private final UserDetailsService userDetailsService;
     private final UserRegisterService userRegisterService;
+    private final NotificationEventPublisher noficationpublisher;
 
     public AdminActionService(
             AdminActionRepository adminActionRepository,
-            UserRepository userRepository, AdminActionMapperImpl adminActionMapperImpl, SuspendedUserRepository suspendedUserRepository, UserDetailsService userDetailsService, UserRegisterService userRegisterService) {
+            UserRepository userRepository, AdminActionMapperImpl adminActionMapperImpl, SuspendedUserRepository suspendedUserRepository, UserDetailsService userDetailsService, UserRegisterService userRegisterService, NotificationEventPublisher noficationPublisher) {
         this.adminActionRepository = adminActionRepository;
         this.userRepository = userRepository;
         this.adminActionMapperImpl = adminActionMapperImpl;
         this.suspendedUserRepository = suspendedUserRepository;
         this.userDetailsService = userDetailsService;
         this.userRegisterService = userRegisterService;
+        this.noficationpublisher = noficationPublisher;
     }
 
     public void logAdminAction(User admin, User user, AdminActionsEnum action, String description) {
@@ -196,6 +200,14 @@ public class AdminActionService {
                 .build();
         suspendedUserRepository.save(suspendedUser);
         logAdminAction(currentUser, targetUser, AdminActionsEnum.USER_BAN, "User " + targetUser.getUsername() + " has been banned by " + currentUser.getUsername() + " for reason: " + reason + "for duration: " + duration.getDuration());
+
+        noficationpublisher.publishNotificationEvent(
+                "You have been banned",
+                "Your account has been banned by admins for reason: " + reason + "for duration: " + duration.getDuration(),
+                    NotificationCategory.ACCOUNT_SUSPENDED,
+                targetUser,
+                null
+        );
 
         UserRequiredActionContext userRequiredActionContext = UserRequiredActionContext.builder()
                 .title("Your account has been banned")

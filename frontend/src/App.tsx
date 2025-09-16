@@ -13,6 +13,7 @@ import { fetchPendingRequiredActions } from './store/slices/requiredActionsSlice
 import { FCMHandlerEventListener } from './lib/FCMMessageListener';
 import { listenForForegroundMessages } from './firebase/firebase';
 import AdminTools from './components/organisms/AdminTools';
+import { sseConnection } from './store/slices/sseSlice';
 
 const App: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -35,6 +36,7 @@ const App: React.FC = () => {
   useEffect(() => {
     dispatch(fetchCurrentUser());
     dispatch(fetchPendingRequiredActions());
+    dispatch(sseConnection());
   }, [auth.isUserLoggedIn]);
 
   return (

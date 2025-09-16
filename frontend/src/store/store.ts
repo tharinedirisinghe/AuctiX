@@ -6,6 +6,7 @@ import deliveryReducer from './slices/deliverySlice';
 import notificationReducer from './slices/notificationSlice';
 import pendingActionReducer from './slices/requiredActionsSlice';
 import adminToolsReducer from './slices/adminToolsSlice';
+import sseReducer from './slices/sseSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     notifications: notificationReducer,
     pendingActions: pendingActionReducer,
     adminTools: adminToolsReducer,
+    sse: sseReducer,
   },
 });
 

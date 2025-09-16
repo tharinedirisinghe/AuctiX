@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll() // Permit all WebSocket endpoints
                         .requestMatchers("/topic/**").permitAll() // Permit all STOMP broker destinations
                         .requestMatchers("/app/**").permitAll() // Permit all STOMP application destinations
+                        .requestMatchers("/api/sse/**").permitAll()
                         .requestMatchers("/api/roletest/seller").hasRole("SELLER")
                         .requestMatchers("/api/roletest/bidder").hasRole("BIDDER")
                         .requestMatchers("/api/user/**").permitAll()
@@ -78,6 +79,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Content-Type", "Cache-Control", "Transfer-Encoding"));
         configuration.setAllowCredentials(true);  // need for cookies/auth
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

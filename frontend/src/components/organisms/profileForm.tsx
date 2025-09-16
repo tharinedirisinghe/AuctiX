@@ -68,6 +68,9 @@ const profileFormSchema = z.object({
     addressNumber: z.string().optional(),
     addressLine1: z.string().optional(),
     addressLine2: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
     country: z.string().optional(),
   }),
   urls: z
@@ -109,6 +112,9 @@ const defaultValues: Partial<ProfileFormValues> = {
     addressNumber: '',
     addressLine1: '',
     addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
     country: '',
   },
   urls: [],
@@ -135,6 +141,7 @@ export function ProfileForm() {
     mode: 'onChange',
   });
 
+
   useEffect(() => {
     const values = {
       ...defaultValues,
@@ -143,6 +150,7 @@ export function ProfileForm() {
   }, [form]);
 
   useEffect(() => {
+
     const values: ProfileFormValues = {
       firstName: userData.firstName || '',
       lastName: userData.lastName || '',
@@ -151,6 +159,9 @@ export function ProfileForm() {
         addressNumber: userData.address?.addressNumber || '',
         addressLine1: userData.address?.addressLine1 || '',
         addressLine2: userData.address?.addressLine2 || '',
+        city: userData.address?.city || '',
+        state: userData.address?.state || '',
+        postalCode: userData.address?.postalCode || '',
         country: userData.address?.country || '',
       },
       urls:
@@ -160,21 +171,23 @@ export function ProfileForm() {
         })) || [],
     };
 
-    console.log('Bio set from userData:', values.bio);
     if ('bio' in userData && typeof userData.bio === 'string') {
       values.bio = userData.bio;
     }
 
-    if ('address' in userData && userData.address) {
-      const address = userData.address as any;
-      if (address.addressNumber)
-        values.address.addressNumber = address.addressNumber;
-      if (address.addressLine1)
-        values.address.addressLine1 = address.addressLine1;
-      if (address.addressLine2)
-        values.address.addressLine2 = address.addressLine2;
-      if (address.country) values.address.country = address.country;
+    // Direct assignment - no conditional logic
+    if (userData.address) {
+      values.address = {
+        addressNumber: userData.address.addressNumber || '',
+        addressLine1: userData.address.addressLine1 || '',
+        addressLine2: userData.address.addressLine2 || '',
+        city: userData.address.city || '',
+        state: userData.address.state || '',
+        postalCode: userData.address.postalCode || '',
+        country: userData.address.country || '',
+      };
     }
+
 
     if ('urls' in userData && Array.isArray(userData.urls)) {
       values.urls = (userData.urls as any[]).map((url) => ({
@@ -184,6 +197,14 @@ export function ProfileForm() {
     }
 
     form.reset(values);
+
+    // Force update address fields with delay to ensure form is ready
+    setTimeout(() => {
+      form.setValue('address.city', values.address.city);
+      form.setValue('address.state', values.address.state);
+      form.setValue('address.postalCode', values.address.postalCode);
+    }, 100);
+
     setCroppedImg(userData.profile_photo || null);
     setBannerImg(userData.banner_photo || assets.default_banner_image);
   }, [userData, form]);
@@ -324,10 +345,10 @@ export function ProfileForm() {
         addressNumber: formData.address.addressNumber || '',
         addressLine1: formData.address.addressLine1 || '',
         addressLine2: formData.address.addressLine2 || '',
+        city: formData.address.city || '',
+        state: formData.address.state || '',
+        postalCode: formData.address.postalCode || '',
         country: formData.address.country || '',
-        city: '',
-        state: '',
-        postalCode: '',
       },
     };
 

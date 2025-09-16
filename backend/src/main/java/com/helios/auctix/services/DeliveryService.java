@@ -18,6 +18,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -108,7 +109,7 @@ public class DeliveryService {
     /**
      * Automatically create delivery after successful auction completion
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DeliveryDTO createAutomaticDelivery(UUID auctionId, UUID buyerId, Double winningAmount) {
         logger.info("Creating automatic delivery for auction: " + auctionId + " with buyer: " + buyerId);
 
@@ -134,6 +135,8 @@ public class DeliveryService {
         LocalDate deliveryDate = LocalDate.now().plusDays(7);
 
         // Create delivery entity
+        logger.info("Creating delivery with address: " + deliveryAddress + " for delivery date: " + deliveryDate);
+        
         Delivery delivery = Delivery.builder()
                 .auction(auction)
                 .seller(seller)
@@ -143,7 +146,10 @@ public class DeliveryService {
                 .deliveryAddress(deliveryAddress)
                 .notes("Automatic delivery created after auction completion")
                 .amount(winningAmount)
+                .addressRequested(false)  // Set the required field explicitly
                 .build();
+
+        logger.info("Built delivery object, attempting to save...");
 
         delivery = deliveryRepository.save(delivery);
         logger.info("Successfully created automatic delivery with ID: " + delivery.getId());

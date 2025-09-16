@@ -24,6 +24,9 @@ const initialState: UserState = {
     addressNumber: '',
     addressLine1: '',
     addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
     country: '',
   },
   urls: [],
@@ -44,7 +47,6 @@ export const fetchCurrentUser = createAsyncThunk(
           Authorization: `Bearer ${authUser?.token}`,
         },
       });
-      console.log('Current user data fetched:', response.data);
 
       // Ensure we have user data in the response
       if (!response.data) {
@@ -52,6 +54,7 @@ export const fetchCurrentUser = createAsyncThunk(
       }
 
       // Add additional setup for user data
+
       const userData = {
         username: response.data.username,
         email: response.data.email,
@@ -70,6 +73,9 @@ export const fetchCurrentUser = createAsyncThunk(
           addressNumber: response.data.userAddress?.addressNumber || '',
           addressLine1: response.data.userAddress?.addressLine1 || '',
           addressLine2: response.data.userAddress?.addressLine2 || '',
+          city: response.data.userAddress?.city || '',
+          state: response.data.userAddress?.state || '',
+          postalCode: response.data.userAddress?.postalCode || '',
           country: response.data.userAddress?.country || '',
         },
         urls:
@@ -79,7 +85,6 @@ export const fetchCurrentUser = createAsyncThunk(
         bio: response.data.bio || '',
       } as IUser;
 
-      console.log('Processed user data:', userData);
       return userData;
     } catch (error: any) {
       if (error.response?.status === 401) {
@@ -102,7 +107,6 @@ const userSlice = createSlice({
       .addCase(fetchCurrentUser.pending, (state) => {
         state.loading = true;
         state.error = null;
-        console.log('Fetching user data dispatched...');
       })
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         state.loading = false;
@@ -121,10 +125,12 @@ const userSlice = createSlice({
           addressNumber: action.payload.address?.addressNumber || '',
           addressLine1: action.payload.address?.addressLine1 || '',
           addressLine2: action.payload.address?.addressLine2 || '',
+          city: action.payload.address?.city || '',
+          state: action.payload.address?.state || '',
+          postalCode: action.payload.address?.postalCode || '',
           country: action.payload.address?.country || '',
         };
         state.isVerified = action.payload.isVerified || false;
-        console.log('User data updated:', action.payload);
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
         state.loading = false;

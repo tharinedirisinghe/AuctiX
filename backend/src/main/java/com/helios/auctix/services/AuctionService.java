@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -44,6 +45,7 @@ public class AuctionService {
     private final UserMapperImpl userMapperImpl;
     private final BidService bidService;
     private final ChatRoomRepository chatRoomRepository;
+    // private final WatchListNotifyService watchListNotifyService;
     @Autowired
     private FileUploadService uploader;
     private AuctionDeletionRequestRepository deletionRequestRepository;

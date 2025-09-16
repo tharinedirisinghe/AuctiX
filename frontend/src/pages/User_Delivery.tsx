@@ -22,7 +22,6 @@ import { BuyerDeliveryStats } from '@/components/delivery/buyer/BuyerDeliverySta
 import { DeliveryFilter } from '@/components/delivery/buyer/DeliveryFilter';
 import { DeliveryCard } from '@/components/delivery/buyer/DeliveryCard';
 import { DeliveryDetailsDialog } from '@/components/delivery/buyer/DeliveryDetailsDialog';
-import { ContactSellerDialog } from '@/components/delivery/buyer/ContactSellerDialog';
 import { EmptyDeliveryState } from '@/components/delivery/buyer/EmptyDeliveryState';
 import { ErrorDisplay } from '@/components/delivery/buyer/ErrorDisplay';
 import { LoadingIndicator } from '@/components/delivery/shared/LoadingIndicator';
@@ -51,9 +50,6 @@ const UserDeliveryPage = () => {
   // Local state for modals instead of using Redux for UI state
   const [localSelectedDelivery, setLocalSelectedDelivery] =
     useState<Delivery | null>(null);
-  const [isContactSellerModalOpen, setIsContactSellerModalOpen] =
-    useState<boolean>(false);
-  const [contactMessage, setContactMessage] = useState<string>('');
 
   // Review state
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState<boolean>(false);
@@ -216,26 +212,7 @@ const UserDeliveryPage = () => {
     setLocalSelectedDelivery(delivery);
   };
 
-  // Handle contact seller
-  const handleContactSeller = (delivery: Delivery) => {
-    setLocalSelectedDelivery(delivery);
-    setIsContactSellerModalOpen(true);
-  };
 
-  const sendContactMessage = () => {
-    if (contactMessage.trim() === '') return;
-
-    // In a real application, you would send this message to the backend
-    toast({
-      title: 'Message Sent',
-      description: `Your message has been sent to ${localSelectedDelivery?.sellerName}`,
-      variant: 'default',
-    });
-
-    setContactMessage('');
-    setIsContactSellerModalOpen(false);
-    setLocalSelectedDelivery(null);
-  };
 
   // Handle review click
   const handleReviewClick = (delivery: Delivery) => {
@@ -378,7 +355,6 @@ const UserDeliveryPage = () => {
               <DeliveryCard
                 key={delivery.id}
                 delivery={delivery}
-                handleContactSeller={handleContactSeller}
                 viewDeliveryDetails={viewDeliveryDetails}
                 onReviewClick={handleReviewClick}
                 canReview={reviewEligibility[delivery.id] || false}
@@ -408,19 +384,8 @@ const UserDeliveryPage = () => {
       <DeliveryDetailsDialog
         selectedDelivery={localSelectedDelivery}
         setSelectedDelivery={setLocalSelectedDelivery}
-        handleContactSeller={handleContactSeller}
-        isContactSellerModalOpen={isContactSellerModalOpen}
       />
 
-      {/* Contact Seller Modal */}
-      <ContactSellerDialog
-        selectedDelivery={localSelectedDelivery}
-        isContactSellerModalOpen={isContactSellerModalOpen}
-        setIsContactSellerModalOpen={setIsContactSellerModalOpen}
-        contactMessage={contactMessage}
-        setContactMessage={setContactMessage}
-        sendContactMessage={sendContactMessage}
-      />
 
       {/* Review Form Dialog */}
       <ReviewFormDialog

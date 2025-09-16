@@ -37,7 +37,7 @@ public class UserAddress {
     @Column(length = 50)
     private String state;
 
-    @Column(length = 20)
+    @Column(name = "postal_code", length = 20)
     private String postalCode;
 
     @Column(length = 50)

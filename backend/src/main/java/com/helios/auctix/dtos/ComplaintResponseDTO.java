@@ -20,4 +20,5 @@ public class ComplaintResponseDTO {
     private String description;
     private LocalDateTime dateReported;
     private ComplaintStatus status;
+    private UUID assignedTo;
 }

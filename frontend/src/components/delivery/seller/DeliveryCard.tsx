@@ -5,7 +5,6 @@ import {
   Calendar,
   Check,
   MapPin,
-  MessageCircle,
   Package,
   Star,
   Truck,
@@ -28,7 +27,6 @@ interface DeliveryCardProps {
   viewDeliveryDetails: (delivery: Delivery) => void;
   handleRequestAddress?: (id: string) => void;
   onViewReviews?: (delivery: Delivery) => void;
-  onContactBuyer?: (delivery: Delivery) => void;
   isLoading: boolean;
 }
 
@@ -39,7 +37,6 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
   viewDeliveryDetails,
   handleRequestAddress,
   onViewReviews,
-  onContactBuyer,
   isLoading,
 }) => {
   const statusInfo = getStatusInfo(delivery.status);
@@ -172,17 +169,6 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
 
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row gap-2 self-center">
-            {onContactBuyer && (
-              <Button
-                variant="outline"
-                className="whitespace-nowrap flex items-center border-blue-300 text-blue-600 hover:bg-blue-50"
-                onClick={() => onContactBuyer(delivery)}
-                size="sm"
-              >
-                <MessageCircle className="mr-1.5 h-4 w-4" />
-                Contact Buyer
-              </Button>
-            )}
             
             <Button
               variant="outline"
@@ -342,14 +328,22 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
               {images.length > 1 && (
                 <>
                   <button
-                    onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                    }}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-75 text-white p-3 rounded-full hover:bg-opacity-90 z-40 text-xl font-bold"
+                    aria-label="Previous image"
                   >
                     ←
                   </button>
                   <button
-                    onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                    }}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-75 text-white p-3 rounded-full hover:bg-opacity-90 z-40 text-xl font-bold"
+                    aria-label="Next image"
                   >
                     →
                   </button>
@@ -358,8 +352,12 @@ export const DeliveryCard: React.FC<DeliveryCardProps> = ({
               
               {/* Close button */}
               <button
-                onClick={() => setIsGalleryOpen(false)}
-                className="absolute top-4 right-4 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsGalleryOpen(false);
+                }}
+                className="absolute top-4 right-4 bg-black bg-opacity-75 text-white p-2 rounded-full hover:bg-opacity-90 z-50 text-xl font-bold leading-none"
+                aria-label="Close image gallery"
               >
                 ×
               </button>

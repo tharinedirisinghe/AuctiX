@@ -12,6 +12,8 @@ import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -51,6 +53,16 @@ public class ComplainController {
         return ResponseEntity.ok(responseDTO);
     }
 
+    @PutMapping("/{id}/assign")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ComplaintResponseDTO> assignToMe(@PathVariable UUID id) throws AuthenticationException {
+        Complaint complaint = complaintService.assignToMe(id);
+        ComplaintResponseDTO responseDTO = ComplaintResponseDTO.builder()
+                .assignedTo(complaint.getAssignedTo())
+                // set other fields as needed
+                .build();
+        return ResponseEntity.ok(responseDTO);
+    }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")

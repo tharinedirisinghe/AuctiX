@@ -59,6 +59,9 @@ public class Complaint {
     @Column(nullable = false)
     private ComplaintStatus status;
 
+    @Column(name = "assigned_to", nullable = true)
+    private UUID assignedTo;
+
     @PrePersist
     public void generateReadableId() {
         if (this.readableId == null || this.readableId.isBlank()) {

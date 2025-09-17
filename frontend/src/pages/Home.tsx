@@ -82,40 +82,6 @@ export default function Home(): ReactNode {
           </div>
         </section>
 
-        <section className="max-w-5xl mx-auto px-5 py-16">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Latest Auctions
-            </h2>
-            <Link to="/explore-auctions">
-              <Button className="px-6">View All</Button>
-            </Link>
-          </div>
-          {loading ? (
-            <div className="text-center py-10 text-gray-500">
-              Loading auctions...
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {latestAuctions.map((auction) => (
-                <AuctionCard
-                  key={auction.id}
-                  imageUrl={auction.imageUrl}
-                  productName={auction.productName || auction.title}
-                  category={auction.category}
-                  sellerName={auction.sellerName || 'Unknown'}
-                  sellerAvatar={auction.sellerAvatar || ''}
-                  startingPrice={
-                    auction.startingPrice || auction.currentPrice || '0'
-                  }
-                  startTime={auction.startTime}
-                  endTime={auction.endTime}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
         <div className="max-w-4xl mx-auto text-center px-5 py-20 pt-36">
           <div className="self-stretch text-center">
             <span className="text-slate-950 text-5xl sm:text-7xl font-bold font-['Geist'] leading-[9px]">

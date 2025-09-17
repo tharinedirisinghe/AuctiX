@@ -55,12 +55,30 @@ type AuctionData = {
   status: string;
   startTime: string;
   endTime: string;
-  isLeadingBid: boolean;
+  leadingBid: boolean;
   category: string;
   imagePaths: string[];
 };
 
 export default function BidderDashboard() {
+  // Helper to show time left for auction
+  function getTimeLeft(endTime: string, status: string) {
+    if (status === 'completed') return 'Ended';
+    const end = new Date(endTime);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    if (diff <= 0) return 'Ended';
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    let str = '';
+    if (days > 0) str += `${days}d `;
+    if (hours > 0 || days > 0) str += `${hours}h `;
+    if (minutes > 0 || hours > 0 || days > 0) str += `${minutes}m `;
+    str += `${seconds}s`;
+    return str.trim();
+  }
   const [stats, setStats] = useState(null);
   const [recentBids, setRecentBids] = useState<AuctionData[]>([]);
   const [watchedAuctions, setWatchedAuctions] = useState<AuctionData[]>([]);
@@ -80,48 +98,10 @@ export default function BidderDashboard() {
   const axiosInstance = AxiosRequest().axiosInstance;
   const token = authData?.token;
 
-  const [walletHistory, setWalletHistory] = useState<
-    { date: string; available: number; frozen: number }[]
-  >([]);
-
-  const walletChartData = React.useMemo(() => {
-    if (!walletHistory.length) return [];
-    if (walletRange === '1d') {
-      const transactions = walletHistory.__rawTransactions || [];
-      if (!transactions.length) return walletHistory.slice(-1);
-      const lastTx = transactions[transactions.length - 1];
-      const lastDateTime = new Date(lastTx.transactionDate);
-      const startDateTime = new Date(lastDateTime);
-      startDateTime.setHours(lastDateTime.getHours() - 23, 0, 0, 0);
-      let available = 0;
-      let frozen = 0;
-      const intradayTxs: { date: string; available: number; frozen: number }[] =
-        [];
-      transactions.forEach((tx: any) => {
-        const txTime = new Date(tx.transactionDate);
-        if (txTime >= startDateTime && txTime <= lastDateTime) {
-          if (tx.status === 'CREDITED') available += tx.amount || 0;
-          else if (tx.status === 'DEBITED') available -= tx.amount || 0;
-          else if (tx.status === 'FREEZED') {
-            available -= tx.amount || 0;
-            frozen += tx.amount || 0;
-          } else if (tx.status === 'UNFREEZED') {
-            available += tx.amount || 0;
-            frozen -= tx.amount || 0;
-          }
-          intradayTxs.push({
-            date: tx.transactionDate.slice(0, 16).replace('T', ' '),
-            available: Math.max(available, 0),
-            frozen: Math.max(frozen, 0),
-          });
-        }
-      });
-      return intradayTxs.length ? intradayTxs : walletHistory.slice(-1);
-    }
-    if (walletRange === '1w') return walletHistory.slice(-7);
-    if (walletRange === '1m') return walletHistory.slice(-30);
-    return walletHistory;
-  }, [walletHistory, walletRange]);
+  const getAuctionImageUrl = (auction: AuctionData) =>
+    auction.imagePaths && auction.imagePaths.length > 0
+      ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${auction.imagePaths[0]}`
+      : '/vite.svg';
 
   useEffect(() => {
     fetchBidderData();
@@ -527,255 +507,97 @@ export default function BidderDashboard() {
           </div>
         </div>
 
-        {/* Bidder Analytics Graphs - Shadcn Pie Chart style */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-8 border-none bg-gray-50 rounded-lg p-4">
-          {/* All Bids: Active vs Ended */}
-          <Card className="flex flex-col shadow-none border-none">
-            <CardHeader className="items-center pb-0">
-              <CardTitle>All Bids ({bidStats?.totalBids ?? 0})</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pt-4">
-              <ChartContainer
-                config={chartConfig}
-                className="[&_.recharts-pie-label-text]:fill-foreground mx-auto aspect-square pb-0"
-              >
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie
-                    data={allBidsPieData}
-                    dataKey="value"
-                    label={({ label, value }) => `${label} (${value})`}
-                    nameKey="label"
-                  >
-                    {allBidsPieData.map((entry, idx) => (
-                      <Cell key={entry.label} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-          {/* Active Bids: Leading vs Outbid */}
-          <Card className="flex flex-col shadow-none border-none">
-            <CardHeader className="items-center pb-0">
-              <CardTitle>Active Bids ({bidStats?.activeBids ?? 0})</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pt-4">
-              <ChartContainer
-                config={chartConfig}
-                className="[&_.recharts-pie-label-text]:fill-foreground mx-auto aspect-square  pb-0"
-              >
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie
-                    data={activeBidsPieData}
-                    dataKey="value"
-                    label={({ label, value }) => `${label} (${value})`}
-                    nameKey="label"
-                  >
-                    {activeBidsPieData.map((entry, idx) => (
-                      <Cell key={entry.label} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-          {/* Ended Bids: Won vs Lost */}
-          <Card className="flex flex-col shadow-none border-none">
-            <CardHeader className="items-center pb-0">
-              <CardTitle>
-                Ended Bids (
-                {bidStats ? bidStats.totalBids - bidStats.activeBids : 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pt-4">
-              <ChartContainer
-                config={chartConfig}
-                className="[&_.recharts-pie-label-text]:fill-foreground mx-auto aspect-square pb-0"
-              >
-                <PieChart>
-                  <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                  <Pie
-                    data={endedBidsPieData}
-                    dataKey="value"
-                    label={({ label, value }) => `${label} (${value})`}
-                    nameKey="label"
-                  >
-                    {endedBidsPieData.map((entry, idx) => (
-                      <Cell key={entry.label} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex gap-6 mb-8">
-          <div className="w-full md:w-2/5">
-            <Card className="bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#ffeaa3] via-[#f2ecda] to-[#fefefe] p-6 rounded-lg h-full shadow-sm border-none flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="text-gray-600 text-md font-medium">
-                    Wallet
-                  </div>
-                  <div className="text-gray-800 text-4xl ">
-                    Aucti<span className="text-[#eaac26]">X</span>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <div className="text-gray-500 text-lg mb-1">
-                    Available Balance
-                  </div>
-                  <div className="text-4xl font-bold tracking-wider text-gray-900">
-                    {loading
-                      ? 'Loading...'
-                      : walletInfo?.amount !== undefined
-                        ? `LKR ${walletInfo.amount.toLocaleString()}`
-                        : 'LKR 0'}
-                  </div>
-                </div>
+        {/* Bidder Analytics Section - Conditional */}
+        <div className="mb-8 w-full">
+          {!bidStats || bidStats.totalBids === 0 ? (
+            <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg py-12">
+              <div className="text-2xl md:text-4xl font-bold mb-3 text-gray-800">
+                No Bids Yet
               </div>
-
-              <div className="flex justify-between items-end mt-auto">
-                <div>
-                  <div className="text-gray-500 text-md">Frozen</div>
-                  <div className="text-sm font-semibold text-orange-600">
-                    {walletInfo?.freezeAmount !== undefined
-                      ? `LKR ${walletInfo.freezeAmount.toLocaleString()}`
-                      : 'LKR 0'}
-                  </div>
-                </div>
-                <div>
-                  <Button
-                    variant="secondary"
-                    className="text-xs px-3 py-1 text-gray-700 hover:text-gray-900"
-                    onClick={() => navigate('/wallet')}
-                  >
-                    Go to Wallet
-                  </Button>
-                </div>
+              <div className="text-lg text-gray-500 mb-6">
+                Explore auctions and start bidding to see your analytics here!
               </div>
-            </Card>
-          </div>
-          <div className="hidden md:block w-3/5 border border-gray-200 rounded-lg">
-            <div className="w-full">
-              <Card className="text-gray-800 p-6 border-none h-full border-none">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-gray-700">
-                    Balance Trend
-                  </h4>
-                  <Select
-                    value={walletRange}
-                    onValueChange={(v) =>
-                      setWalletRange(v as '1d' | '1w' | '1m')
+              <Button
+                variant="default"
+                size="lg"
+                className="px-8 py-3 text-lg"
+                onClick={() => navigate('/explore-auctions')}
+              >
+                Explore Auctions
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-lg p-6">
+              <div className="text-xl font-semibold mb-4 text-gray-800">
+                Your Recent Bids
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {recentBids.slice(0, 6).map((bid) => (
+                  <div
+                    key={bid.auctionId}
+                    className="group bg-white border border-gray-200 rounded-lg flex flex-col justify-between p-0 overflow-hidden cursor-pointer"
+                    onClick={() =>
+                      navigate(`/auction-details/${bid.auctionId}`)
                     }
                   >
-                    <SelectTrigger className="w-28 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1d">1 Day</SelectItem>
-                      <SelectItem value="1w">1 Week</SelectItem>
-                      <SelectItem value="1m">1 Month</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart
-                    data={walletChartData}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="availableColor"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
+                    <div className="relative h-32 w-full overflow-hidden rounded-t-lg">
+                      <img
+                        src={getAuctionImageUrl(bid)}
+                        alt="auction"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <div className="bg-black/70 text-white rounded px-2 py-1 text-xs font-semibold shadow flex items-center">
+                          {getTimeLeft(bid.endTime, bid.status)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 px-4 py-3">
+                      <div
+                        className="font-bold text-gray-800 text-lg truncate"
+                        title={bid.title}
                       >
-                        <stop
-                          offset="5%"
-                          stopColor="#eaac26"
-                          stopOpacity={0.8}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#eaac26"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                      <linearGradient
-                        id="frozenColor"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
+                        {bid.title}
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Your Bid:</span>
+                        <span className="font-semibold text-gray-900">
+                          LKR {bid.yourHighestBid?.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Current Price:</span>
+                        <span className="font-semibold text-gray-900">
+                          LKR {bid.currentPrice?.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between px-4 pb-3 mt-auto">
+                      <Badge
+                        variant={bid.leadingBid ? 'default' : 'destructive'}
+                        className="px-2 py-1 text-xs"
                       >
-                        <stop
-                          offset="5%"
-                          stopColor="#f87171"
-                          stopOpacity={0.8}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#f87171"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(date) =>
-                        walletRange === '1d'
-                          ? date.slice(11, 16)
-                          : new Date(date).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                      }
-                    />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#fff',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                      }}
-                      labelFormatter={(date) =>
-                        walletRange === '1d'
-                          ? date.slice(0, 16).replace('T', ' ')
-                          : new Date(date).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                      }
-                      labelStyle={{ color: '#333' }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="available"
-                      stroke="#eaac26"
-                      fillOpacity={1}
-                      fill="url(#availableColor)"
-                      name="Available"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="frozen"
-                      stroke="#f87171"
-                      fillOpacity={1}
-                      fill="url(#frozenColor)"
-                      name="Frozen"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Card>
+                        {bid.leadingBid ? 'Leading' : 'Outbid'}
+                      </Badge>
+                      <span
+                        className={`text-xs font-medium ${bid.status === 'completed' ? 'text-red-500' : 'text-green-600'}`}
+                      >
+                        {bid.status === 'completed' ? 'Ended' : 'Active'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/manage-bids')}
+                >
+                  View All Bids
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

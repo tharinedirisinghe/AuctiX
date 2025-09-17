@@ -1,41 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAppSelector } from '@/hooks/hooks';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Eye, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AxiosRequest from '@/services/axiosInspector';
 import { toast } from 'react-toastify';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-} from 'recharts';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { PieChart, Pie, Cell } from 'recharts';
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
-import { TrendingUp } from 'lucide-react';
 
 type SellerStats = {
   totalAuctions: number;
@@ -53,17 +22,25 @@ type WalletInfo = {
   // Add other properties based on your API response
 };
 
-// Seller stats chart config for shadcn chart
-const sellerChartConfig: ChartConfig = {
-  value: { label: 'Auctions' },
-  Active: { label: 'Active', color: '#22c55e' },
-  Upcoming: { label: 'Upcoming', color: '#3b82f6' },
-  Ended: { label: 'Ended', color: '#eaac26' },
-  Unlisted: { label: 'Unlisted', color: '#fbbf24' },
-  Deleted: { label: 'Deleted', color: '#f87171' },
-};
-
 export default function SellerDashboard() {
+  // Helper to show time left for auction
+  function getTimeLeft(endTime: string, status: string) {
+    if (status === 'completed' || status === 'ended') return 'Ended';
+    const end = new Date(endTime);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    if (diff <= 0) return 'Ended';
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    let str = '';
+    if (days > 0) str += `${days}d `;
+    if (hours > 0 || days > 0) str += `${hours}h `;
+    if (minutes > 0 || hours > 0 || days > 0) str += `${minutes}m `;
+    str += `${seconds}s`;
+    return str.trim();
+  }
   const [stats, setStats] = useState<SellerStats | null>(null);
   const [recentAuctions, setRecentAuctions] = useState([]);
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
@@ -123,7 +100,20 @@ export default function SellerDashboard() {
 
       setStats(statsResponse.data);
       setWalletInfo(walletData);
-      setRecentAuctions(auctionsResponse.data.slice(0, 5)); // Show only recent 5
+      // Handle paginated response structure like ManageAuctions
+      let auctionsArr = [];
+      if (
+        auctionsResponse.data.content &&
+        Array.isArray(auctionsResponse.data.content)
+      ) {
+        auctionsArr = auctionsResponse.data.content;
+      } else if (Array.isArray(auctionsResponse.data)) {
+        auctionsArr = auctionsResponse.data;
+      } else if (Array.isArray(auctionsResponse.data.auctions)) {
+        auctionsArr = auctionsResponse.data.auctions;
+      }
+      console.log('Fetched auctions:', auctionsArr);
+      setRecentAuctions(auctionsArr.slice(-5).reverse());
     } catch (error) {
       console.error('Error fetching seller data:', error);
       toast.error('Failed to load dashboard data');
@@ -217,46 +207,6 @@ export default function SellerDashboard() {
     setShowDropdown(null);
   };
 
-  // Wallet chart data logic (same as bidder dashboard)
-  const walletChartData = React.useMemo(() => {
-    if (!walletHistory.length) return [];
-    if (walletRange === '1d') {
-      const transactions = (walletHistory as any).__rawTransactions || [];
-      if (!transactions.length) return walletHistory.slice(-1);
-      const lastTx = transactions[transactions.length - 1];
-      const lastDateTime = new Date(lastTx.transactionDate);
-      const startDateTime = new Date(lastDateTime);
-      startDateTime.setHours(lastDateTime.getHours() - 23, 0, 0, 0);
-      let available = 0;
-      let frozen = 0;
-      const intradayTxs: { date: string; available: number; frozen: number }[] =
-        [];
-      transactions.forEach((tx: any) => {
-        const txTime = new Date(tx.transactionDate);
-        if (txTime >= startDateTime && txTime <= lastDateTime) {
-          if (tx.status === 'CREDITED') available += tx.amount || 0;
-          else if (tx.status === 'DEBITED') available -= tx.amount || 0;
-          else if (tx.status === 'FREEZED') {
-            available -= tx.amount || 0;
-            frozen += tx.amount || 0;
-          } else if (tx.status === 'UNFREEZED') {
-            available += tx.amount || 0;
-            frozen -= tx.amount || 0;
-          }
-          intradayTxs.push({
-            date: tx.transactionDate.slice(0, 16).replace('T', ' '),
-            available: Math.max(available, 0),
-            frozen: Math.max(frozen, 0),
-          });
-        }
-      });
-      return intradayTxs.length ? intradayTxs : walletHistory.slice(-1);
-    }
-    if (walletRange === '1w') return walletHistory.slice(-7);
-    if (walletRange === '1m') return walletHistory.slice(-30);
-    return walletHistory;
-  }, [walletHistory, walletRange]);
-
   // Fetch wallet history (same as bidder dashboard)
   useEffect(() => {
     const fetchWalletHistory = async () => {
@@ -341,7 +291,7 @@ export default function SellerDashboard() {
       }
     };
     fetchWalletHistory();
-  }, [token, axiosInstance]);
+  }, [token]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -358,125 +308,56 @@ export default function SellerDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
 
-  // Pie chart data for shadcn chart
-  const sellerPieData = [
-    {
-      label: 'Active',
-      value: stats?.ongoingAuctions || 0,
-      fill: '#22c55e',
-    },
-    {
-      label: 'Upcoming',
-      value: stats?.upcomingAuctions || 0,
-      fill: '#3b82f6',
-    },
-    {
-      label: 'Ended',
-      value: stats?.completedAuctions || 0,
-      fill: '#eaac26',
-    },
-    {
-      label: 'Unlisted',
-      value: stats?.unlistedAuctions || 0,
-      fill: '#fbbf24',
-    },
-    {
-      label: 'Deleted',
-      value: stats?.deletedAuctions || 0,
-      fill: '#f87171',
-    },
-  ].filter((d) => d.value > 0);
-
   return (
     <div className="bg-white">
-      <section className="relative w-full mb-5">
-        {/* Banner image without padding */}
-        <div className="relative h-64 w-full">
-          <img
-            src={userData.banner_photo}
-            alt="cover-image"
-            className="w-full h-full object-cover"
-          />
-          {/* Gradient overlay for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-
-          {/* Profile content positioned at bottom of banner */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-            <div className="w-full max-w-7xl mx-auto">
-              <div className="flex items-end justify-between">
-                <div className="flex items-end">
+      <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
+        <div className="flex gap-6 mb-8">
+          {/* Banner/Profile (left) */}
+          <div className="hidden md:block w-3/5 border border-gray-200 rounded-lg">
+            <div className="w-full">
+              <Card className="text-gray-800 border-none relative p-0 overflow-hidden">
+                <div className="relative w-full h-64">
                   <img
-                    src={userData.profile_photo}
-                    alt="user-avatar-image"
-                    className="rounded-md w-20 h-20 object-cover shadow-lg shadow-white/10 border-2 border-white/20"
+                    src={userData.banner_photo}
+                    alt="cover-image"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="flex flex-col items-start ml-4 md:ml-6 mb-2">
-                    <div className="text-white/80 font-medium leading-none text-sm">
-                      Hello,
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                    <div className="w-full max-w-7xl mx-auto">
+                      <div className="flex items-end justify-between">
+                        <div className="flex items-end">
+                          <img
+                            src={userData.profile_photo}
+                            alt="user-avatar-image"
+                            className="rounded-md w-20 h-20 object-cover"
+                          />
+                          <div className="flex flex-col items-start ml-4 md:ml-6 mb-2">
+                            <div className="text-white/80 font-medium leading-none text-sm">
+                              Hello,
+                            </div>
+                            <h3 className="font-manrope font-bold text-2xl md:text-4xl text-white">
+                              {userData.username || 'Guest'}
+                            </h3>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate('/settings/profile')}
+                        >
+                          Go to Settings
+                        </Button>
+                      </div>
                     </div>
-                    <h3 className="font-manrope font-bold text-2xl md:text-4xl text-white">
-                      {userData.username || 'Guest'}
-                    </h3>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/settings/profile')}
-                >
-                  Go to Settings
-                </Button>
-              </div>
+              </Card>
             </div>
           </div>
-        </div>
-      </section>
-      <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
-        {/* Seller Stats Pie Chart - full width, left 1/3 titles, right 2/3 graph */}
-        <div className="mb-8 w-full flex flex-row items-center justify-center">
-          {/* Left: Titles */}
-          <div className="w-full md:w-2/5 flex flex-col justify-center items-end px-4 py-8">
-            <div className="text-3xl md:text-4xl font-bold mb-3">
-              Auction Distribution
-            </div>
-            <div className="text-lg md:text-xl text-gray-500">
-              Current Auction Status Breakdown
-            </div>
-          </div>
-          {/* Right: Graph */}
-          <div className="w-full md:w-3/5 flex justify-center items-start px-4 py-8">
-            <ChartContainer
-              config={sellerChartConfig}
-              className="[&_.recharts-pie-label-text]:fill-foreground mx-auto"
-              style={{ width: '100%', height: '350px', maxWidth: '100%' }}
-            >
-              <PieChart
-                width={window.innerWidth > 900 ? 600 : window.innerWidth - 40}
-                height={320}
-              >
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                <Pie
-                  data={sellerPieData}
-                  dataKey="value"
-                  label={({ label, value }) => `${label} (${value})`}
-                  nameKey="label"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={120}
-                >
-                  {sellerPieData.map((entry, idx) => (
-                    <Cell key={entry.label} fill={entry.fill} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-          </div>
-        </div>
-        {/* Split screen: Wallet Card (left) and wallet graph (right) */}
-        <div className="flex gap-6 mb-8">
-          {/* Wallet Card (left) */}
+          {/* Wallet Card (right) */}
           <div className="w-full md:w-2/5">
-            <Card className="bg-gradient-to-br from-gray-50 to-zinc-300 text-gray-800 p-6 rounded-lg h-full shadow-sm border-none flex flex-col justify-between">
+            <Card className="bg-gradient-to-br from-gray-50 to-zinc-300 text-gray-800 p-6 rounded-lg h-full shadow-none border-none flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-start mb-4">
                   <div className="text-gray-600 text-md font-medium">
@@ -486,7 +367,6 @@ export default function SellerDashboard() {
                     Aucti<span className="text-[#eaac26]">X</span>
                   </div>
                 </div>
-
                 <div className="mb-6">
                   <div className="text-gray-500 text-lg mb-1">
                     Available Balance
@@ -500,7 +380,6 @@ export default function SellerDashboard() {
                   </div>
                 </div>
               </div>
-
               <div className="flex justify-between items-end mt-auto">
                 <div>
                   <div className="text-gray-500 text-md">Frozen</div>
@@ -522,124 +401,90 @@ export default function SellerDashboard() {
               </div>
             </Card>
           </div>
-          {/* Wallet Graph (right) */}
-          <div className="hidden md:block w-3/5 border border-gray-200 rounded-lg">
-            <div className="w-full">
-              <Card className="text-gray-800 p-6 border-none h-full border-none">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-gray-700">
-                    Balance Trend
-                  </h4>
-                  <Select
-                    value={walletRange}
-                    onValueChange={(v) =>
-                      setWalletRange(v as '1d' | '1w' | '1m')
-                    }
+        </div>
+
+        <div className="mb-8 w-full">
+          <div className="text-xl font-semibold mb-4 text-gray-800">
+            Your Recent Auctions
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {recentAuctions.length === 0 ? (
+              <div className="col-span-3 text-center text-gray-500 py-8">
+                No auctions found.
+              </div>
+            ) : (
+              recentAuctions.map((auction: any) => {
+                // Use correct property names from sample
+                const auctionId = auction.id;
+                const imageId = auction.images?.[0];
+                const imageUrl = imageId
+                  ? `${import.meta.env.VITE_API_URL}/auctions/getAuctionImages?file_uuid=${imageId}`
+                  : '/vite.svg';
+                const currentPrice =
+                  auction.currentHighestBid?.amount ?? auction.startingPrice;
+                const status = auction.status ?? '';
+                return (
+                  <div
+                    key={auctionId}
+                    className="group bg-white border border-gray-200 rounded-xl flex flex-col justify-between p-0 overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`/auction-details/${auctionId}`)}
                   >
-                    <SelectTrigger className="w-28 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1d">1 Day</SelectItem>
-                      <SelectItem value="1w">1 Week</SelectItem>
-                      <SelectItem value="1m">1 Month</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart
-                    data={walletChartData}
-                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="availableColor"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
+                    <div className="relative h-32 w-full overflow-hidden rounded-t-xl">
+                      <img
+                        src={imageUrl}
+                        alt="auction"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <div className="bg-black/70 text-white rounded px-2 py-1 text-xs font-semibold shadow flex items-center">
+                          {getTimeLeft(auction.endTime, status)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 px-4 py-3">
+                      <div
+                        className="font-bold text-gray-800 text-lg truncate"
+                        title={auction.title}
                       >
-                        <stop
-                          offset="5%"
-                          stopColor="#eaac26"
-                          stopOpacity={0.8}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#eaac26"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                      <linearGradient
-                        id="frozenColor"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#f87171"
-                          stopOpacity={0.8}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#f87171"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(date) =>
-                        walletRange === '1d'
-                          ? date.slice(11, 16)
-                          : new Date(date).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                      }
-                    />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <RechartsTooltip
-                      contentStyle={{
-                        background: '#fff',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                      }}
-                      labelFormatter={(date) =>
-                        walletRange === '1d'
-                          ? date.slice(0, 16).replace('T', ' ')
-                          : new Date(date).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                      }
-                      labelStyle={{ color: '#333' }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="available"
-                      stroke="#eaac26"
-                      fillOpacity={1}
-                      fill="url(#availableColor)"
-                      name="Available"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="frozen"
-                      stroke="#f87171"
-                      fillOpacity={1}
-                      fill="url(#frozenColor)"
-                      name="Frozen"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Card>
-            </div>
+                        {auction.title}
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Current Price:</span>
+                        <span className="font-semibold text-gray-900">
+                          LKR {currentPrice?.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Category:</span>
+                        <span className="font-semibold text-gray-900">
+                          {auction.category}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Ends:</span>
+                        <span className="font-semibold text-gray-900">
+                          {auction.endTime
+                            ? new Date(auction.endTime).toLocaleString()
+                            : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/manage-auctions')}
+            >
+              View All Auctions
+            </Button>
           </div>
         </div>
+
+        {/* Wallet Graph (below) */}
       </div>
     </div>
   );

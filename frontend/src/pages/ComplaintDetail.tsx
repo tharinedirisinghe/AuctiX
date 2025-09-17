@@ -314,15 +314,14 @@ export default function ComplaintDetail() {
 
   return (
     <div className="bg-white min-h-screen">
-      {/* Header part */}
-      <header className="relative h-32 w-full bg-gradient-to-b from-yellow-400 to-black/90 shadow-lg">
+      <header className="relative h-28 w-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#ffcc5f] via-[#eedca6] to-[#f1f1ec] mb-0">
         <div className="absolute bottom-0 left-0 right-0 px-6 md:px-8 mb-4 flex items-center gap-4">
-          <Button variant="ghost" className="text-white" size="icon" asChild>
+          <Button variant="ghost" className="text-gray-800" size="icon" asChild>
             <Link to="/complaints">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-4xl font-bold text-white drop-shadow-lg">
+          <h1 className="text-4xl font-semibold text-gray-800">
             Complaint Details
           </h1>
         </div>

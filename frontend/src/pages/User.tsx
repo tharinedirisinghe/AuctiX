@@ -34,12 +34,12 @@ export default function User() {
 
   return (
     <div className="bg-white">
-      <div className="p-6 max-w-6xl mx-auto">
-        <header className="mb-4">
-          <h1 className="text-3xl font-bold mb-1">User management</h1>
-          <p className="text-gray-500">View and manage users</p>
-        </header>
-
+      <header className="relative h-28 w-full bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-[#ffcc5f] via-[#eedca6] to-[#f1f1ec] mb-0">
+        <h1 className="text-4xl font-semibold text-gray-800 absolute bottom-0 left-0 right-0 px-6 md:px-8 mb-4">
+          User management
+        </h1>
+      </header>
+      <div className="max-w-7xl mx-auto px-6 md:px-8 py-6">
         {isLoading ? (
           <div className="grid grid-cols-4 gap-4 mb-8">
             {[...Array(4)].map((_, i) => (

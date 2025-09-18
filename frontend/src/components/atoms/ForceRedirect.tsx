@@ -3,6 +3,8 @@ import { useAppSelector, useAppDispatch } from '../../hooks/hooks';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { markLastRedirect } from '../../store/slices/requiredActionsSlice';
+import useSse from '@/hooks/useSse';
+import { logout } from '@/store/slices/authSlice';
 
 // Action types for pending actions
 export enum ActionType {
@@ -29,6 +31,28 @@ export default function ForceRedirect() {
   const authUser = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const { toast } = useToast();
+
+  /* refactor later */
+  /**********************************************************/
+  /**********************************************************/
+  const { isConnected, pendingEvents } = useSse(
+    'SYSTEM_EVENT',
+    (event: any) => {
+      console.log('Received SYSTEM_EVENT via SSE:', event);
+      if (event.context === 'LOG_OUT') {
+        console.log('Logging out user due to SYSTEM_EVENT LOG_OUT');
+        dispatch(logout());
+      }
+    },
+  );
+
+  useEffect(() => {
+    console.log('SSE Connection Status:', isConnected);
+    console.log('Pending SYSTEM_EVENT Events:', pendingEvents);
+  }, [isConnected, pendingEvents]);
+
+  /**********************************************************/
+  /**********************************************************/
 
   // Log the mounted state
   useEffect(() => {

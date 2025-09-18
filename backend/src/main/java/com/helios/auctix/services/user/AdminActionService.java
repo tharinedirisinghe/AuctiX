@@ -1,5 +1,7 @@
 package com.helios.auctix.services.user;
 
+import com.helios.auctix.domain.sse.SSEEventTypeEnum;
+import com.helios.auctix.domain.sse.SSEEventValueEnum;
 import com.helios.auctix.domain.user.*;
 import com.helios.auctix.domain.user.UserRequiredActionEnum;
 import com.helios.auctix.dtos.AdminActionDTO;
@@ -9,6 +11,7 @@ import com.helios.auctix.mappers.impl.AdminActionMapperImpl;
 import com.helios.auctix.repositories.AdminActionRepository;
 import com.helios.auctix.repositories.SuspendedUserRepository;
 import com.helios.auctix.repositories.UserRepository;
+import com.helios.auctix.services.SSEService;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,17 +37,19 @@ public class AdminActionService {
     private final AdminActionMapperImpl adminActionMapperImpl;
     private final SuspendedUserRepository suspendedUserRepository;
     private final UserDetailsService userDetailsService;
+    private final SSEService sseService;
     private final UserRegisterService userRegisterService;
 
     public AdminActionService(
             AdminActionRepository adminActionRepository,
-            UserRepository userRepository, AdminActionMapperImpl adminActionMapperImpl, SuspendedUserRepository suspendedUserRepository, UserDetailsService userDetailsService, UserRegisterService userRegisterService) {
+            UserRepository userRepository, AdminActionMapperImpl adminActionMapperImpl, SuspendedUserRepository suspendedUserRepository, UserDetailsService userDetailsService, UserRegisterService userRegisterService, SSEService sseService) {
         this.adminActionRepository = adminActionRepository;
         this.userRepository = userRepository;
         this.adminActionMapperImpl = adminActionMapperImpl;
         this.suspendedUserRepository = suspendedUserRepository;
         this.userDetailsService = userDetailsService;
         this.userRegisterService = userRegisterService;
+        this.sseService = sseService;
     }
 
     public void logAdminAction(User admin, User user, AdminActionsEnum action, String description) {
@@ -204,6 +209,8 @@ public class AdminActionService {
                 .severityLevel(UserRequiredActionSeverityLevelEnum.HIGH)
                 .continueUrl(null)
                 .build();
+
+        sseService.sendToUser(targetUserUserName, SSEEventTypeEnum.SYSTEM_EVENT, SSEEventValueEnum.LOG_OUT);
 
         userDetailsService.registerUserRequiredAction(targetUser, UserRequiredActionEnum.ACCOUNT_BANNED_ANNOUNCEMENT, userRequiredActionContext);
     }

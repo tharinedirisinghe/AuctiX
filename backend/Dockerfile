@@ -7,14 +7,14 @@ RUN mvn clean package -DskipTests
 # Use a lightweight JRE to run the app
 FROM eclipse-temurin:21-jre
 
-# Create a non-root user and group
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+# Create a non-root user with UID in the allowed range
+RUN addgroup --system appgroup && adduser --system --uid 10001 --ingroup appgroup appuser
 
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Switch to the non-root user
-USER appuser
+USER 10001
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

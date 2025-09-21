@@ -1,0 +1,27 @@
+# Maven target folder (build artifacts)
+target/
+# Local environment files
+.env
+.env.* 
+env.example
+# IDE files
+*.iml
+.idea/
+.vscode/
+# OS generated files
+.DS_Store
+Thumbs.db
+# Logs
+*.log
+# Git files
+.git
+.gitignore
+# Maven wrapper scripts (optional if you copy them explicitly)
+mvnw
+mvnw.cmd
+# Mailpit data
+mailpit-data/
+# Docker related files (if you don't want them in build context)
+Dockerfile
+docker-compose.yml
+HELP.md

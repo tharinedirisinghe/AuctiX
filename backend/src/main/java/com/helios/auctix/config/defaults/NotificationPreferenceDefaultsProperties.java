@@ -50,6 +50,10 @@ public class NotificationPreferenceDefaultsProperties {
                     NotificationType.EMAIL, true,
                     NotificationType.PUSH, false
             ),
+            NotificationCategory.OUTBID, Map.of(
+                    NotificationType.EMAIL, true,
+                    NotificationType.PUSH, true
+            ),
             NotificationCategory.DEFAULT, Map.of(
                     NotificationType.EMAIL, true,
                     NotificationType.PUSH, true

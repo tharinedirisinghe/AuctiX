@@ -178,6 +178,14 @@
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 			<version>3.4.3</version>
 		</dependency>
+
+		<!-- Force patched Tomcat version -->
+		<dependency>
+			<groupId>org.apache.tomcat.embed</groupId>
+			<artifactId>tomcat-embed-core</artifactId>
+			<version>10.1.35</version>
+		</dependency>
+		
 		<!-- OpenTelemetry SDK -->
 		<!-- <dependency>
 			<groupId>io.opentelemetry</groupId>
